@@ -112,12 +112,21 @@ static void
 delete_drawing_area (GtkWidget *widget, gpointer data)
 {			   
     cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
+    cairo_5c_tool_t	*tool = c5s->u.window.tool;
     
     if (c5s->u.window.send_events)
     {
 	fprintf (c5s->u.window.send_events, "%d delete\n", 0);
 	fflush (c5s->u.window.send_events);
     }
+    tool->drawing_area = NULL;
+    tool->window = NULL;
+    if (tool->pixmap)
+    {
+	gdk_drawable_unref (tool->pixmap);
+	tool->pixmap = NULL;
+    }
+    c5s->u.window.pixmap = None;
 }
 
 static gboolean
@@ -300,6 +309,7 @@ gtk_tool_free (void *object)
     {
 	gtk_widget_destroy (tool->window);
 	tool->window = NULL;
+	tool->drawing_area = NULL;
     }
     if (tool->pixmap)
     {
@@ -313,7 +323,7 @@ gtk_tool_free (void *object)
 static DataType gtk_tool_type = { gtk_tool_mark, gtk_tool_free, "GtkTool" };
 
 Bool
-cairo_5c_tool_create (cairo_5c_surface_t *c5s, int width, int height)
+cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height)
 {
     ENTER ();
     gtk_global_t    *gg = gtk_global ? gtk_global : create_gtk_global ();
@@ -348,6 +358,7 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, int width, int height)
     tool->window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
     gtk_window_set_default_size (GTK_WINDOW(tool->window),
 				 width, height);
+    gtk_window_set_title (GTK_WINDOW (tool->window), name);
     
     tool->drawing_area = gtk_drawing_area_new ();
     
@@ -393,20 +404,7 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, int width, int height)
 Bool
 cairo_5c_tool_destroy (cairo_5c_surface_t *c5s)
 {
-    cairo_5c_tool_t *tool = c5s->u.window.tool;
-
-    gdk_threads_enter ();
-    if (tool->window)
-    {
-	gtk_widget_destroy (tool->window);
-	tool->window = NULL;
-    }
-    if (tool->pixmap)
-    {
-	gdk_drawable_unref (tool->pixmap);
-	tool->pixmap = NULL;
-    }
-    gdk_threads_leave ();
+    /* let nickle allocator free it */
     return True;
 }
 

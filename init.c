@@ -825,15 +825,11 @@ nickle_init (void)
 	{ 0 }
     };
 
-    static const struct fbuiltin_2 surfuncs_2[] = {
-	{ do_Cairo_Surface_create_window, "create_window", SURFACE_S, "nn", "\n"
+    static const struct fbuiltin_3 surfuncs_3[] = {
+	{ do_Cairo_Surface_create_window, "create_window", SURFACE_S, "snn", "\n"
 	    " surface_t create_window (real width, real height)\n"
 	    "\n"
 	    " Create a window and return a surface pointer for it\n" },
-	{ 0 }
-    };
-
-    static const struct fbuiltin_3 surfuncs_3[] = {
 	{ do_Cairo_Surface_create_png, "create_png", SURFACE_S, "snn", "\n"
 	    " surface_t create_png (string filename, real width, real height)\n"
 	    "\n"
@@ -925,7 +921,6 @@ nickle_init (void)
     BuiltinFuncs7 (&CairoNamespace, funcs_7);
 
     BuiltinFuncs1 (&CairoSurfaceNamespace, surfuncs_1);
-    BuiltinFuncs2 (&CairoSurfaceNamespace, surfuncs_2);
     BuiltinFuncs3 (&CairoSurfaceNamespace, surfuncs_3);
     BuiltinFuncs5 (&CairoSurfaceNamespace, surfuncs_5);
     

@@ -1,3 +1,18 @@
+2004-12-24  Keith Packard  <keithp@keithp.com>
+
+	* cairo-5c.h:
+	* cairo.5c:
+	* cairo.c: (do_Cairo_set_target_surface):
+	* gtk.c: (delete_drawing_area), (gtk_tool_free),
+	(cairo_5c_tool_create), (cairo_5c_tool_destroy):
+	* init.c: (nickle_init):
+	* surface.c: (create_cairo_window), (cairo_5c_surface_get),
+	(do_Cairo_Surface_create_window):
+	Handle window delete more gracefully; report exception on drawing,
+	report 'delete' event to event reader.
+	Have default surface creation code re-create a surface when the old
+	default surface has been destroyed.
+
 2004-12-23  Keith Packard  <keithp@keithp.com>
 
 	* examples/grid.5c:

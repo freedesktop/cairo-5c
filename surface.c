@@ -44,6 +44,13 @@ create_cairo_window (cairo_5c_surface_t *c5s)
     
     if (c5s->surface)
 	cairo_surface_destroy (c5s->surface);
+    if (!c5s->u.window.pixmap)
+    {
+	RaiseStandardException (exception_invalid_argument,
+				"window destroyed",
+				2, NewInt (0), NewInt (0));
+	return False;
+    }
     c5s->surface = cairo_xlib_surface_create (dpy,
 					      c5s->u.window.pixmap,
 					      DefaultVisual (dpy, DefaultScreen (dpy)),
@@ -82,7 +89,8 @@ cairo_5c_surface_get (Value av)
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
 	if (c5s->u.window.curpix != c5s->u.window.pixmap)
-	    create_cairo_window (c5s);
+	    if (!create_cairo_window (c5s))
+		return 0;
 	break;
     case CAIRO_5C_PNG:
     case CAIRO_5C_PS:
@@ -156,11 +164,12 @@ cairo_surface_foreign_free (void *object)
 }
 
 Value
-do_Cairo_Surface_create_window (Value wv, Value hv)
+do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
 {
     ENTER ();
     cairo_5c_surface_t	*c5s;
     Value		ret;
+    char		*name = StrzPart (namev, "invalid name");
     int			width = IntPart (wv, "invalid width");
     int			height = IntPart (hv, "invalid height");
     
@@ -175,7 +184,7 @@ do_Cairo_Surface_create_window (Value wv, Value hv)
     c5s->dirty = False;
     c5s->recv_events = Void;
     
-    if (!cairo_5c_tool_create (c5s, width, height))
+    if (!cairo_5c_tool_create (c5s, name, width, height))
     {
 	RaiseStandardException (exception_open_error,
 				"Can't create window",

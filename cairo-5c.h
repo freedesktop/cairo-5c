@@ -150,7 +150,7 @@ cairo_5c_surface_t *
 cairo_5c_surface_get (Value av);
 
 Value
-do_Cairo_Surface_create_window (Value wv, Value hv);
+do_Cairo_Surface_create_window (Value namev, Value wv, Value hv);
 
 Value
 do_Cairo_Surface_create_png (Value fv, Value wv, Value hv);
@@ -446,7 +446,7 @@ do_Cairo_text_extents (Value cv, Value uv);
 /* gtk.c */
 
 Bool
-cairo_5c_tool_create (cairo_5c_surface_t *c5s, int width, int height);
+cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height);
 
 Bool
 cairo_5c_tool_destroy (cairo_5c_surface_t *c5s);

@@ -216,11 +216,10 @@ do_Cairo_set_target_surface (Value cv, Value sv)
     cairo_5c_t		*c5c = cairo_5c_get (cv);
     cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
 
-    if (!aborting)
-    {
-	cairo_set_target_surface (c5c->cr, c5s->surface);
-	c5c->surface = sv;
-    }
+    if (aborting)
+	RETURN (Void);
+    cairo_set_target_surface (c5c->cr, c5s->surface);
+    c5c->surface = sv;
     RETURN (Void);
 }
 

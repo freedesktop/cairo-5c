@@ -59,19 +59,43 @@ extend namespace Cairo {
 	int w = dim(args) > 0 ? args[0] : 0;
 	int h = dim(args) > 1 ? args[1] : 0;
 
-	static surface_t    surface;
-	static bool	    been_here = false;
-	static mutex	    m = Mutex::new();
+	typedef union {
+	    void	none;
+	    surface_t	surface;
+	} surface_or_none_t;
+	
+	static surface_or_none_t    surface = surface_or_none_t.none;
+	static mutex		    m = Mutex::new();
 
-	Mutex::acquire (m);
-	if (!been_here) {
-	    been_here = true;
-	    surface = Surface::create_window (w, h);
+	/*
+	 * A local function to make sure the 'default' surface
+	 * exists
+	 */
+	void ensure_surface () 
+	{
+	    Mutex::acquire (m);
+	    union switch (surface) {
+	    case none:
+		string name = (dim (argv) > 0) ? argv[0] : "nickle";
+		surface.surface = Surface::create_window (name, w, h);
+		break;
+	    case surface:
+		break;
+	    }
+	    Mutex::release (m);
 	}
-	Mutex::release (m);
 
 	cairo_t	cr = create ();
-	set_target_surface (cr, surface);
+	
+	try 
+	{
+	    ensure_surface ();
+	    set_target_surface (cr, surface.surface);
+	} catch invalid_argument (string reason, int i, poly arg) {
+	    surface = surface_or_none_t.none;
+	    ensure_surface ();
+	    set_target_surface (cr, surface.surface);
+	}
 	set_rgb_color (cr, 1, 1, 1);
 	rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));
 	fill (cr);
