@@ -37,7 +37,7 @@
 Value
 do_Cairo_new_path (Value cv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
 
     if (!aborting)
 	cairo_new_path (c5c->cr);
@@ -47,7 +47,7 @@ do_Cairo_new_path (Value cv)
 Value
 do_Cairo_move_to (Value cv, Value xv, Value yv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x = DoublePart (xv, "invalid X value");
     double	y = DoublePart (yv, "invalid Y value");
 
@@ -59,7 +59,7 @@ do_Cairo_move_to (Value cv, Value xv, Value yv)
 Value
 do_Cairo_line_to (Value cv, Value xv, Value yv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x = DoublePart (xv, "invalid X value");
     double	y = DoublePart (yv, "invalid Y value");
 
@@ -74,7 +74,7 @@ do_Cairo_curve_to (Value cv,
 		   Value x2v, Value y2v,
 		   Value x3v, Value y3v)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x1 = DoublePart (x1v, "invalid X1 value");
     double	y1 = DoublePart (y1v, "invalid Y1 value");
     double	x2 = DoublePart (x2v, "invalid X2 value");
@@ -93,7 +93,7 @@ do_Cairo_arc (Value cv,
 	      Value x2v, Value y2v,
 	      Value rv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x1 = DoublePart (x1v, "invalid X1 value");
     double	y1 = DoublePart (y1v, "invalid Y1 value");
     double	x2 = DoublePart (x2v, "invalid X2 value");
@@ -111,7 +111,7 @@ do_Cairo_arc_negative (Value cv,
 		       Value x2v, Value y2v,
 		       Value rv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x1 = DoublePart (x1v, "invalid X1 value");
     double	y1 = DoublePart (y1v, "invalid Y1 value");
     double	x2 = DoublePart (x2v, "invalid X2 value");
@@ -126,7 +126,7 @@ do_Cairo_arc_negative (Value cv,
 Value
 do_Cairo_rel_move_to (Value cv, Value xv, Value yv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x = DoublePart (xv, "invalid X value");
     double	y = DoublePart (yv, "invalid Y value");
 
@@ -138,7 +138,7 @@ do_Cairo_rel_move_to (Value cv, Value xv, Value yv)
 Value
 do_Cairo_rel_line_to (Value cv, Value xv, Value yv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x = DoublePart (xv, "invalid X value");
     double	y = DoublePart (yv, "invalid Y value");
 
@@ -153,7 +153,7 @@ do_Cairo_rel_curve_to (Value cv,
 		   Value x2v, Value y2v,
 		   Value x3v, Value y3v)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x1 = DoublePart (x1v, "invalid X1 value");
     double	y1 = DoublePart (y1v, "invalid Y1 value");
     double	x2 = DoublePart (x2v, "invalid X2 value");
@@ -169,7 +169,7 @@ do_Cairo_rel_curve_to (Value cv,
 Value
 do_Cairo_rectangle (Value cv, Value xv, Value yv, Value wv, Value hv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x = DoublePart (xv, "invalid x value");
     double	y = DoublePart (yv, "invalid y value");
     double	w = DoublePart (wv, "invalid width value");
@@ -183,7 +183,7 @@ do_Cairo_rectangle (Value cv, Value xv, Value yv, Value wv, Value hv)
 Value
 do_Cairo_close_path (Value cv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
 
     if (!aborting)
 	cairo_close_path (c5c->cr);
@@ -193,12 +193,12 @@ do_Cairo_close_path (Value cv)
 Value
 do_Cairo_fill (Value cv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
 
     if (!aborting)
     {
 	cairo_fill (c5c->cr);
-	dirty_cairo_5c (c5c);
+	cairo_5c_dirty (c5c);
     }
     return Void;
 }
@@ -206,11 +206,11 @@ do_Cairo_fill (Value cv)
 Value
 do_Cairo_stroke (Value cv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
 
     if (!aborting) {
 	cairo_stroke (c5c->cr);
-	dirty_cairo_5c (c5c);
+	cairo_5c_dirty (c5c);
     }
     return Void;
 }
@@ -218,7 +218,7 @@ do_Cairo_stroke (Value cv)
 Value
 do_Cairo_in_stroke (Value cv, Value xv, Value yv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x = DoublePart (xv, "invalid X value");
     double	y = DoublePart (yv, "invalid Y value");
 
@@ -231,7 +231,7 @@ do_Cairo_in_stroke (Value cv, Value xv, Value yv)
 Value
 do_Cairo_in_fill (Value cv, Value xv, Value yv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x = DoublePart (xv, "invalid X value");
     double	y = DoublePart (yv, "invalid Y value");
 
@@ -245,7 +245,7 @@ Value
 do_Cairo_stroke_extents (Value cv)
 {
     ENTER ();
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x, y, w, h;
     Value	ret;
     static int	dims[2] = { 2, 2 };
@@ -265,7 +265,7 @@ Value
 do_Cairo_fill_extents (Value cv)
 {
     ENTER ();
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	x, y, w, h;
     Value	ret;
     static int	dims[2] = { 2, 2 };
@@ -369,7 +369,7 @@ do_Cairo_current_path_list (Value cv)
 {
     ENTER ();
     path_closure_t  close;
-    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    cairo_5c_t	    *c5c = cairo_5c_get (cv);
     
     if (aborting)
 	RETURN (Void);
@@ -389,7 +389,7 @@ do_Cairo_current_path_flat_list (Value cv)
 {
     ENTER ();
     path_closure_t  close;
-    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    cairo_5c_t	    *c5c = cairo_5c_get (cv);
     
     if (aborting)
 	RETURN (Void);

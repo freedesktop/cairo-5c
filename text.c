@@ -38,7 +38,7 @@
 Value
 do_Cairo_select_font (Value cv, Value fv, Value sv, Value wv)
 {
-    cairo_5c_t		*c5c = get_cairo_5c (cv);
+    cairo_5c_t		*c5c = cairo_5c_get (cv);
     char		*family = StrzPart (fv, "invalid family");
     cairo_font_slant_t	slant = EnumIntPart (sv, "invalid slant");
     cairo_font_weight_t	weight = EnumIntPart (wv, "invalid weight");
@@ -52,7 +52,7 @@ Value
 do_Cairo_set_font (Value cv, Value fv)
 {
     ENTER ();
-    cairo_5c_t		*c5c = get_cairo_5c (cv);
+    cairo_5c_t		*c5c = cairo_5c_get (cv);
     char		*name = StrzPart (fv, "invalid name");
     FcPattern		*pat;
     static FT_Library	ft_library;
@@ -90,7 +90,7 @@ do_Cairo_set_font (Value cv, Value fv)
 Value
 do_Cairo_scale_font (Value cv, Value sv)
 {
-    cairo_5c_t		*c5c = get_cairo_5c (cv);
+    cairo_5c_t		*c5c = cairo_5c_get (cv);
     double		scale = DoublePart (sv, "invalid scale");
     
     if (!aborting)
@@ -102,7 +102,7 @@ Value
 do_Cairo_transform_font (Value cv, Value mv)
 {
     ENTER ();
-    cairo_5c_t		*c5c = get_cairo_5c (cv);
+    cairo_5c_t		*c5c = cairo_5c_get (cv);
     cairo_matrix_t	*matrix;
     
     if (aborting)
@@ -116,15 +116,37 @@ do_Cairo_transform_font (Value cv, Value mv)
 }
 
 Value
+do_Cairo_current_font_extents (Value cv)
+{
+    ENTER ();
+    cairo_5c_t		    *c5c = cairo_5c_get (cv);
+    cairo_font_extents_t    extents;
+    Value		    ret;
+    BoxPtr		    box;
+
+    if (aborting)
+	return Void;
+    cairo_current_font_extents (c5c->cr, &extents);
+    ret = NewStruct (TypeCanon (typeCairoFontExtents)->structs.structs, False);
+    box = ret->structs.values;
+    BoxValueSet (box, 0, NewDoubleFloat (extents.ascent));
+    BoxValueSet (box, 1, NewDoubleFloat (extents.descent));
+    BoxValueSet (box, 2, NewDoubleFloat (extents.height));
+    BoxValueSet (box, 3, NewDoubleFloat (extents.max_x_advance));
+    BoxValueSet (box, 4, NewDoubleFloat (extents.max_y_advance));
+    RETURN (ret);
+}
+
+Value
 do_Cairo_show_text (Value cv, Value uv)
 {
-    cairo_5c_t		*c5c = get_cairo_5c (cv);
+    cairo_5c_t		*c5c = cairo_5c_get (cv);
     char		*utf8 = StrzPart (uv, "invalid text");
 
     if (!aborting)
     {
 	cairo_show_text (c5c->cr, utf8);
-	dirty_cairo_5c (c5c);
+	cairo_5c_dirty (c5c);
     }
     return Void;
 }
@@ -132,7 +154,7 @@ do_Cairo_show_text (Value cv, Value uv)
 Value
 do_Cairo_text_path (Value cv, Value uv)
 {
-    cairo_5c_t		*c5c = get_cairo_5c (cv);
+    cairo_5c_t		*c5c = cairo_5c_get (cv);
     char		*utf8 = StrzPart (uv, "invalid text");
 
     if (!aborting)
@@ -144,7 +166,7 @@ Value
 do_Cairo_text_extents (Value cv, Value uv)
 {
     ENTER ();
-    cairo_5c_t		    *c5c = get_cairo_5c (cv);
+    cairo_5c_t		    *c5c = cairo_5c_get (cv);
     char		    *utf8 = StrzPart (uv, "invalid text");
     cairo_text_extents_t    extents;
     Value		    ret;
@@ -162,11 +184,4 @@ do_Cairo_text_extents (Value cv, Value uv)
     BoxValueSet (box, 4, NewDoubleFloat (extents.x_advance));
     BoxValueSet (box, 5, NewDoubleFloat (extents.y_advance));
     RETURN (ret);
-}
-
-Value
-do_Cairo_select_ft_font (Value pv)
-{
-    /* XXX */
-    return Void;
 }

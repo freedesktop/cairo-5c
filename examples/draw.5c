@@ -105,6 +105,12 @@ void draw (cairo_t cr)
 	    if (button == 1)
 		down = false;
 	    break;
+	case "delete":
+	    exit (0);
+	    break;
+	default:
+	    printf ("unknown event %s\n", name);
+	    break;
 	}
     }
 }

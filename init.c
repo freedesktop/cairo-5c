@@ -36,8 +36,10 @@
 #include "cairo-5c.h"
 
 NamespacePtr	CairoNamespace;
+NamespacePtr	CairoSurfaceNamespace;
 NamespacePtr	CairoPatternNamespace;
 Type		*typeCairo;
+Type		*typeCairoSurface;
 Type		*typeCairoStatus;
 Type		*typeCairoOperator;
 Type		*typeCairoFillRule;
@@ -46,6 +48,7 @@ Type		*typeCairoLineJoin;
 Type		*typeCairoFontSlant;
 Type		*typeCairoFontWeight;
 Type		*typeCairoTextExtents;
+Type		*typeCairoFontExtents;
 Type		*typeCairoMatrix;
 Type		*typeCairoPoint;
 Type		*typeCairoRect;
@@ -62,42 +65,46 @@ Type		*typeCairoPatternFilter;
 
 #define CAIRO_I		0
 #define CAIRO_S		"00"
-#define STATUS_I	1
-#define STATUS_S	"01"
-#define OPERATOR_I	2
-#define OPERATOR_S	"02"
-#define FILL_RULE_I	3
-#define FILL_RULE_S	"03"
-#define LINE_CAP_I	4
-#define LINE_CAP_S	"04"
-#define LINE_JOIN_I	5
-#define LINE_JOIN_S	"05"
-#define FONT_SLANT_I	6
-#define FONT_SLANT_S	"06"
-#define FONT_WEIGHT_I	7
-#define FONT_WEIGHT_S	"07"
-#define	TEXT_EXTENTS_I	8
-#define TEXT_EXTENTS_S	"08"
-#define MATRIX_I	9
-#define MATRIX_S	"09"
-#define POINT_I		10
-#define POINT_S		"10"
-#define RECT_I		11
-#define RECT_S		"11"
-#define RGB_COLOR_I	12
-#define RGB_COLOR_S	"12"
-#define PATTERN_I	13
-#define PATTERN_S	"13"
-#define PATH_I		14
-#define PATH_S		"14"
-#define MOVE_TO_I	15
-#define MOVE_TO_S	"15"
-#define LINE_TO_I	16
-#define LINE_TO_S	"16"
-#define CURVE_TO_I	17
-#define CURVE_TO_S	"17"
-#define CLOSE_PATH_I	18
-#define CLOSE_PATH_S	"18"
+#define SURFACE_I	1
+#define SURFACE_S	"01"
+#define STATUS_I	2
+#define STATUS_S	"02"
+#define OPERATOR_I	3
+#define OPERATOR_S	"03"
+#define FILL_RULE_I	4
+#define FILL_RULE_S	"04"
+#define LINE_CAP_I	5
+#define LINE_CAP_S	"05"
+#define LINE_JOIN_I	6
+#define LINE_JOIN_S	"06"
+#define FONT_SLANT_I	7
+#define FONT_SLANT_S	"07"
+#define FONT_WEIGHT_I	8
+#define FONT_WEIGHT_S	"08"
+#define	TEXT_EXTENTS_I	9
+#define TEXT_EXTENTS_S	"09"
+#define	FONT_EXTENTS_I	10
+#define FONT_EXTENTS_S	"10"
+#define MATRIX_I	11
+#define MATRIX_S	"11"
+#define POINT_I		12
+#define POINT_S		"12"
+#define RECT_I		13
+#define RECT_S		"13"
+#define RGB_COLOR_I	14
+#define RGB_COLOR_S	"14"
+#define PATTERN_I	15
+#define PATTERN_S	"15"
+#define PATH_I		16
+#define PATH_S		"16"
+#define MOVE_TO_I	17
+#define MOVE_TO_S	"17"
+#define LINE_TO_I	18
+#define LINE_TO_S	"18"
+#define CURVE_TO_I	19
+#define CURVE_TO_S	"19"
+#define CLOSE_PATH_I	20
+#define CLOSE_PATH_S	"20"
 
 #define EXTEND_I	30
 #define EXTEND_S	"30"
@@ -141,6 +148,13 @@ init_types (void)
 			      CAIRO_I,
 			      NULL,
 			      typePrim[rep_foreign]);
+
+    typeCairoSurface = make_typedef ("surface_t",
+				     CairoNamespace,
+				     publish_public,
+				     SURFACE_I,
+				     NULL,
+				     typePrim[rep_foreign]);
 
     typeCairoStatus = make_typedef ("status_t",
 				    CairoNamespace,
@@ -236,6 +250,17 @@ init_types (void)
 							  typePrim[rep_float], "height",
 							  typePrim[rep_float], "x_advance",
 							  typePrim[rep_float], "y_advance"));
+    typeCairoFontExtents = make_typedef ("font_extents_t",
+					 CairoNamespace,
+					 publish_public,
+					 FONT_EXTENTS_I,
+					 NULL,
+					 BuildStructType (5, 
+							  typePrim[rep_float], "ascent",
+							  typePrim[rep_float], "descent",
+							  typePrim[rep_float], "height",
+							  typePrim[rep_float], "max_x_advance",
+							  typePrim[rep_float], "max_y_advance"));
     typeCairoMatrix = make_typedef ("matrix_t",
 				    CairoNamespace,
 				    publish_public,
@@ -347,6 +372,11 @@ init_types (void)
     cp->symbol.type = BuildStructType (1,
 				       typeCairoPath, "next");
 
+    
+
+    CairoSurfaceNamespace = BuiltinNamespace (&CairoNamespace, "Surface")->namespace.namespace;
+
+
     CairoPatternNamespace = BuiltinNamespace (&CairoNamespace, "Pattern")->namespace.namespace;
 
     typeCairoPatternExtend = make_typedef ("extend_t",
@@ -416,40 +446,33 @@ Value
 nickle_init (void)
 {
     ENTER ();
-    
-    static const struct fbuiltin_v funcs_v[] = {
-	{ do_Cairo_new, "new", CAIRO_S, ".i", "\n"
-	    " cairo_t new (int...)\n"
-	    "\n"
-	    " Create a cairo window. Optional arguments are width, height\n" },
-	{ 0 }
-    };
 	
+    static const struct fbuiltin_0 funcs_0[] = {
+	{ do_Cairo_create, "create", CAIRO_S, "", "\n"
+	    " cairo_t create ()\n"
+	    "\n"
+	    " Create a cairo context.\n"
+	},
+	{ 0 },
+    };
+    
     static const struct fbuiltin_1 funcs_1[] = {
-	{ do_Cairo_dup, "dup", CAIRO_S, CAIRO_S, "\n"
-	    " cairo_t dup (cairo_t cairo)\n"
+	{ do_Cairo_destroy, "destroy", "v", CAIRO_S, "\n"
+	    " void destroy (cairo_t cairo)\n"
 	    "\n"
-	    " Creates another rendering context pointing at the same surface\n"},
-	{ do_Cairo_width, "width", "i", CAIRO_S, "\n"
-	    " void width (cairo_t cairo)\n"
+	    " destroy a rendering context.\n"},
+	{ do_Cairo_current_target_surface, "current_target_surface", SURFACE_S, CAIRO_S, "\n"
+	    " surface_t current_target_surface (cairo_t cairo)\n"
 	    "\n"
-	    " Return the width of a cairo surface\n" },
-	{ do_Cairo_height, "height", "i", CAIRO_S, "\n"
-	    " void height (cairo_t cairo)\n"
-	    "\n"
-	    " Return the height of a cairo surface\n" },
+	    " Return current target surface\n" },
 	{ do_Cairo_status, "status", STATUS_S, CAIRO_S, "\n"
-	    " void status (cairo_t cairo)\n"
+	    " status_t status (cairo_t cairo)\n"
 	    "\n"
 	    " Return the status of a cairo surface\n" },
 	{ do_Cairo_status_string, "status_string", "s", CAIRO_S, "\n"
-	    " void status_string (cairo_t cairo)\n"
+	    " string status_string (cairo_t cairo)\n"
 	    "\n"
 	    " Return the status string of a cairo surface\n" },
-	{ do_Cairo_dispose, "dispose", "v", CAIRO_S, "\n"
-	    " void dispose (cairo_t cairo)\n"
-	    "\n"
-	    " Dispose a cairo surface\n" },
 	{ do_Cairo_enable, "enable", "v", CAIRO_S, "\n"
 	    " void enable (cairo_t cairo)\n"
 	    "\n"
@@ -581,14 +604,22 @@ nickle_init (void)
 	    "\n"
 	    " Returns the current transformation matrix\n" },
 	
-	{ do_Cairo_open_event, "open_event", "f", CAIRO_S, "\n"
-	    " file open_event (cairo_t cairo)\n"
+	{ do_Cairo_current_font_extents, "current_font_extents", FONT_EXTENTS_S, CAIRO_S, "\n"
+	    " font_extents_t current_font_extents (cairo_t cairo)\n"
 	    "\n"
-	    " Returns a file which will receive events\n" },
+	    " Returns metrics for current font\n" },
 	{ 0 }
     };
     
     static const struct fbuiltin_2 funcs_2[] = {
+	{ do_Cairo_set_target_surface, "set_target_surface", "v", CAIRO_S SURFACE_S, "\n"
+	    " void set_target_surface (cairo_t cr, surface_t surface)\n"
+	    "\n"
+	    " Set target surface for drawing operations\n" },
+	{ do_Cairo_copy, "copy", "v", CAIRO_S CAIRO_S, "\n"
+	    " void copy (cairo_t dst, cairo_t src)\n"
+	    "\n"
+	    " Copy state from one rendering context to another\n" },
 	{ do_Cairo_set_operator, "set_operator", "v", CAIRO_S OPERATOR_S, "\n"
 	    " void set_operator (cairo_t cr, operator_t operator)\n"
 	    "\n"
@@ -653,7 +684,11 @@ nickle_init (void)
 	    " text_extents_t text_extents (cairo_t cr, string text)\n"
 	    "\n"
 	    " Appends text to current path\n" },
-	{ do_Cairo_set_matrix, "set_matrix", "v", CAIRO_S "A**n", "\n"
+	{ do_Cairo_concat_matrix, "concat_matrix", "v", CAIRO_S MATRIX_S, "\n"
+	    " void concat_matrix (cairo_t cr, matrix_t matrix)\n"
+	    "\n"
+	    " Mixes in another matrix to the current transformation\n" },
+	{ do_Cairo_set_matrix, "set_matrix", "v", CAIRO_S MATRIX_S, "\n"
 	    " void set_matrix (cairo_t cr, matrix_t matrix)\n"
 	    "\n"
 	    " Sets the transformation matrix\n" },
@@ -677,6 +712,7 @@ nickle_init (void)
     };
 
     static const struct fbuiltin_3 funcs_3[] = {
+#if 0
 	{ do_Cairo_new_png, "new_png", CAIRO_S, "sii", "\n"
 	    " cairo_t new_png (string filename, int width, int height)\n"
 	    "\n"
@@ -685,6 +721,7 @@ nickle_init (void)
 	    " cairo_t new_scratch (cairo_t cr, int width, int height)\n"
 	    "\n"
 	    " Create a scratch surface related to the given surface.\n" },
+#endif
 	{ do_Cairo_move_to, "move_to", "v", CAIRO_S "nn", "\n"
 	    " void move_to (cairo_t cr, real x, real y)\n"
 	    "\n"
@@ -768,6 +805,54 @@ nickle_init (void)
 	{ 0 }
     };
 
+    static const struct fbuiltin_1 surfuncs_1[] = {
+	{ do_Cairo_Surface_destroy, "destroy", "v", SURFACE_S, "\n"
+	    " void destroy (surface_t surface)\n"
+	    "\n"
+	    " Destroy a surface.  Further usage will raise an exception.\n" },
+	{ do_Cairo_Surface_width, "width", "i", SURFACE_S, "\n"
+	    " int width (surface_t surface)\n"
+	    "\n"
+	    " Returns the width of the given surface\n" },
+	{ do_Cairo_Surface_height, "height", "i", SURFACE_S, "\n"
+	    " int height (surface_t surface)\n"
+	    "\n"
+	    " Returns the height of the given surface\n" },
+	{ do_Cairo_Surface_open_event, "open_event", "f", SURFACE_S, "\n"
+	    " file open_event (surface_t surface)\n"
+	    "\n"
+	    " Returns a file which will receive events\n" },
+	{ 0 }
+    };
+
+    static const struct fbuiltin_2 surfuncs_2[] = {
+	{ do_Cairo_Surface_create_window, "create_window", SURFACE_S, "nn", "\n"
+	    " surface_t create_window (real width, real height)\n"
+	    "\n"
+	    " Create a window and return a surface pointer for it\n" },
+	{ 0 }
+    };
+
+    static const struct fbuiltin_3 surfuncs_3[] = {
+	{ do_Cairo_Surface_create_png, "create_png", SURFACE_S, "snn", "\n"
+	    " surface_t create_png (string filename, real width, real height)\n"
+	    "\n"
+	    " Create a png file and return a surface pointer for it\n" },
+	{ do_Cairo_Surface_create_similar, "create_similar", SURFACE_S, SURFACE_S "nn", "\n"
+	    " surface_t create_similar (surface_t related, real width, real height)\n"
+	    "\n"
+	    " Create a similar surface related to another surface\n" },
+	{ 0 }
+    };
+
+    static const struct fbuiltin_5 surfuncs_5[] = {
+	{ do_Cairo_Surface_create_ps, "create_ps", SURFACE_S, "snnnn", "\n"
+	    " surface_t create_ps (string filename, real width_inches, real height_inches, real xppi, real yppi)\n"
+	    "\n"
+	    " Create a PostScript file and return a surface pointer for it\n" },
+	{ 0 }
+    };
+
     static const struct fbuiltin_1 patfuncs_1[] = {
 	{ do_Cairo_Pattern_create_png, "create_png", PATTERN_S, "s", "\n"
 	    " pattern_t create_png (string filename)\n"
@@ -830,7 +915,7 @@ nickle_init (void)
 
     init_types ();
     
-    BuiltinFuncsV (&CairoNamespace, funcs_v);
+    BuiltinFuncs0 (&CairoNamespace, funcs_0);
     BuiltinFuncs1 (&CairoNamespace, funcs_1);
     BuiltinFuncs2 (&CairoNamespace, funcs_2);
     BuiltinFuncs3 (&CairoNamespace, funcs_3);
@@ -839,6 +924,11 @@ nickle_init (void)
     BuiltinFuncs6 (&CairoNamespace, funcs_6);
     BuiltinFuncs7 (&CairoNamespace, funcs_7);
 
+    BuiltinFuncs1 (&CairoSurfaceNamespace, surfuncs_1);
+    BuiltinFuncs2 (&CairoSurfaceNamespace, surfuncs_2);
+    BuiltinFuncs3 (&CairoSurfaceNamespace, surfuncs_3);
+    BuiltinFuncs5 (&CairoSurfaceNamespace, surfuncs_5);
+    
     BuiltinFuncs1 (&CairoPatternNamespace, patfuncs_1);
     BuiltinFuncs2 (&CairoPatternNamespace, patfuncs_2);
     BuiltinFuncs4 (&CairoPatternNamespace, patfuncs_4);

@@ -53,6 +53,12 @@ get_cairo_pattern (Value pv)
 }
 
 static void
+mark_cairo_pattern (void *v)
+{
+    ;
+}
+
+static void
 free_cairo_pattern (void *v)
 {
     cairo_pattern_t *pat = v;
@@ -65,13 +71,13 @@ static Value
 make_pattern_value (cairo_pattern_t *pat)
 {
     cairo_pattern_reference (pat);
-    return NewForeign (CairoPatternId, pat, free_cairo_pattern);
+    return NewForeign (CairoPatternId, pat, mark_cairo_pattern, free_cairo_pattern);
 }
 
 Value
 do_Cairo_set_pattern (Value cv, Value patv)
 {
-    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    cairo_5c_t	    *c5c = cairo_5c_get (cv);
     cairo_pattern_t *pat = get_cairo_pattern (patv);
 
     if (aborting)
@@ -83,7 +89,7 @@ do_Cairo_set_pattern (Value cv, Value patv)
 Value
 do_Cairo_current_pattern (Value cv)
 {
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
 
     if (aborting)
 	return Void;
@@ -126,7 +132,7 @@ Value
 do_Cairo_Pattern_create_for_surface (Value cv)
 {
     ENTER ();
-    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    cairo_5c_t	    *c5c = cairo_5c_get (cv);
     cairo_surface_t *surface;
 
     if (aborting)

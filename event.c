@@ -37,32 +37,50 @@
 #include <errno.h>
 
 Value
-do_Cairo_open_event (Value cv)
+do_Cairo_Surface_open_event (Value sv)
 {
     ENTER ();
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
-    Value	read;
-    int		fd[2];
-    FILE	*write;
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
+    Value		read;
+    int			fd[2];
+    FILE		*write;
+    int			err;
 
     if (aborting)
 	RETURN(Void);
-    if (!c5c->recv_events)
+    
+    if (c5s->recv_events == Void)
     {
-	if (pipe (fd) < 0)
-	{
-	    int err = errno;
-	    RaiseStandardException (exception_open_error,
-				    FileGetErrorMessage (err),
-				    2, FileGetError (err), Void);
-	    RETURN (Void);
+	switch (c5s->kind) {
+	case CAIRO_5C_WINDOW:
+	    if (pipe (fd) < 0)
+	    {
+		err = errno;
+		RaiseStandardException (exception_open_error,
+					FileGetErrorMessage (err),
+					2, FileGetError (err), Void);
+		RETURN (Void);
+	    }
+	    read = FileCreate (fd[0], FileReadable);
+	    if (aborting)
+		RETURN(Void);
+	    write = fdopen (fd[1], "w");
+	    c5s->u.window.send_events = write;
+	    break;
+	case CAIRO_5C_PNG:
+	case CAIRO_5C_PS:
+	case CAIRO_5C_SCRATCH:
+	    read = FileFopen ("/dev/null", "r", &err);
+	    if (!c5s->recv_events)
+	    {
+		RaiseStandardException (exception_open_error,
+					FileGetErrorMessage (err),
+					2, FileGetError (err), Void);
+		RETURN (Void);
+	    }
+	    break;
 	}
-	read = FileCreate (fd[0], FileReadable);
-	if (aborting)
-	    RETURN(Void);
-	write = fdopen (fd[1], "w");
-	c5c->recv_events = read;
-	c5c->u.window.x->send_events = write;
+	c5s->recv_events = read;
     }
-    RETURN (c5c->recv_events);
+    RETURN (c5s->recv_events);
 }

@@ -1,3 +1,74 @@
+2004-12-23  Keith Packard  <keithp@keithp.com>
+
+	* Makefile.am:
+	* cairo-5c.h:
+	* cairo.5c:
+	* cairo.c: (cairo_5c_get), (cairo_5c_mark), (cairo_5c_free),
+	(cairo_foreign_mark), (cairo_foreign_free), (do_Cairo_create),
+	(cairo_5c_dirty), (cairo_5c_enable), (cairo_5c_disable),
+	(do_Cairo_set_target_surface), (do_Cairo_current_target_surface),
+	(do_Cairo_destroy), (do_Cairo_copy), (do_Cairo_status),
+	(do_Cairo_status_string), (do_Cairo_enable), (do_Cairo_disable):
+	* draw.c: (do_Cairo_new_path), (do_Cairo_move_to),
+	(do_Cairo_line_to), (do_Cairo_curve_to), (do_Cairo_arc),
+	(do_Cairo_arc_negative), (do_Cairo_rel_move_to),
+	(do_Cairo_rel_line_to), (do_Cairo_rel_curve_to),
+	(do_Cairo_rectangle), (do_Cairo_close_path), (do_Cairo_fill),
+	(do_Cairo_stroke), (do_Cairo_in_stroke), (do_Cairo_in_fill),
+	(do_Cairo_stroke_extents), (do_Cairo_fill_extents),
+	(do_Cairo_current_path_list), (do_Cairo_current_path_flat_list):
+	* event.c: (do_Cairo_Surface_open_event):
+	* examples/draw.5c:
+	* examples/graph.5c:
+	* examples/grid.5c:
+	* examples/rottext.5c:
+	* gstate.c: (do_Cairo_save), (do_Cairo_restore),
+	(do_Cairo_set_operator), (do_Cairo_set_rgb_color),
+	(do_Cairo_set_alpha), (do_Cairo_set_tolerance),
+	(do_Cairo_set_fill_rule), (do_Cairo_set_line_width),
+	(do_Cairo_set_line_cap), (do_Cairo_set_line_join),
+	(do_Cairo_set_dash), (do_Cairo_set_miter_limit),
+	(do_Cairo_identity_matrix), (do_Cairo_default_matrix),
+	(do_Cairo_translate), (do_Cairo_scale), (do_Cairo_rotate),
+	(do_Cairo_current_matrix), (do_Cairo_concat_matrix),
+	(do_Cairo_set_matrix), (do_Cairo_transform_point),
+	(do_Cairo_transform_distance), (do_Cairo_inverse_transform_point),
+	(do_Cairo_inverse_transform_distance), (do_Cairo_init_clip),
+	(do_Cairo_clip), (do_Cairo_current_operator),
+	(do_Cairo_current_rgb_color), (do_Cairo_current_alpha),
+	(do_Cairo_current_tolerance), (do_Cairo_current_point),
+	(do_Cairo_current_fill_rule), (do_Cairo_current_line_width),
+	(do_Cairo_current_line_cap), (do_Cairo_current_line_join),
+	(do_Cairo_current_miter_limit):
+	* gtk.c: (configure_event), (expose_event), (delete_drawing_area),
+	(delete_event), (motion_notify_event), (button_press_event),
+	(button_release_event), (gtk_repaint), (gtk_repaint_timeout),
+	(gtk_global_mark), (gtk_global_free), (create_gtk_global),
+	(gtk_tool_mark), (gtk_tool_free), (cairo_5c_tool_create),
+	(cairo_5c_tool_destroy), (cairo_5c_tool_mark),
+	(cairo_5c_tool_dirty), (cairo_5c_tool_disable),
+	(cairo_5c_tool_enable), (cairo_5c_tool_display):
+	* init.c: (init_types), (nickle_init):
+	* pattern.c: (mark_cairo_pattern), (make_pattern_value),
+	(do_Cairo_set_pattern), (do_Cairo_current_pattern),
+	(do_Cairo_Pattern_create_for_surface):
+	* surface.c: (create_cairo_window), (cairo_5c_surface_get),
+	(cairo_5c_surface_mark), (cairo_5c_surface_free),
+	(cairo_surface_foreign_mark), (cairo_surface_foreign_free),
+	(do_Cairo_Surface_create_window), (do_Cairo_Surface_create_png),
+	(do_Cairo_Surface_create_ps), (do_Cairo_Surface_create_similar),
+	(do_Cairo_Surface_destroy), (do_Cairo_Surface_width),
+	(do_Cairo_Surface_height):
+	* text.c: (do_Cairo_select_font), (do_Cairo_set_font),
+	(do_Cairo_scale_font), (do_Cairo_transform_font),
+	(do_Cairo_current_font_extents), (do_Cairo_show_text),
+	(do_Cairo_text_path), (do_Cairo_text_extents):
+	Split cairo_t and cairo_surface_t functions apart, permitting
+	more complex programs to be written that use more than a single
+	window.  Switch allocations around to mostly use the nickle memory
+	allocator now.  Requires updated nickle bits that expose this
+	change in the foreign object API.
+
 2004-12-18  Keith Packard  <keithp@keithp.com>
 
 	* configure.in:

@@ -35,358 +35,307 @@
 
 #include "cairo-5c.h"
 
-static char	CairoId[] = "Cairo";
+static char	CairoSurfaceId[] = "CairoSurface";
 
-cairo_5c_t *
-get_cairo_5c (Value av)
+static Bool
+create_cairo_window (cairo_5c_surface_t *c5s)
 {
-    cairo_5c_t	*c5c;
+    Display	*dpy = cairo_5c_tool_display (c5s);
     
-    if (av->foreign.id != CairoId)
-    {
-	RaiseStandardException (exception_invalid_argument,
-				"not a cairo_t",
-				2, NewInt(0), av);
-	return 0;
-    }
-    c5c = av->foreign.data;
-    if (!c5c)
-    {
-	RaiseStandardException (exception_invalid_argument,
-				"cairo destroyed",
-				2, NewInt(0), av);
-	return 0;
-    }
-    switch (c5c->kind) {
-    case CAIRO_5C_WINDOW:
-	if (c5c->u.window.pix != c5c->u.window.x->pixmap)
-	{
-	    c5c->u.window.pix = c5c->u.window.x->pixmap;
-	    c5c->width = c5c->u.window.x->width;
-	    c5c->height = c5c->u.window.x->height;
-	    cairo_set_target_drawable (c5c->cr, c5c->u.window.x->dpy, c5c->u.window.pix);
-	}
-	break;
-    case CAIRO_5C_PNG:
-    case CAIRO_5C_SCRATCH:
-	break;
-    }
-    return c5c;
-}
-
-void
-free_cairo_5c (void *v)
-{
-    cairo_5c_t	*c5c = v;
-
-    if (c5c)
-    {
-	cairo_destroy (c5c->cr);
-	switch (c5c->kind) {
-	case CAIRO_5C_WINDOW:
-	    break;
-	case CAIRO_5C_PNG:
-	    fflush (c5c->u.png.file);
-	    break;
-	case CAIRO_5C_SCRATCH:
-	    cairo_surface_destroy (c5c->u.scratch.surface);
-	    break;
-	}
-        free (c5c);
-    }
-}
-
-void
-dirty_cairo_5c (cairo_5c_t *c5c)
-{
-    switch (c5c->kind) {
-    case CAIRO_5C_WINDOW:
-	dirty_x (c5c->u.window.x, 0, 0, 0, 0);
-	break;
-    case CAIRO_5C_PNG:
-    case CAIRO_5C_SCRATCH:
-	break;
-    }
-}
-
-static Bool
-enable_cairo_5c (cairo_5c_t *c5c)
-{
-    switch (c5c->kind) {
-    case CAIRO_5C_WINDOW:
-	return enable_x (c5c->u.window.x);
-    case CAIRO_5C_PNG:
-    case CAIRO_5C_SCRATCH:
-	break;
-    }
+    if (c5s->surface)
+	cairo_surface_destroy (c5s->surface);
+    c5s->surface = cairo_xlib_surface_create (dpy,
+					      c5s->u.window.pixmap,
+					      DefaultVisual (dpy, DefaultScreen (dpy)),
+					      0,
+					      DefaultColormap (dpy, DefaultScreen (dpy)));
+    c5s->u.window.curpix = c5s->u.window.pixmap;
     return True;
 }
 
-static Bool
-disable_cairo_5c (cairo_5c_t *c5c)
+cairo_5c_surface_t *
+cairo_5c_surface_get (Value av)
 {
-    switch (c5c->kind) {
+    cairo_5c_surface_t	*c5s;
+
+    if (av == Void)
+    {
+	RaiseStandardException (exception_invalid_argument,
+				"context not bound to surface",
+				2, NewInt(0), av);
+    }
+    if (av->foreign.id != CairoSurfaceId)
+    {
+	RaiseStandardException (exception_invalid_argument,
+				"not a surface_t",
+				2, NewInt(0), av);
+	return 0;
+    }
+    c5s = av->foreign.data;
+    if (!c5s)
+    {
+	RaiseStandardException (exception_invalid_argument,
+				"surface destroyed",
+				2, NewInt(0), av);
+	return 0;
+    }
+    switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
-	return disable_x (c5c->u.window.x);
+	if (c5s->u.window.curpix != c5s->u.window.pixmap)
+	    create_cairo_window (c5s);
+	break;
     case CAIRO_5C_PNG:
+    case CAIRO_5C_PS:
     case CAIRO_5C_SCRATCH:
 	break;
     }
-    return True;
+    return c5s;
+}
+
+/*
+ * These are the functions for the nickle memory allocator interface
+ * for the CairoSurfaceType datatype
+ */
+
+static void
+cairo_5c_surface_mark (void *object)
+{
+    cairo_5c_surface_t	*c5s = object;
+    MemReference (c5s->recv_events);
+    switch (c5s->kind) {
+    case CAIRO_5C_WINDOW:
+	cairo_5c_tool_mark (c5s);
+	break;
+    case CAIRO_5C_PNG:
+    case CAIRO_5C_PS:
+    case CAIRO_5C_SCRATCH:
+	break;
+    }
+}
+
+static int
+cairo_5c_surface_free (void *object)
+{
+    cairo_5c_surface_t	*c5s = object;
+
+    cairo_surface_destroy (c5s->surface);
+    switch (c5s->kind) {
+    case CAIRO_5C_WINDOW:
+	cairo_5c_tool_destroy (c5s);
+	break;
+    case CAIRO_5C_PNG:
+    case CAIRO_5C_PS:
+    case CAIRO_5C_SCRATCH:
+	break;
+    }
+    return 1;
+}
+
+static DataType Cairo5cSurfaceType = { 
+    cairo_5c_surface_mark,
+    cairo_5c_surface_free,
+    "Cairo5cSurface"
+};
+    
+/*
+ * These are the functions for the nickle foreign function interface
+ * for the "CairoSurface" foreign datatype
+ */
+
+static void
+cairo_surface_foreign_mark (void *object)
+{
+    MemReference (object);
+}
+
+static void
+cairo_surface_foreign_free (void *object)
+{
+    /* let nickle finalizer deal with this */
+    ;
 }
 
 Value
-do_Cairo_new (int n, Value *v)
+do_Cairo_Surface_create_window (Value wv, Value hv)
 {
     ENTER ();
-    cairo_5c_t	*c5c;
-    Value	ret;
-    int		width, height;
+    cairo_5c_surface_t	*c5s;
+    Value		ret;
+    int			width = IntPart (wv, "invalid width");
+    int			height = IntPart (hv, "invalid height");
     
-    c5c = malloc (sizeof (cairo_5c_t));
-    c5c->kind = CAIRO_5C_WINDOW;
-
-    if (!c5c)
+    if (aborting )
 	RETURN (Void);
-    if (n > 0)
-	width = IntPart (v[0], "invalid width");
-    else
-	width = 0;
-    if (n > 1)
-	height = IntPart (v[1], "invalid height");
-    else
-	height = 0;
 
-    if (aborting)
+    c5s = ALLOCATE (&Cairo5cSurfaceType, sizeof (cairo_5c_surface_t));
+    c5s->kind = CAIRO_5C_WINDOW;
+    c5s->surface = 0;
+    c5s->width = width;
+    c5s->height = height;
+    c5s->dirty = False;
+    c5s->recv_events = Void;
+    
+    if (!cairo_5c_tool_create (c5s, width, height))
     {
-	free (c5c);
+	RaiseStandardException (exception_open_error,
+				"Can't create window",
+				0, wv);
 	RETURN (Void);
     }
     
-    c5c->recv_events = 0;
-    c5c->u.window.x = start_x (width, height);
-    c5c->width = c5c->u.window.x->width;
-    c5c->height = c5c->u.window.x->height;
-    c5c->u.window.pix = c5c->u.window.x->pixmap;
+    create_cairo_window (c5s);
 
-    c5c->cr = cairo_create ();
-    cairo_set_target_drawable (c5c->cr, c5c->u.window.x->dpy, c5c->u.window.pix);
-    
-    cairo_save (c5c->cr); {
-	cairo_identity_matrix (c5c->cr);
-	cairo_set_rgb_color (c5c->cr, 1, 1, 1);
-	cairo_rectangle (c5c->cr, 0, 0, c5c->width, c5c->height);
-	cairo_fill (c5c->cr);
-    } cairo_restore (c5c->cr);
-    
-    cairo_set_rgb_color (c5c->cr, 0, 0, 0);
-
-    ret = NewForeign (CairoId, c5c, free_cairo_5c);
+    ret = NewForeign (CairoSurfaceId, c5s, 
+		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
 
     RETURN (ret);
 }
 
 Value
-do_Cairo_new_png (Value fv, Value wv, Value hv)
+do_Cairo_Surface_create_png (Value fv, Value wv, Value hv)
 {
     ENTER ();
-    cairo_5c_t	*c5c;
-    char	*filename = StrzPart (fv, "invalid filename");
-    int		width = IntPart (wv, "invalid width");
-    int		height = IntPart (hv, "invalid height");
-    Value	ret;
+    cairo_5c_surface_t	*c5s;
+    char		*filename = StrzPart (fv, "invalid filename");
+    int			width = IntPart (wv, "invalid width");
+    int			height = IntPart (hv, "invalid height");
+    Value		ret;
 
     if (aborting)
 	RETURN (Void);
     
-    c5c = malloc (sizeof (cairo_5c_t));
-    if (!c5c)
-	RETURN (Void);
-
-    c5c->kind = CAIRO_5C_PNG;
-
-    c5c->u.png.file = fopen (filename, "w");
-    if (!c5c->u.png.file)
+    c5s = ALLOCATE (&Cairo5cSurfaceType, sizeof (cairo_5c_surface_t));
+    c5s->kind = CAIRO_5C_PNG;
+    c5s->surface = 0;
+    c5s->width = width;
+    c5s->height = height;
+    c5s->dirty = False;
+    c5s->recv_events = Void;
+    
+    c5s->u.png.file = fopen (filename, "w");
+    
+    if (!c5s->u.png.file)
     {
 	RaiseStandardException (exception_open_error,
 				"can't open file",
 				0, fv);
-	free (c5c);
 	RETURN (Void);
     }
-    c5c->width = width;
-    c5c->height = height;
-    c5c->cr = cairo_create ();
-    cairo_set_target_png (c5c->cr, c5c->u.png.file,
-			  CAIRO_FORMAT_ARGB32, c5c->width,
-			  c5c->height);
 
-    cairo_save (c5c->cr); {
-	cairo_set_rgb_color (c5c->cr, 0, 0, 0);
-	cairo_set_alpha (c5c->cr, 0);
-	cairo_set_operator (c5c->cr, CAIRO_OPERATOR_SRC);
-	cairo_rectangle (c5c->cr, 0, 0, c5c->width, c5c->height);
-	cairo_fill (c5c->cr);
-    } cairo_restore (c5c->cr);
-
-    cairo_set_rgb_color (c5c->cr, 0, 0, 0);
-
-    ret = NewForeign (CairoId, c5c, free_cairo_5c);
+    c5s->surface = cairo_png_surface_create (c5s->u.png.file,
+					     CAIRO_FORMAT_ARGB32,
+					     width,
+					     height);
+    
+    ret = NewForeign (CairoSurfaceId, c5s, 
+		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
 
     RETURN (ret);
 }
 
 Value
-do_Cairo_new_scratch (Value cov, Value wv, Value hv)
+do_Cairo_Surface_create_ps (Value fv, Value wv, Value hv, Value xppiv, Value yppiv)
 {
     ENTER ();
-    cairo_5c_t	*c5co = get_cairo_5c (cov);
-    cairo_5c_t	*c5c;
-    int		width = IntPart (wv, "invalid width");
-    int		height = IntPart (hv, "invalid height");
-    Value	ret;
-    
+    cairo_5c_surface_t	*c5s;
+    char		*filename = StrzPart (fv, "invalid filename");
+    double		width = DoublePart (wv, "invalid width");
+    double    		height = DoublePart (hv, "invalid height");
+    double		xppi = DoublePart (xppiv, "invalid x pixels per inch");
+    double		yppi = DoublePart (yppiv, "invalid y pixels per inch");
+    Value		ret;
+
     if (aborting)
 	RETURN (Void);
     
-    c5c = malloc (sizeof (cairo_5c_t));
-    if (!c5c)
+    c5s = ALLOCATE (&Cairo5cSurfaceType, sizeof (cairo_5c_surface_t));
+    c5s->kind = CAIRO_5C_PS;
+    c5s->surface = 0;
+    c5s->width = width * xppi;
+    c5s->height = height * yppi;
+    c5s->dirty = False;
+    c5s->recv_events = Void;
+    
+    c5s->u.ps.file = fopen (filename, "w");
+    
+    if (!c5s->u.ps.file)
+    {
+	RaiseStandardException (exception_open_error,
+				"can't open file",
+				0, fv);
 	RETURN (Void);
+    }
 
-    c5c->kind = CAIRO_5C_SCRATCH;
-
-    c5c->u.scratch.surface = cairo_surface_create_similar (cairo_current_target_surface (c5co->cr),
-							   CAIRO_FORMAT_ARGB32,
-							   width, height);
-    c5c->width = width;
-    c5c->height = height;
-    c5c->cr = cairo_create ();
-    cairo_set_target_surface (c5c->cr, c5c->u.scratch.surface);
-
-    cairo_save (c5c->cr); {
-	cairo_set_rgb_color (c5c->cr, 0, 0, 0);
-	cairo_set_alpha (c5c->cr, 0);
-	cairo_set_operator (c5c->cr, CAIRO_OPERATOR_SRC);
-	cairo_rectangle (c5c->cr, 0, 0, c5c->width, c5c->height);
-	cairo_fill (c5c->cr);
-    } cairo_restore (c5c->cr);
-
-    cairo_set_rgb_color (c5c->cr, 0, 0, 0);
-
-    ret = NewForeign (CairoId, c5c, free_cairo_5c);
+    c5s->surface = cairo_ps_surface_create (c5s->u.ps.file, width, height, xppi, yppi);
+    
+    ret = NewForeign (CairoSurfaceId, c5s, 
+		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
 
     RETURN (ret);
 }
 
 Value
-do_Cairo_dup (Value cov)
+do_Cairo_Surface_create_similar (Value sv, Value wv, Value hv)
 {
     ENTER ();
-    cairo_5c_t	*c5co = get_cairo_5c (cov);
-    cairo_5c_t	*c5c;
-    Value	ret;
-    
+    cairo_5c_surface_t	*c5s;
+    cairo_5c_surface_t	*c5os = cairo_5c_surface_get (sv);
+    int			width = IntPart (wv, "invalid width");
+    int			height = IntPart (hv, "invalid height");
+    Value		ret;
+
     if (aborting)
 	RETURN (Void);
     
-    c5c = malloc (sizeof (cairo_5c_t));
-    if (!c5c)
-	RETURN (Void);
-
-    *c5c = *c5co;
-    c5c->cr = cairo_create ();
-    cairo_set_target_surface (c5c->cr, cairo_current_target_surface (c5co->cr));
-    cairo_copy (c5c->cr, c5co->cr);
-    ret = NewForeign (CairoId, c5c, free_cairo_5c);
+    c5s = ALLOCATE (&Cairo5cSurfaceType, sizeof (cairo_5c_surface_t));
+    c5s->kind = CAIRO_5C_SCRATCH;
+    c5s->surface = 0;
+    c5s->width = width;
+    c5s->height = height;
+    c5s->dirty = False;
+    c5s->recv_events = Void;
+    
+    c5s->surface = cairo_surface_create_similar (c5os->surface,
+						 CAIRO_FORMAT_ARGB32,
+						 width, height);
+						 
+    ret = NewForeign (CairoSurfaceId, c5s, 
+		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
 
     RETURN (ret);
 }
 
 Value
-do_Cairo_width (Value av)
+do_Cairo_Surface_destroy (Value sv)
 {
     ENTER ();
-    cairo_5c_t	*c5c = get_cairo_5c (av);
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
+
     if (aborting)
-	return Void;
-    RETURN(NewInt (c5c->width));
+	RETURN (Void);
+    cairo_surface_destroy (c5s->surface);
+    c5s->surface = 0;
+    RETURN(Void);
 }
 
 Value
-do_Cairo_height (Value av)
+do_Cairo_Surface_width (Value sv)
 {
     ENTER ();
-    cairo_5c_t	*c5c = get_cairo_5c (av);
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
 
     if (aborting)
-	return Void;
-    RETURN(NewInt (c5c->height));
+	RETURN (Void);
+    RETURN(NewInt (c5s->width));
 }
 
 Value
-do_Cairo_status (Value cv)
+do_Cairo_Surface_height (Value sv)
 {
     ENTER ();
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
 
     if (aborting)
-	return Void;
-    RETURN(IntToEnum (typeCairoStatus, cairo_status (c5c->cr)));
-}
-
-Value
-do_Cairo_status_string (Value cv)
-{
-    ENTER ();
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
-
-    if (aborting)
-	return Void;
-    RETURN(NewStrString (cairo_status_string (c5c->cr)));
-}
-
-Value
-do_Cairo_dispose (Value av)
-{
-    ENTER ();
-    cairo_5c_t	*c5c = get_cairo_5c (av);
-
-    if (c5c)
-    {
-	free_cairo_5c (c5c);
-	av->foreign.data = 0;
-    }
-    RETURN (Void);
-}
-
-Value
-do_Cairo_enable (Value cv)
-{
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
-    
-    if (aborting)
-	return Void;
-    if (!enable_cairo_5c (c5c))
-    {
-	RaiseStandardException (exception_invalid_argument,
-				"already enabled",
-				2, NewInt(0), cv);
-    }
-    return Void;
-}
-
-Value
-do_Cairo_disable (Value cv)
-{
-    cairo_5c_t	*c5c = get_cairo_5c (cv);
-    
-    if (aborting)
-	return Void;
-    if (!disable_cairo_5c (c5c))
-    {
-	RaiseStandardException (exception_invalid_argument,
-				"can't disable",
-				2, NewInt(0), cv);
-    }
-    return Void;
+	RETURN (Void);
+    RETURN(NewInt (c5s->height));
 }

@@ -38,17 +38,124 @@ autoload Cairo;
 namespace Graph {
     import Cairo;
 
-    typedef struct {
-	foreign	cr;
-    } graph;
+    public typedef enum { linear, log } scale_kind_t;
+    
+    public typedef struct {
+	scale_kind_t	kind;
+	real		low, high;
+	real		len;
+    } scale_t;
 
-    graph new () {
-	graph	g;
-
-	g.cr = new ();
-    	return g;
+    real scale (scale_t scale, real value)
+    {
+	if (scale.kind == scale_kind_t.log)
+	{
+	    value = log(value);
+	    scale.low = log (scale.low);
+	    scale.high = log (scale.high);
+	}
+        return scale.len * (value - scale.low) / (scale.high - scale.low);
     }
 
+    public typedef struct {
+	&scale_t    scale;
+	real	    major;
+	real	    minor;
+    } axis_t;
+    
+    public typedef struct {
+	cairo_t	cr;
+	axis_t	left;
+	axis_t	bottom;
+    } graph_t;
+
+    void axis_draw (cairo_t cr, axis_t axis)
+    {
+	move_to (cr, scale (axis.scale,axis.scale.low), 0);
+	line_to (cr, scale (axis.scale,axis.scale.high), 0);
+	for (real minor = axis.scale.low; 
+	     minor <= axis.scale.high; 
+	     minor += axis.minor)
+	{
+	    if ((minor - axis.scale.low) % axis.major != 0)
+	    {
+		move_to (cr, scale (axis.scale, minor), 0);
+		rel_line_to (cr, 0, 5);
+	    }
+	}
+	for (real major = axis.scale.low; major <= axis.scale.high; major += axis.major)
+	{
+	    move_to (cr, scale (axis.scale, major), 0);
+	    rel_line_to (cr, 0, 10);
+	}
+	stroke (cr);
+        font_extents_t  f = current_font_extents (cr);
+	printf ("font extents: %v\n", f);
+	for (real major = axis.scale.low; major <= axis.scale.high; major += axis.major)
+	{
+	    string	    text = sprintf ("%g", major);
+	    text_extents_t  e = text_extents (cr, text);
+	    
+	    move_to (cr, scale (axis.scale, major) - e.x_advance / 2, 
+		     abs(f.height) * 1.2);
+	    show_text (cr, text);
+	}
+    }
+
+    public void axes_draw (cairo_t cr, graph_t g)
+    {
+	save (cr);
+	axis_draw (cr, g.bottom);
+	restore (cr);
+	save (cr);
+	transform_font (cr, (matrix_t) { { 1, 0 }, { 0, -1 }, { 0, 0 } });
+	set_matrix (cr, Matrix::multiply ((matrix_t) { { 0, 1 }, 
+	    { 1, 0 }, { 0, 0 } }, current_matrix (cr)));
+				  
+	axis_draw (cr, g.left);
+	restore (cr);
+    }
+        
+    public graph_t new (cairo_t cr) {
+	set_font (cr, "sans-12");
+	transform_font (cr, (matrix_t) { { 1, 0 }, { 0, -1 }, { 0, 0 } });
+	translate (cr, 0, height(cr));
+	Cairo::scale (cr, 1, -1);
+	
+	set_line_cap (cr, line_cap_t.SQUARE);
+	translate (cr, width(cr) * .1, height(cr) * .1);
+	return (graph_t) {
+	    cr = cr,
+	    left = { 
+		scale = &(scale_t) {
+		    kind = scale_kind_t.linear,
+		    len = height(cr) * .8,
+		    low = 0,
+		    high = 10
+		},
+		major = 1,
+		minor = 0.25
+	    },
+	    bottom = {
+		scale = &(scale_t) {
+		    kind = scale_kind_t.linear,
+		    len = width(cr) * .8,
+		    low = 0,
+		    high = 10
+		},
+		major = 1,
+		minor = 0.25
+	    } 
+	};
+    }
+    public void test ()
+    {
+	cairo_t cr = Cairo::new (500, 500);
+	graph_t gr = new (cr);
+	axes_draw (cr, gr);
+    }
     
 }
 
+Graph::test ();
+for (;;) sleep (1000);

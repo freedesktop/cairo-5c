@@ -38,8 +38,7 @@ autoimport Cairo;
 
 void rottext () {
     cairo_t	cr = new ();
-    select_font (cr, "sans-serif", font_slant_t.NORMAL, font_weight_t.NORMAL);
-    scale_font (cr, 20);
+    set_font (cr, "sans-20");
     set_rgb_color (cr, 0, 0, 0);
     
     for (real a = 0; a < 2 * pi; a += pi / 10) {
@@ -52,5 +51,8 @@ void rottext () {
     }
 }
 
-rottext ();
-sleep (20000);
+if (dim (argv) > 0)
+{
+    rottext ();
+    sleep (20000);
+}

@@ -46,6 +46,79 @@ extend namespace Cairo {
 	real hue, saturation, value;
     } hsv_color_t;
     
+    public int width (cairo_t cr) = 
+	Surface::width (current_target_surface (cr));
+    
+    public int height (cairo_t cr) = 
+	Surface::height (current_target_surface (cr));
+    
+    public file open_event (cairo_t cr) =
+	Surface::open_event (current_target_surface (cr));
+
+    public cairo_t new (int args...) {
+	int w = dim(args) > 0 ? args[0] : 0;
+	int h = dim(args) > 1 ? args[1] : 0;
+
+	static surface_t    surface;
+	static bool	    been_here = false;
+	static mutex	    m = Mutex::new();
+
+	Mutex::acquire (m);
+	if (!been_here) {
+	    been_here = true;
+	    surface = Surface::create_window (w, h);
+	}
+	Mutex::release (m);
+
+	cairo_t	cr = create ();
+	set_target_surface (cr, surface);
+	set_rgb_color (cr, 1, 1, 1);
+	rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));
+	fill (cr);
+	set_rgb_color (cr, 0, 0, 0);
+	return cr;
+    }
+
+    public cairo_t new_png (string filename, int width, int height)
+    {
+	surface_t   surface = Surface::create_png (filename, width, height);
+	cairo_t	    cr = create ();
+	set_target_surface (cr, surface);
+	set_target_surface (cr, surface);
+	set_rgb_color (cr, 0, 0, 0);
+	set_alpha (cr, 0);
+	rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));
+	fill (cr);
+	set_rgb_color (cr, 0, 0, 0);
+	set_alpha (cr, 1);
+	return cr;
+    }
+    
+    public cairo_t new_ps (string filename, 
+			   real width, real height,
+			   real xppi, real yppi)
+    {
+	surface_t   surface = Surface::create_ps (filename, width, height,
+						  xppi, yppi);
+	cairo_t	    cr = create ();
+	set_target_surface (cr, surface);
+	set_target_surface (cr, surface);
+	set_rgb_color (cr, 1, 1, 1);
+	rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));
+	fill (cr);
+	set_rgb_color (cr, 0, 0, 0);
+	return cr;
+    }
+    
+    public cairo_t dup (cairo_t cr)
+    {
+	cairo_t	n = create ();
+
+	set_target_surface (n, current_target_surface (cr));
+	copy (n, cr);
+	return n;
+    }
+    
     void walk_path (path_t  path,
 		    move_to_func_t move_to,
 		    line_to_func_t line_to,
