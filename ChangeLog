@@ -1,5 +1,10 @@
 2004-12-18  Keith Packard  <keithp@keithp.com>
 
+	* configure.in:
+	Add -lpthread to link
+
+2004-12-18  Keith Packard  <keithp@keithp.com>
+
 	* cairo.5c:
 	Add matrix operations
 	

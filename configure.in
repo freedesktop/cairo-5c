@@ -32,6 +32,8 @@ NICKLE_LIBDIR=`nickle -e 'printf ("%s\n", Command::nickle_libdir);'`
 
 AC_SUBST(NICKLE_LIBDIR)
 
+AC_CHECK_LIB(pthread, pthread_create)
+
 WARN_CFLAGS=""
 
 if test "x$GCC" = "xyes"; then
