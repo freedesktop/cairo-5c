@@ -139,7 +139,7 @@ nickle_init (void)
 	    " void text_path (foreign cr, string text)\n"
 	    "\n"
 	    " Appends text to current path\n" },
-	{ do_Cairo_text_extents, "text_extents", "a", "Fs", "\n"
+	{ do_Cairo_text_extents, "text_extents", "u", "Fs", "\n"
 	    " text_extents_t text_extents (foreign cr, string text)\n"
 	    "\n"
 	    " Appends text to current path\n" },
@@ -249,6 +249,8 @@ nickle_init (void)
     typeTextExtents = NewTypeName (NewExprAtom (AtomId ("text_extents_t"), 0, False),
 				   sym);
     
+    BuiltinSetUserdefType (typeTextExtents);
+
     NamespaceAddName (CairoNamespace, sym, publish_public);
 
     BuiltinFuncsV (&CairoNamespace, funcs_v);

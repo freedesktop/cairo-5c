@@ -1,0 +1,164 @@
+#!/usr/bin/env nickle
+
+if (!Command::valid_name ((string[]) { "Cairo" }))
+    Foreign::load ("libcairo-5c.so");
+    
+import Cairo;
+
+typedef foreign cairo_t;
+
+real[3] rgb_to_hsv(real[3] rgb)
+{
+    real min, max, delta;
+    int i, w;
+    real[3] hsv;
+
+    w = 0;
+    min = max = rgb[0];
+    for(i=0; i<3; i++) {
+	if (rgb[i]<min) min = rgb[i];
+	if (rgb[i]>max) { max = rgb[i]; w = i; }
+    }
+
+    /* calculate V */
+    hsv[2] = max;
+
+    /* calculate S */
+    if (max>0.00000001)
+	hsv[1] = ((max-min)/max);
+    else
+	hsv[1] = 0.0;
+
+    /* calculate H */
+    if (hsv[1]<=0.000001) {
+
+    } else {
+	delta = max-min;
+	switch(w) {
+	case 0: hsv[0] = 60.0*(0.0 + (rgb[1]-rgb[2])/delta); break;
+	case 1: hsv[0] = 60.0*(2.0 + (rgb[2]-rgb[0])/delta); break;
+	case 2: hsv[0] = 60.0*(4.0 + (rgb[0]-rgb[1])/delta); break;
+	}
+	while (hsv[0] < 0.0) hsv[0] += 360.0;
+    }
+    return hsv;
+}
+
+/* convert hsv to rgb */
+
+real[3] hsv_to_rgb(real[3] hsv) 
+{
+    real h,s,v,f,p,q,t;
+    int i;
+    real[3] rgb;
+
+    h = hsv[0];
+    s = hsv[1];
+    v = hsv[2];
+
+    if(s <= 0.0000001) {
+	for(i=0; i<3; i++)
+	    rgb[i] = v;
+    } else {
+	while(h<0.0) h+=360.0;
+	while(h>=360.0) h-=360.0;
+
+	h /= 60.0;
+	i = floor (h);
+	f = h - i;
+	p = v*(1.0-s);
+	q = v*(1.0-(s*f));
+	t = v*(1.0-(s*(1.0-f)));
+
+	switch(i) {
+	case 0: rgb[0] = v; rgb[1] = t; rgb[2] = p; break;
+	case 1: rgb[0] = q; rgb[1] = v; rgb[2] = p; break;
+	case 2: rgb[0] = p; rgb[1] = v; rgb[2] = t; break;
+	case 3: rgb[0] = p; rgb[1] = q; rgb[2] = v; break;
+	case 4: rgb[0] = t; rgb[1] = p; rgb[2] = v; break;
+	case 5: rgb[0] = v; rgb[1] = p; rgb[2] = q; break;
+	}
+    }
+    return rgb;
+}
+
+void set_hsv_color (foreign cr, real h, real s, real v)
+{
+    real[3] rgb = hsv_to_rgb ((real[3]) { h, s, v });
+    Cairo::set_rgb_color (cr, rgb[0], rgb[1], rgb[2]);
+}
+
+real π = pi;
+real text_width (cairo_t cr, string text) = text_extents (cr, text).width;
+real text_height(cairo_t cr, string text) = text_extents (cr, text).height;
+
+void circle_text (cairo_t cr, string text)
+{
+    real    circumference = 0;
+    
+    for (int i = 0; i < String::length(text); i++)
+	circumference += text_width (cr, String::substr(text,i,1));
+
+    real radius = circumference / (2 * π);
+
+    real height = text_height (cr, text) * 2;
+
+    translate (cr, radius + height, radius + height);
+
+    real θ = -π ÷ 2;
+    for (int i = 0; i < String::length(text); i++)
+    {
+	string	c = String::substr (text, i, 1);
+	real	width = text_width (cr, c);
+	
+	save (cr);
+	rotate (cr, θ + π ÷ 2);
+	
+	translate   (cr, -width ÷ 2, -radius);
+	
+	move_to (cr, 0, 0);
+	
+	show_text (cr, c);
+	restore (cr);
+	θ += asin ((width ÷ 2) / radius) * 2;
+    }
+}
+
+void spiral_text (cairo_t cr, string text)
+{
+    real    circumference = 0;
+    
+    translate (cr, width(cr) / 2, height(cr) / 2);
+
+    real height = text_height (cr, text) * 3;
+
+    real θ = -π ÷ 2;
+    for (int i = 0; i < String::length(text); i++)
+    {
+	string	c = String::substr (text, i, 1);
+	real	width = text_width (cr, c);
+	
+	real radius = ((θ + π) * height / (2 × π));
+
+	save (cr);
+	rotate (cr, θ + π ÷ 2);
+	set_hsv_color (cr, θ * 180 / π, 1, 0.7);
+	
+	translate   (cr, -width ÷ 2, -radius);
+	
+	move_to (cr, 0, 0);
+	
+	show_text (cr, c);
+	restore (cr);
+	θ += asin ((width ÷ 2) / radius) * 2;
+    }
+}
+
+void pie (int bits)
+{
+    cairo_t cr = new (700, 700);
+    sleep (100);
+    select_font (cr, "sans-serif", 0, 0);
+    scale_font (cr, 10);
+    spiral_text (cr, sprintf ("%.-g", pi_value (bits)));
+}

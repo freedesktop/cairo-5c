@@ -1,0 +1,6 @@
+2004-12-10  Keith Packard  <keithp@keithp.com>
+
+	* examples/pie.5c:
+	Add text example
+	* init.c: (nickle_init):
+	Set return type of text_extents function correctly
