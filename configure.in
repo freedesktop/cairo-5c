@@ -1,0 +1,39 @@
+AC_PREREQ(2.59)
+
+AC_INIT
+AC_CONFIG_SRCDIR([cairo-5c.h])
+AM_INIT_AUTOMAKE(cairo-5c, 0.0.0)
+AM_MAINTAINER_MODE
+
+LT_CURRENT=0
+LT_REVISION=0
+AC_SUBST(LT_CURRENT)
+AC_SUBST(LT_REVISION)
+LT_AGE=0
+
+LT_VERSION_INFO="$LT_CURRENT:$LT_REVISION:$LT_AGE"
+AC_SUBST(LT_VERSION_INFO)
+
+LT_CURRENT_MINUS_AGE=`expr $LT_CURRENT - $LT_AGE`
+AC_SUBST(LT_CURRENT_MINUS_AGE)
+
+AC_CONFIG_HEADERS([config.h])
+
+AC_PROG_CC
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AM_PROG_LIBTOOL
+
+WARN_CFLAGS=""
+
+if test "x$GCC" = "xyes"; then
+	WARN_CFLAGS="-Wall -Wpointer-arith -Wstrict-prototypes \
+	-Wmissing-prototypes -Wmissing-declarations \
+	-Wnested-externs -fno-strict-aliasing"
+fi
+AC_SUBST(WARN_CFLAGS)
+
+PKG_CHECK_MODULES(CAIRO, cairo)
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT

@@ -1,0 +1,80 @@
+if (!Command::valid_name ((string[]) { "Cairo" }))
+    Foreign::load (".libs/libcairo-5c.so");
+    
+import Cairo;
+
+void clear (foreign cr) {
+    save (cr);
+    identity_matrix (cr);
+    set_rgb_color (cr, 1, 1, 1);
+    int w = width (cr);
+    int h = height (cr);
+    move_to (cr, 0, 0);
+    line_to (cr, w, 0);
+    line_to (cr, w, h);
+    line_to (cr, 0, h);
+    fill (cr);
+    restore (cr);
+}
+
+void rectangle (foreign cr, real x, real y, real w, real h)
+{
+    move_to (cr, x, y);
+    rel_line_to (cr, w, 0);
+    rel_line_to (cr, 0, h);
+    rel_line_to (cr, -w, 0);
+    close_path (cr);
+}
+
+void picture (foreign cr)
+{
+    save (cr);
+    set_rgb_color (cr, 0.6, .6, 1);
+    move_to (cr, -10, 18);
+    show_text (cr, "nickle");
+    set_rgb_color (cr, 0, 0, 0);
+    set_alpha (cr, 0.5);
+    rotate (cr, pi/2);
+    move_to (cr, -10, -5);
+    show_text (cr, "cairo");
+    restore (cr);
+}
+
+void transform (foreign cr, real t)
+{
+    translate (cr, 50, 50);
+    rotate (cr, t * pi / 30);
+}
+
+void animate (foreign cr, mutex l, int n, int m)
+{
+    real t = 0;
+    for (;;)
+    {
+	Mutex::acquire (l);
+	save (cr);
+	translate (cr, n * 100, m * 100);
+	set_rgb_color (cr, 1, 1, 1);
+	rectangle (cr, 0, 0, 100, 100);
+	fill (cr);
+	transform (cr, t);
+	picture (cr);
+	restore (cr);
+	Mutex::release (l);
+	sleep (100);
+	t += n + m + 1;
+    }
+}
+
+cr = new ();
+select_font (cr, "Gadget", 0, 0);
+scale_font (cr, 20);
+m = Mutex::new();
+fork animate (cr, m, 0, 0);
+fork animate (cr, m, 1, 0);
+fork animate (cr, m, 2, 0);
+fork animate (cr, m, 0, 1);
+fork animate (cr, m, 1, 1);
+thread t = fork animate (cr, m, 2, 1);
+Thread::join (t);
+

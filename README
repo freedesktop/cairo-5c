@@ -1,0 +1,23 @@
+Cairo-5c - Nickle language binding for the cairo graphics library
+http://nickle.org
+
+Compiling
+---------
+See the INSTALL document for build instructions.
+
+Description
+-----------
+Cairo-5c provides a simple binding for the cairo graphics library within the
+nickle programming environment.
+
+Dependencies
+------------
+Cairo-5c currently requires the following supporting libraries:
+
+	libcairo
+
+Documentation
+-------------
+
+> print Cairo
+
