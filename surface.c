@@ -57,19 +57,20 @@ get_cairo_5c (Value av)
 				2, NewInt(0), av);
 	return 0;
     }
-    return c5c;
-}
-
-static void
-Cairo_block_handler (void *closure)
-{
-    cairo_5c_t	*c5c = closure;
-
-    if (c5c->dirty)
-    {
-	XFlush (c5c->u.window.dpy);
-	c5c->dirty = False;
+    switch (c5c->kind) {
+    case CAIRO_5C_WINDOW:
+	if (c5c->u.window.pix != c5c->u.window.x->pixmap)
+	{
+	    c5c->u.window.pix = c5c->u.window.x->pixmap;
+	    c5c->width = c5c->u.window.x->width;
+	    c5c->height = c5c->u.window.x->height;
+	    cairo_set_target_drawable (c5c->cr, c5c->u.window.x->dpy, c5c->u.window.pix);
+	}
+	break;
+    case CAIRO_5C_PNG:
+	break;
     }
+    return c5c;
 }
 
 void
@@ -82,8 +83,6 @@ free_cairo_5c (void *v)
 	cairo_destroy (c5c->cr);
 	switch (c5c->kind) {
 	case CAIRO_5C_WINDOW:
-	    XCloseDisplay (c5c->u.window.dpy);
-	    ThreadsUnregisterBlockHandler (Cairo_block_handler, c5c);
 	    break;
 	case CAIRO_5C_PNG:
 	    fflush (c5c->u.png.file);
@@ -93,54 +92,53 @@ free_cairo_5c (void *v)
     }
 }
 
+void
+dirty_cairo_5c (cairo_5c_t *c5c)
+{
+    switch (c5c->kind) {
+    case CAIRO_5C_WINDOW:
+	dirty_x (c5c->u.window.x, 0, 0, 0, 0);
+	break;
+    case CAIRO_5C_PNG:
+	break;
+    }
+}
+
 Value
 do_Cairo_new (int n, Value *v)
 {
     ENTER ();
     cairo_5c_t	*c5c;
-    int		screen;
     Value	ret;
-    Display	*dpy;
+    int		width, height;
     
     c5c = malloc (sizeof (cairo_5c_t));
-    if (!c5c)
-	RETURN (Void);
-
     c5c->kind = CAIRO_5C_WINDOW;
 
-    dpy = XOpenDisplay (0);
-    c5c->u.window.dpy = dpy;
-    if (!dpy)
-    {
-	RaiseStandardException (exception_open_error,
-				"can't open X display",
-				0, Void);
-	free (c5c);
+    if (!c5c)
 	RETURN (Void);
-    }
-    screen = DefaultScreen(dpy);
-
     if (n > 0)
-	c5c->width = IntPart (v[0], "invalid width");
+	width = IntPart (v[0], "invalid width");
     else
-	c5c->width = DisplayWidth (dpy, screen) / 3;
+	width = 0;
     if (n > 1)
-	c5c->height = IntPart (v[1], "invalid height");
+	height = IntPart (v[1], "invalid height");
     else
-	c5c->height = DisplayWidth (dpy, screen) / 3;
+	height = 0;
+
     if (aborting)
     {
-	XCloseDisplay (dpy);
 	free (c5c);
 	RETURN (Void);
     }
     
-    c5c->u.window.w = XCreateSimpleWindow (dpy, RootWindow (dpy, screen),
-					   0, 0, c5c->width, c5c->height, 0,
-					   BlackPixel (dpy, screen),
-					   WhitePixel (dpy, screen));
+    c5c->u.window.x = start_x (width, height);
+    c5c->width = c5c->u.window.x->width;
+    c5c->height = c5c->u.window.x->height;
+    c5c->u.window.pix = c5c->u.window.x->pixmap;
+
     c5c->cr = cairo_create ();
-    cairo_set_target_drawable (c5c->cr, dpy, c5c->u.window.w);
+    cairo_set_target_drawable (c5c->cr, c5c->u.window.x->dpy, c5c->u.window.pix);
     
     cairo_save (c5c->cr); {
 	cairo_identity_matrix (c5c->cr);
@@ -151,12 +149,7 @@ do_Cairo_new (int n, Value *v)
     
     cairo_set_rgb_color (c5c->cr, 0, 0, 0);
 
-    XMapWindow (dpy, c5c->u.window.w);
-    XFlush (dpy);
-
     ret = NewForeign (CairoId, c5c, free_cairo_5c);
-
-    ThreadsRegisterBlockHandler (Cairo_block_handler, c5c);
 
     RETURN (ret);
 }

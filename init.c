@@ -99,6 +99,10 @@ nickle_init (void)
 	    " void stroke (foreign cairo)\n"
 	    "\n"
 	    " Stroke the current path\n" },
+	{ do_Cairo_current_matrix, "current_matrix", "A**n", "F", "\n"
+	    " real[3,2] current_matrix (foreign cairo)\n"
+	    "\n"
+	    " Returns the current transformation matrix\n" },
 	{ 0 }
     };
     
@@ -143,6 +147,10 @@ nickle_init (void)
 	    " text_extents_t text_extents (foreign cr, string text)\n"
 	    "\n"
 	    " Appends text to current path\n" },
+	{ do_Cairo_set_matrix, "set_matrix", "v", "FA**n", "\n"
+	    " void set_matrix (foreign cr, real[3,2] matrix)\n"
+	    "\n"
+	    " Sets the transformation matrix\n" },
 	{ 0 }
     };
 

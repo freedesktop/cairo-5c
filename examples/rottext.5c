@@ -1,5 +1,5 @@
 if (!Command::valid_name ((string[]) { "Cairo" }))
-    Foreign::load (".libs/libcairo-5c.so");
+    Foreign::load ("libcairo-5c.so");
     
 import Cairo;
 

@@ -43,6 +43,13 @@
 
 typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_PNG } cairo_5c_kind_t;
 
+typedef struct _cairo_5c_x_t {
+    Display	*dpy;
+    Pixmap	pixmap;
+    int		width;
+    int		height;
+} cairo_5c_x_t;
+
 typedef struct {
     cairo_5c_kind_t kind;
     cairo_t *cr;
@@ -51,11 +58,11 @@ typedef struct {
     Bool    dirty;
     union {
 	struct {
-	    Display *dpy;
-	    Window  w;
+	    Pixmap	    pix;
+	    cairo_5c_x_t    *x;
 	} window;
 	struct {
-	    FILE    *file;
+	    FILE	    *file;
 	} png;
     } u;
 } cairo_5c_t;
@@ -68,6 +75,9 @@ get_cairo_5c (Value av);
 
 void
 free_cairo_5c (void *v);
+
+void
+dirty_cairo_5c (cairo_5c_t *c5c);
 
 Value
 do_Cairo_new (int n, Value *v);
@@ -131,6 +141,12 @@ do_Cairo_scale (Value cv, Value xv, Value yv);
 
 Value
 do_Cairo_rotate (Value cv, Value av);
+
+Value
+do_Cairo_current_matrix (Value cv);
+
+Value
+do_Cairo_set_matrix (Value cv, Value mv);
 
 /* draw.c */
 Value
@@ -198,4 +214,14 @@ do_Cairo_text_path (Value cv, Value uv);
 Value
 do_Cairo_text_extents (Value cv, Value uv);
     
+/* gtk+.c */
+cairo_5c_x_t *
+start_x (int width, int height);
+
+void
+repaint_x (cairo_5c_x_t *c5cx, int x, int y, int w, int h);
+
+void
+dirty_x (cairo_5c_x_t *c5cx, int x, int y, int w, int h);
+
 #endif /* _CAIRO_5C_H_ */

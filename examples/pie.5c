@@ -172,3 +172,8 @@ void pie (int bits)
     scale_font (cr, 10);
     spiral_text (cr, sprintf ("%.-g", pi_value (bits)));
 }
+
+if (dim(argv) > 0) {
+    pie (8192);
+    while (true) sleep (1000);
+}

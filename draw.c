@@ -184,7 +184,7 @@ do_Cairo_fill (Value cv)
     if (!aborting)
     {
 	cairo_fill (c5c->cr);
-	c5c->dirty = True;
+	dirty_cairo_5c (c5c);
     }
     return Void;
 }
@@ -196,7 +196,7 @@ do_Cairo_stroke (Value cv)
 
     if (!aborting) {
 	cairo_stroke (c5c->cr);
-	c5c->dirty = True;
+	dirty_cairo_5c (c5c);
     }
     return Void;
 }

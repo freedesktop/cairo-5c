@@ -68,7 +68,7 @@ do_Cairo_show_text (Value cv, Value uv)
     if (!aborting)
     {
 	cairo_show_text (c5c->cr, utf8);
-	c5c->dirty = True;
+	dirty_cairo_5c (c5c);
     }
     return Void;
 }

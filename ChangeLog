@@ -1,3 +1,32 @@
+2004-12-14  Keith Packard  <keithp@keithp.com>
+
+	* .cvsignore:
+	* Makefile.am:
+	* cairo-5c.h:
+	* configure.in:
+	* draw.c: (do_Cairo_fill), (do_Cairo_stroke):
+	* gtk.c: (configure_event), (expose_event), (cairo_5c_window_new),
+	(repaint_x), (gtk_repaint_timeout), (gtk_thread_main), (start_x),
+	(dirty_x):
+	* init.c: (nickle_init):
+	* surface.c: (get_cairo_5c), (free_cairo_5c), (dirty_cairo_5c),
+	(do_Cairo_new):
+	* text.c: (do_Cairo_show_text):
+	Replace lame Xlib-based output with more capable gtk+ based output,
+	including backing storage and resize handling.  Input still
+	isn't hooked up.
+	
+	* gstate.c: (do_Cairo_current_matrix), (do_Cairo_set_matrix):
+	Add current_matrix and set_matrix functions; these only do affine
+	matrices.
+	
+	* examples/animate.5c:
+	* examples/pie.5c:
+	* examples/rottext.5c:
+	* examples/sin.5c:
+	* examples/test.5c:
+	Update examples to use installed library
+
 2004-12-11  Keith Packard  <keithp@keithp.com>
 
 	* examples/pie.5c:

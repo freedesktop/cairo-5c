@@ -1,5 +1,10 @@
-#Foreign::load(".libs/libcairo-5c.so");
-#import Cairo;
+if (!Command::valid_name ((string[]) { "Cairo" }))
+    Foreign::load ("libcairo-5c.so");
+    
+import Cairo;
+
+typedef foreign cairo_t;
+
 cr = new ();
 set_rgb_color (cr,0,0,0);
 move_to (cr, 10, 10);
