@@ -1,3 +1,24 @@
+2005-01-02  Keith Packard  <keithp@keithp.com>
+
+	* cairo-5c.h:
+	Add do_Cairo_copy_page and do_Cairo_show_page.
+	Track whether copy_page/show_page have ever been called so
+	that they can be when the surface is destroyed.
+
+	* cairo.c: (cairo_5c_free), (cairo_5c_dirty):
+	* draw.c: (do_Cairo_arc), (do_Cairo_arc_negative),
+	(do_Cairo_copy_page), (do_Cairo_show_page):
+	Fix arc arguments
+	
+	* event.c: (do_Cairo_Surface_open_event):
+	* gtk.c: (cairo_5c_tool_destroy):
+	* init.c: (nickle_init):
+	* surface.c: (cairo_5c_surface_mark), (cairo_5c_surface_destroy),
+	(cairo_5c_surface_free), (do_Cairo_Surface_create_window),
+	(do_Cairo_Surface_create_png), (do_Cairo_Surface_create_ps),
+	(do_Cairo_Surface_create_similar), (do_Cairo_Surface_destroy):
+	dunno
+
 2004-12-24  Keith Packard  <keithp@keithp.com>
 
 	* cairo-5c.h:

@@ -109,6 +109,7 @@ static void
 cairo_5c_surface_mark (void *object)
 {
     cairo_5c_surface_t	*c5s = object;
+
     MemReference (c5s->recv_events);
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
@@ -121,21 +122,58 @@ cairo_5c_surface_mark (void *object)
     }
 }
 
-static int
-cairo_5c_surface_free (void *object)
+static void
+cairo_5c_surface_destroy (cairo_5c_surface_t *c5s)
 {
-    cairo_5c_surface_t	*c5s = object;
+
+    if (!c5s->surface)
+	return;
+    
+    switch (c5s->kind) {
+    case CAIRO_5C_PNG:
+    case CAIRO_5C_PS:
+	FilePrintf (FileStdout, "Copied %d\n", c5s->copied);
+	if (!c5s->copied)
+	{
+	    cairo_t *cr = cairo_create ();
+	    if (cr)
+	    {
+		cairo_set_target_surface (cr, c5s->surface);
+		cairo_copy_page (cr);
+		cairo_destroy (cr);
+	    }
+	}
+	break;
+    default:
+	break;
+    }
 
     cairo_surface_destroy (c5s->surface);
+    c5s->surface = 0;
+    
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
 	cairo_5c_tool_destroy (c5s);
 	break;
     case CAIRO_5C_PNG:
+        fclose (c5s->u.png.file);
+        c5s->u.png.file = NULL;
+	break;
     case CAIRO_5C_PS:
+	fclose (c5s->u.ps.file);
+	c5s->u.ps.file = NULL;
+	break;
     case CAIRO_5C_SCRATCH:
 	break;
     }
+}
+
+static int
+cairo_5c_surface_free (void *object)
+{
+    cairo_5c_surface_t	*c5s = object;
+
+    cairo_5c_surface_destroy (c5s);
     return 1;
 }
 
@@ -182,6 +220,7 @@ do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
     c5s->width = width;
     c5s->height = height;
     c5s->dirty = False;
+    c5s->copied = False;
     c5s->recv_events = Void;
     
     if (!cairo_5c_tool_create (c5s, name, width, height))
@@ -220,6 +259,7 @@ do_Cairo_Surface_create_png (Value fv, Value wv, Value hv)
     c5s->height = height;
     c5s->dirty = False;
     c5s->recv_events = Void;
+    c5s->copied = False;
     
     c5s->u.png.file = fopen (filename, "w");
     
@@ -263,6 +303,7 @@ do_Cairo_Surface_create_ps (Value fv, Value wv, Value hv, Value xppiv, Value ypp
     c5s->width = width * xppi;
     c5s->height = height * yppi;
     c5s->dirty = False;
+    c5s->copied = False;
     c5s->recv_events = Void;
     
     c5s->u.ps.file = fopen (filename, "w");
@@ -302,6 +343,7 @@ do_Cairo_Surface_create_similar (Value sv, Value wv, Value hv)
     c5s->width = width;
     c5s->height = height;
     c5s->dirty = False;
+    c5s->copied = False;
     c5s->recv_events = Void;
     
     c5s->surface = cairo_surface_create_similar (c5os->surface,
@@ -322,8 +364,7 @@ do_Cairo_Surface_destroy (Value sv)
 
     if (aborting)
 	RETURN (Void);
-    cairo_surface_destroy (c5s->surface);
-    c5s->surface = 0;
+    cairo_5c_surface_destroy (c5s);
     RETURN(Void);
 }
 

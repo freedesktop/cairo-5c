@@ -157,7 +157,7 @@ do_Cairo_set_dash (Value cv, Value dv, Value ov)
 	RETURN (Void);
     for (i = 0; i < ndash; i++)
     {
-	d[i] = DoublePart (ArrayValueGet(&dv->array, i), "invalid dash length");
+	d[i] = DoublePart (ArrayValue(&dv->array, i), "invalid dash length");
 	if (aborting)
 	    RETURN (Void);
     }

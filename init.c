@@ -515,6 +515,16 @@ nickle_init (void)
 	    "\n"
 	    " Stroke the current path\n" },
 	
+	{ do_Cairo_copy_page, "copy_page", "v", CAIRO_S, "\n"
+	    " void copy_page (cairo_t cairo)\n"
+	    "\n"
+	    " Write out the current page, leaving it intact.\n" },
+	
+	{ do_Cairo_show_page, "show_page", "v", CAIRO_S, "\n"
+	    " void show_page (cairo_t cairo)\n"
+	    "\n"
+	    " Write out the current page, and erase it.\n" },
+	
 	{ do_Cairo_current_path_flat_list, "current_path_flat_list", PATH_S, CAIRO_S, "\n"
 	    " void current_path_flat (cairo_t cr)\n"
 	    "\n"
@@ -783,13 +793,13 @@ nickle_init (void)
     
     static const struct fbuiltin_6 funcs_6[] = {
 	{ do_Cairo_arc, "arc", "v", CAIRO_S "nnnnn", "\n"
-	    " void arc (cairo_t cr, real x1, real y1, real x2, real y2, real radius)\n"
+	    " void arc (cairo_t cr, real xc, real yc, real r, real angle1, real angle2)\n"
 	    "\n"
-	    " Draw a clockwise arc from x1,y1 to x2,y2 with the given radius\n" },
+	    " Draw a clockwise arc centered at xc,yc from angle1 to angle2 with the given radius\n" },
 	{ do_Cairo_arc_negative, "arc_negative", "v", CAIRO_S "nnnnn", "\n"
-	    " void arc (cairo_t cr, real x1, real y1, real x2, real y2, real radius)\n"
+	    " void arc (cairo_t cr, real xc, real yc, real r, real angle1, real angle2)\n"
 	    "\n"
-	    " Draw a counter-clockwise arc from x1,y1 to x2,y2 with the given radius\n" },
+	    " Draw a counter-clockwise arc centered at xc,yc from angle1 to angle2 with the given radius\n" },
 	{ 0 }
     };
 

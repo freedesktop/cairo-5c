@@ -38,12 +38,12 @@
 cairo_matrix_t *
 cairo_matrix_part (Value mv, char *err)
 {
-    double a = DoublePart (ArrayValueGet(&mv->array, 0), "invalid matrix");
-    double b = DoublePart (ArrayValueGet(&mv->array, 1), "invalid matrix");
-    double c = DoublePart (ArrayValueGet(&mv->array, 2), "invalid matrix");
-    double d = DoublePart (ArrayValueGet(&mv->array, 3), "invalid matrix");
-    double tx = DoublePart (ArrayValueGet(&mv->array, 4), "invalid matrix");
-    double ty = DoublePart (ArrayValueGet(&mv->array, 5), "invalid matrix");
+    double a = DoublePart (ArrayValue(&mv->array, 0), "invalid matrix");
+    double b = DoublePart (ArrayValue(&mv->array, 1), "invalid matrix");
+    double c = DoublePart (ArrayValue(&mv->array, 2), "invalid matrix");
+    double d = DoublePart (ArrayValue(&mv->array, 3), "invalid matrix");
+    double tx = DoublePart (ArrayValue(&mv->array, 4), "invalid matrix");
+    double ty = DoublePart (ArrayValue(&mv->array, 5), "invalid matrix");
     cairo_matrix_t  *matrix;
 
     if (aborting)

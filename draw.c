@@ -89,37 +89,35 @@ do_Cairo_curve_to (Value cv,
 
 Value
 do_Cairo_arc (Value cv, 
-	      Value x1v, Value y1v,
-	      Value x2v, Value y2v,
-	      Value rv)
+	      Value xcv, Value ycv, Value rv,
+	      Value a1v, Value a2v)
 {
     cairo_5c_t	*c5c = cairo_5c_get (cv);
-    double	x1 = DoublePart (x1v, "invalid X1 value");
-    double	y1 = DoublePart (y1v, "invalid Y1 value");
-    double	x2 = DoublePart (x2v, "invalid X2 value");
-    double	y2 = DoublePart (y2v, "invalid Y2 value");
+    double	xc = DoublePart (xcv, "invalid xc value");
+    double	yc = DoublePart (ycv, "invalid yc value");
     double	r = DoublePart (rv, "invalid radius");
+    double	a1 = DoublePart (a1v, "invalid angle1 value");
+    double	a2 = DoublePart (a2v, "invalid angle2 value");
 
     if (!aborting)
-	cairo_arc (c5c->cr, x1, y1, x2, y2, r);
+	cairo_arc (c5c->cr, xc, yc, r, a1, a2);
     return Void;
 }
 
 Value
 do_Cairo_arc_negative (Value cv, 
-		       Value x1v, Value y1v,
-		       Value x2v, Value y2v,
-		       Value rv)
+		       Value xcv, Value ycv, Value rv,
+		       Value a1v, Value a2v)
 {
     cairo_5c_t	*c5c = cairo_5c_get (cv);
-    double	x1 = DoublePart (x1v, "invalid X1 value");
-    double	y1 = DoublePart (y1v, "invalid Y1 value");
-    double	x2 = DoublePart (x2v, "invalid X2 value");
-    double	y2 = DoublePart (y2v, "invalid Y2 value");
+    double	xc = DoublePart (xcv, "invalid xc value");
+    double	yc = DoublePart (ycv, "invalid yc value");
     double	r = DoublePart (rv, "invalid radius");
+    double	a1 = DoublePart (a1v, "invalid angle1 value");
+    double	a2 = DoublePart (a2v, "invalid angle2 value");
 
     if (!aborting)
-	cairo_arc_negative (c5c->cr, x1, y1, x2, y2, r);
+	cairo_arc_negative (c5c->cr, xc, yc, r, a1, a2);
     return Void;
 }
 
@@ -211,6 +209,42 @@ do_Cairo_stroke (Value cv)
     if (!aborting) {
 	cairo_stroke (c5c->cr);
 	cairo_5c_dirty (c5c);
+    }
+    return Void;
+}
+
+Value
+do_Cairo_copy_page (Value cv)
+{
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
+
+    if (aborting)
+	return Void;
+    if (c5c->surface != Void)
+    {
+	cairo_5c_surface_t *c5s = cairo_5c_surface_get (c5c->surface);
+	if (!c5s)
+	    return 0;
+	c5s->copied = True;
+	cairo_copy_page (c5c->cr);
+    }
+    return Void;
+}
+
+Value
+do_Cairo_show_page (Value cv)
+{
+    cairo_5c_t	*c5c = cairo_5c_get (cv);
+
+    if (aborting)
+	return Void;
+    if (c5c->surface != Void)
+    {
+	cairo_5c_surface_t *c5s = cairo_5c_surface_get (c5c->surface);
+	if (!c5s)
+	    return 0;
+	c5s->copied = True;
+	cairo_show_page (c5c->cr);
     }
     return Void;
 }

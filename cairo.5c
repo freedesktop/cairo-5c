@@ -67,35 +67,50 @@ extend namespace Cairo {
 	static surface_or_none_t    surface = surface_or_none_t.none;
 	static mutex		    m = Mutex::new();
 
+	cairo_t	cr = create ();
+	
 	/*
 	 * A local function to make sure the 'default' surface
 	 * exists
 	 */
 	void ensure_surface () 
 	{
-	    Mutex::acquire (m);
-	    union switch (surface) {
-	    case none:
-		string name = (dim (argv) > 0) ? argv[0] : "nickle";
-		surface.surface = Surface::create_window (name, w, h);
-		break;
-	    case surface:
-		break;
+	    twixt (Mutex::acquire (m); Mutex::release (m))
+	    {
+		union switch (surface) {
+		case none:
+		    string name = (dim (argv) > 0) ? argv[0] : "nickle";
+		    surface.surface = Surface::create_window (name, w, h);
+		    set_target_surface (cr, surface.surface);
+		    set_rgb_color (cr, 1, 1, 1);
+		    rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));
+		    fill (cr);
+		    break;
+		case surface:
+		    set_target_surface (cr, surface.surface);
+		    break;
+		}
 	    }
-	    Mutex::release (m);
 	}
 
-	cairo_t	cr = create ();
-	
 	try 
 	{
 	    ensure_surface ();
-	    set_target_surface (cr, surface.surface);
 	} catch invalid_argument (string reason, int i, poly arg) {
 	    surface = surface_or_none_t.none;
 	    ensure_surface ();
-	    set_target_surface (cr, surface.surface);
 	}
+	set_rgb_color (cr, 0, 0, 0);
+	return cr;
+    }
+
+    public cairo_t new_window (string name, int args...) {
+	int	    w = dim(args) > 0 ? args[0] : 0;
+	int	    h = dim(args) > 1 ? args[1] : 0;
+	surface_t   surface = Surface::create_window (name, w, h);
+	cairo_t	    cr = create ();
+	
+	set_target_surface (cr, surface);
 	set_rgb_color (cr, 1, 1, 1);
 	rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));
 	fill (cr);
@@ -108,11 +123,12 @@ extend namespace Cairo {
 	surface_t   surface = Surface::create_png (filename, width, height);
 	cairo_t	    cr = create ();
 	set_target_surface (cr, surface);
-	set_target_surface (cr, surface);
 	set_rgb_color (cr, 0, 0, 0);
 	set_alpha (cr, 0);
+	set_operator (cr, operator_t.SRC);
 	rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));
 	fill (cr);
+	set_operator (cr, operator_t.OVER);
 	set_rgb_color (cr, 0, 0, 0);
 	set_alpha (cr, 1);
 	return cr;
@@ -125,7 +141,6 @@ extend namespace Cairo {
 	surface_t   surface = Surface::create_ps (filename, width, height,
 						  xppi, yppi);
 	cairo_t	    cr = create ();
-	set_target_surface (cr, surface);
 	set_target_surface (cr, surface);
 	set_rgb_color (cr, 1, 1, 1);
 	rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));

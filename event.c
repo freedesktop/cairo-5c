@@ -41,7 +41,7 @@ do_Cairo_Surface_open_event (Value sv)
 {
     ENTER ();
     cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
-    Value		read;
+    Value		read = Void;
     int			fd[2];
     FILE		*write;
     int			err;

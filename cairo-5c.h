@@ -76,6 +76,7 @@ typedef struct _cairo_5c_surface_t {
     int		    height;
     Bool	    dirty;
     Value	    recv_events;
+    Bool	    copied;
     union {
 	cairo_5c_window_t   window;
 	cairo_5c_png_t	    png;
@@ -345,6 +346,12 @@ do_Cairo_fill (Value cv);
 
 Value
 do_Cairo_stroke (Value cv);
+
+Value
+do_Cairo_copy_page (Value cv);
+
+Value
+do_Cairo_show_page (Value cv);
 
 Value
 do_Cairo_in_stroke (Value cv, Value xv, Value yv);

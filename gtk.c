@@ -404,6 +404,11 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height
 Bool
 cairo_5c_tool_destroy (cairo_5c_surface_t *c5s)
 {
+    cairo_5c_tool_t *tool = c5s->u.window.tool;
+    
+    gdk_threads_enter ();
+    gtk_widget_hide (tool->window);
+    gdk_threads_leave ();
     /* let nickle allocator free it */
     return True;
 }

@@ -86,11 +86,12 @@ cairo_5c_free (void *v)
 {
     cairo_5c_t	*c5c = v;
 
-    if (c5c)
+    if (c5c->cr)
     {
 	cairo_destroy (c5c->cr);
-	c5c->surface = Void;
+	c5c->cr = NULL;
     }
+    c5c->surface = Void;
     return 1;
 }
 
@@ -147,7 +148,7 @@ cairo_5c_dirty (cairo_5c_t *c5c)
     if (c5c->surface != Void)
     {
 	cairo_5c_surface_t  *c5s = cairo_5c_surface_get (c5c->surface);
-
+	
 	if (c5s)
 	{
 	    switch (c5s->kind) {
