@@ -37,5 +37,73 @@ if (!Command::valid_name ((string[]) { "Cairo" }))
     Foreign::load ("libcairo-5c.so");
 
 extend namespace Cairo {
+    
+    public typedef void (real x, real y) move_to_func_t;
+    public typedef void (real x, real y) line_to_func_t;
+    public typedef void (real x1, real y1, real x2, real y2, real x3, real y3) curve_to_func_t;
+    public typedef void () close_path_func_t;
+    
+    void walk_path (path_t  path,
+		    move_to_func_t move_to,
+		    line_to_func_t line_to,
+		    curve_to_func_t curve_to,
+		    close_path_func_t close_path)
+    {
+	while (path != path_t.end)
+	{
+	    union switch (path) {
+	    case move_to m:
+		move_to (m->x, m->y);
+		path = m->next;
+		break;
+	    case line_to l:
+		line_to (l->x, l->y);
+		path = l->next;
+		break;
+	    case curve_to c:
+		curve_to (c->x1, c->y1, c->x2, c->y2, c->x3, c->y3);
+		path = c->next;
+		break;
+	    case close_path c:
+		close_path ();
+		path = c->next;
+		break;
+	    case end:
+		break;
+	    }
+	}
+    }
+
+    public void current_path (cairo_t cr,
+			      move_to_func_t move_to,
+			      line_to_func_t line_to,
+			      curve_to_func_t curve_to,
+			      close_path_func_t close_path)
+	/*
+	 * Walk path calling provided functions for matching 
+	 * elements sequentially
+	 */
+    {
+	walk_path (current_path_list (cr),
+		   move_to, line_to, curve_to, close_path);
+    }
+    
+    public void current_path_flat (cairo_t cr,
+				   move_to_func_t move_to,
+				   line_to_func_t line_to,
+				   close_path_func_t close_path)
+	/*
+	 * Walk path calling provided functions for matching 
+	 * elements sequentially.  Curves are replaced by
+	 * lines as needed to meet current_tolerance
+	 */
+    {
+	void no_curve_to (real x1, real y1, real x2, real y2, real x2, real y3)
+	{
+	    abort ("flat paths have no curves", cr);
+	}
+	walk_path (current_path_flat_list (cr),
+		   move_to, line_to, no_curve_to, close_path);
+    }
 }
 

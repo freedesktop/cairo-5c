@@ -45,7 +45,7 @@ get_cairo_5c (Value av)
     if (av->foreign.id != CairoId)
     {
 	RaiseStandardException (exception_invalid_argument,
-				"not a cairo",
+				"not a cairo_t",
 				2, NewInt(0), av);
 	return 0;
     }

@@ -281,25 +281,124 @@ do_Cairo_fill_extents (Value cv)
     RETURN (ret);
 }
 
-#if 0
+typedef struct _path_closure {
+    Value   head;
+    Value   *tail;
+} path_closure_t;
+
+static Value
+path_new (char *tag, Value value)
+{
+    ENTER ();
+    Value   pt = NewUnion (TypeCanon (typeCairoPath)->structs.structs, False);
+    BoxPtr  box = pt->unions.value;
+    pt->unions.tag = AtomId (tag);
+    BoxValueSet (box, 0, value);
+    RETURN (pt);
+}
+
+static Value
+path_box (void *closure, Type *type, char *tag)
+{
+    ENTER ();
+    path_closure_t  *pc = closure;
+    Value	    elt = NewStruct (TypeCanon (type)->structs.structs, False);
+    Value	    elt_ref = NewRef (NewBox (False, False, 1, type), 0);
+    Value	    path = path_new (tag, elt_ref);
+    BoxPtr	    box = elt->structs.values;
+
+    RefValueSet (elt_ref, elt);
+    /* move End element after this element */
+    BoxValueSet (box, 0, *pc->tail);
+    /* append element to list */
+    *pc->tail = path;
+    pc->tail = &BoxElements(box)[0];
+    RETURN (elt);
+}
+
 static void
 cairo_5c_move_to (void *closure, double x, double y)
 {
     ENTER ();
+    Value   elt = path_box (closure, typeCairoMoveTo, "move_to");
+    BoxPtr  box = elt->structs.values;
+    BoxValueSet (box, 1, NewDoubleFloat (x));
+    BoxValueSet (box, 2, NewDoubleFloat (y));
     EXIT ();
 }
-#endif
 
-Value
-do_Cairo_current_path (Value cv, Value mv, Value lv, Value cuv, Value clp)
+static void
+cairo_5c_line_to (void *closure, double x, double y)
 {
-    /* XXX */
-    return Void;
+    ENTER ();
+    Value   elt = path_box (closure, typeCairoLineTo, "line_to");
+    BoxPtr  box = elt->structs.values;
+    BoxValueSet (box, 1, NewDoubleFloat (x));
+    BoxValueSet (box, 2, NewDoubleFloat (y));
+    EXIT ();
+}
+
+static void
+cairo_5c_curve_to (void *closure,
+		   double x1, double y1,
+		   double x2, double y2,
+		   double x3, double y3)
+{
+    ENTER ();
+    Value   elt = path_box (closure, typeCairoCurveTo, "curve_to");
+    BoxPtr  box = elt->structs.values;
+    BoxValueSet (box, 1, NewDoubleFloat (x1));
+    BoxValueSet (box, 2, NewDoubleFloat (y1));
+    BoxValueSet (box, 3, NewDoubleFloat (x2));
+    BoxValueSet (box, 4, NewDoubleFloat (y2));
+    BoxValueSet (box, 5, NewDoubleFloat (x3));
+    BoxValueSet (box, 6, NewDoubleFloat (y3));
+    EXIT ();
+}
+
+static void
+cairo_5c_close_path (void *closure)
+{
+    ENTER ();
+    (void) path_box (closure, typeCairoClosePath, "close_path");
+    EXIT ();
 }
 
 Value
-do_Cairo_current_path_flat (Value cv, Value mv, Value lv, Value clp)
+do_Cairo_current_path_list (Value cv)
 {
-    /* XXX */
-    return Void;
+    ENTER ();
+    path_closure_t  close;
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	RETURN (Void);
+    close.head = path_new ("end", Void);
+    close.tail = &close.head;
+    cairo_current_path (c5c->cr,
+			cairo_5c_move_to,
+			cairo_5c_line_to,
+			cairo_5c_curve_to,
+			cairo_5c_close_path,
+			&close);
+    RETURN(close.head);
+}
+
+Value
+do_Cairo_current_path_flat_list (Value cv)
+{
+    ENTER ();
+    path_closure_t  close;
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	RETURN (Void);
+    close.head = path_new ("end", Void);
+    close.tail = &close.head;
+    cairo_current_path_flat (c5c->cr,
+			     cairo_5c_move_to,
+			     cairo_5c_line_to,
+			     cairo_5c_close_path,
+			     &close);
+    RETURN(close.head);
 }

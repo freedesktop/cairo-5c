@@ -84,6 +84,12 @@ extern Type		*typeCairoMatrix;
 extern Type		*typeCairoPoint;
 extern Type		*typeCairoRect;
 extern Type		*typeCairoRgbColor;
+extern Type		*typeCairoPattern;
+extern Type		*typeCairoPath;
+extern Type		*typeCairoMoveTo;
+extern Type		*typeCairoLineTo;
+extern Type		*typeCairoCurveTo;
+extern Type		*typeCairoClosePath;
 
 /* surface.c */
 cairo_5c_t *
@@ -308,10 +314,10 @@ Value
 do_Cairo_fill_extents (Value cv);
 
 Value
-do_Cairo_current_path (Value cv, Value mv, Value lv, Value cuv, Value clp);
+do_Cairo_current_path_list (Value cv);
 
 Value
-do_Cairo_current_path_flat (Value cv, Value mv, Value lv, Value np);
+do_Cairo_current_path_flat_list (Value cv);
 
 /* text.c */
 Value

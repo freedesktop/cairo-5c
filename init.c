@@ -49,6 +49,12 @@ Type		*typeCairoMatrix;
 Type		*typeCairoPoint;
 Type		*typeCairoRect;
 Type		*typeCairoRgbColor;
+Type		*typeCairoPattern;
+Type		*typeCairoPath;
+Type		*typeCairoMoveTo;
+Type		*typeCairoLineTo;
+Type		*typeCairoCurveTo;
+Type		*typeCairoClosePath;
 
 #define CAIRO_I		0
 #define CAIRO_S		"00"
@@ -76,11 +82,25 @@ Type		*typeCairoRgbColor;
 #define RECT_S		"11"
 #define RGB_COLOR_I	12
 #define RGB_COLOR_S	"12"
+#define PATTERN_I	13
+#define PATTERN_S	"13"
+#define PATH_I		14
+#define PATH_S		"14"
+#define MOVE_TO_I	15
+#define MOVE_TO_S	"15"
+#define LINE_TO_I	16
+#define LINE_TO_S	"16"
+#define CURVE_TO_I	17
+#define CURVE_TO_S	"17"
+#define CLOSE_PATH_I	18
+#define CLOSE_PATH_S	"18"
 
 static Type *
-make_typedef (char  *name_str,
-	      int   usertype_id,
-	      Type  *type)
+make_typedef (char	*name_str,
+	      Publish	publish,
+	      int	usertype_id,
+	      Symbol	**sret,
+	      Type	*type)
 {
     ENTER ();
     Atom    name = AtomId (name_str);
@@ -88,26 +108,33 @@ make_typedef (char  *name_str,
     Type    *typed = NewTypeName (NewExprAtom (name, 0, False),
 				  sym);
     
-    NamespaceAddName (CairoNamespace, sym, publish_public);
+    NamespaceAddName (CairoNamespace, sym, publish);
     
     BuiltinSetUserdefType (typed, usertype_id);
     MemAddRoot (typed);
+    if (sret)
+	*sret = sym;
     RETURN (typed);
 }
 
 static void
 init_types (void)
 {
+    Symbol  *mt, *lt, *ct, *cp, *path;
     ENTER ();
 
     CairoNamespace = BuiltinNamespace (/* parent */ 0, "Cairo")->namespace.namespace;
 
     typeCairo = make_typedef ("cairo_t",
+			      publish_public,
 			      CAIRO_I,
+			      NULL,
 			      typePrim[rep_foreign]);
 
     typeCairoStatus = make_typedef ("status_t",
+				    publish_public,
 				    STATUS_I,
+				    NULL,
 				    BuildEnumType (8,
 						   "SUCCESS",
 						   "NO_MEMORY",
@@ -118,7 +145,9 @@ init_types (void)
 						   "NO_TARGET_SURFACE",
 						   "NULL_POINTER"));
     typeCairoOperator = make_typedef ("operator_t",
+				      publish_public,
 				      OPERATOR_I,
+				      NULL,
 				      BuildEnumType (14,
 						     "CLEAR",
 						     "SRC",
@@ -136,39 +165,51 @@ init_types (void)
 						     "SATURATE"));
 
     typeCairoFillRule = make_typedef ("fill_rule_t",
+				      publish_public,
 				      FILL_RULE_I,
+				      NULL,
 				      BuildEnumType (2,
 						     "WINDING",
 						     "EVEN_ODD"));
 
     typeCairoLineCap = make_typedef ("line_cap_t",
+				     publish_public,
 				     LINE_CAP_I,
+				     NULL,
 				     BuildEnumType (3,
 						    "BUTT",
 						    "ROUND",
 						    "SQUARE"));
 
     typeCairoLineJoin = make_typedef ("line_join_t",
+				      publish_public,
 				      LINE_JOIN_I,
+				      NULL,
 				      BuildEnumType (3,
 						     "MITER",
 						     "ROUND",
 						     "BEVEL"));
 
     typeCairoFontSlant = make_typedef ("font_slant_t",
+				       publish_public,
 				       FONT_SLANT_I,
+				       NULL,
 				       BuildEnumType (3,
 						      "NORMAL",
 						      "ITALIC",
 						      "OBLIQUE"));
     typeCairoFontWeight = make_typedef ("font_weight_t",
+					publish_public,
 					FONT_WEIGHT_I,
+					NULL,
 					BuildEnumType (2,
 						       "NORMAL",
 						       "BOLD"));
 
     typeCairoTextExtents = make_typedef ("text_extents_t",
+					 publish_public,
 					 TEXT_EXTENTS_I,
+					 NULL,
 					 BuildStructType (6, 
 							  typePrim[rep_float], "x_bearing",
 							  typePrim[rep_float], "y_bearing",
@@ -177,18 +218,24 @@ init_types (void)
 							  typePrim[rep_float], "x_advance",
 							  typePrim[rep_float], "y_advance"));
     typeCairoMatrix = make_typedef ("matrix_t",
+				    publish_public,
 				    MATRIX_I,
+				    NULL,
 				    BuildArrayType (typePrim[rep_float],
 						    2, 2, 3));
 
     typeCairoPoint = make_typedef ("point_t",
+				   publish_public,
 				   POINT_I,
+				   NULL,
 				   BuildStructType (2,
 						    typePrim[rep_float], "x",
 						    typePrim[rep_float], "y"));
 
     typeCairoRect = make_typedef ("rect_t",
+				  publish_public,
 				  RECT_I,
+				  NULL,
 				  BuildStructType (4,
 						   typePrim[rep_float], "x",
 						   typePrim[rep_float], "y",
@@ -196,12 +243,81 @@ init_types (void)
 						   typePrim[rep_float], "height"));
 
     typeCairoRgbColor = make_typedef ("rgb_color_t",
+				      publish_public,
 				      RGB_COLOR_I,
+				      NULL,
 				      BuildStructType (3,
 						       typePrim[rep_float], "red",
 						       typePrim[rep_float], "green",
 						       typePrim[rep_float], "blue"));
-    
+
+    typeCairoPattern = make_typedef ("pattern_t",
+				     publish_public,
+				     PATTERN_I,
+				     NULL,
+				     typePrim[rep_foreign]);
+
+    /*
+     * Recursive datatypes aren't supported by the simple API
+     */
+
+    typeCairoMoveTo = make_typedef ("move_to_t",
+				    publish_public,
+				    MOVE_TO_I,
+				    &mt,
+				    0);
+
+    typeCairoLineTo = make_typedef ("line_to_t",
+				    publish_public,
+				    LINE_TO_I,
+				    &lt,
+				    0);
+
+    typeCairoCurveTo = make_typedef ("curve_to_t",
+				     publish_public,
+				     CURVE_TO_I,
+				     &ct,
+				     0);
+
+    typeCairoClosePath = make_typedef ("close_path_t",
+				       publish_public,
+				       CLOSE_PATH_I,
+				       &cp,
+				       0);
+
+    typeCairoPath = make_typedef ("path_t",
+				  publish_public,
+				  PATH_I,
+				  &path,
+				  BuildUnionType(5,
+						 NewTypeRef (typeCairoMoveTo, True), "move_to",
+						 NewTypeRef (typeCairoLineTo, True), "line_to",
+						 NewTypeRef (typeCairoCurveTo, True), "curve_to",
+						 NewTypeRef (typeCairoClosePath, True), "close_path",
+						 typePrim[rep_void], "end"));
+
+    mt->symbol.type = BuildStructType (3,
+				       typeCairoPath, "next",
+				       typePrim[rep_float], "x",
+				       typePrim[rep_float], "y");
+
+    lt->symbol.type = BuildStructType (3,
+				       typeCairoPath, "next",
+				       typePrim[rep_float], "x",
+				       typePrim[rep_float], "y");
+
+    ct->symbol.type = BuildStructType (7,
+				       typeCairoPath, "next",
+				       typePrim[rep_float], "x1",
+				       typePrim[rep_float], "y1",
+				       typePrim[rep_float], "x2",
+				       typePrim[rep_float], "y2",
+				       typePrim[rep_float], "x3",
+				       typePrim[rep_float], "y3");
+
+    cp->symbol.type = BuildStructType (1,
+				       typeCairoPath, "next");
+
     EXIT();
 }
 
@@ -246,6 +362,7 @@ Value
 nickle_init (void)
 {
     ENTER ();
+    
     static const struct fbuiltin_v funcs_v[] = {
 	{ do_Cairo_new, "new", CAIRO_S, ".i", "\n"
 	    " cairo_t new (int...)\n"
@@ -316,6 +433,16 @@ nickle_init (void)
 	    " void stroke (cairo_t cairo)\n"
 	    "\n"
 	    " Stroke the current path\n" },
+	
+	{ do_Cairo_current_path_flat_list, "current_path_flat_list", PATH_S, CAIRO_S, "\n"
+	    " void current_path_flat (cairo_t cr)\n"
+	    "\n"
+	    " Returns the current path with curves tesselated to lines\n" },
+
+	{ do_Cairo_current_path_list, "current_path_list", PATH_S, CAIRO_S, "\n"
+	    " void current_path (cairo_t cr)\n"
+	    "\n"
+	    " Returns the current path\n" },
 	
 	{ do_Cairo_init_clip, "init_clip", "v", CAIRO_S, "\n"
 	    " void init_clip (cairo_t cairo)\n"

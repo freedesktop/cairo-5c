@@ -1,3 +1,18 @@
+2004-12-17  Keith Packard  <keithp@keithp.com>
+
+	* cairo-5c.h:
+	* cairo.5c:
+	* draw.c: (path_new), (path_box), (cairo_5c_move_to),
+	(cairo_5c_line_to), (cairo_5c_curve_to), (cairo_5c_close_path),
+	(do_Cairo_current_path_list), (do_Cairo_current_path_flat_list):
+	* init.c: (make_typedef), (init_types), (nickle_init):
+	* surface.c: (get_cairo_5c):
+	Add current_path/current_path_flat by creating nickle structure in C
+	code holding the entire path and walking it in nickle code.
+
+	* examples/.cvsignore:
+	ignore build files
+
 2004-12-16  Keith Packard  <keithp@keithp.com>
 
 	* examples/Makefile.am:
