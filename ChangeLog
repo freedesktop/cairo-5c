@@ -1,5 +1,10 @@
 2004-12-16  Keith Packard  <keithp@keithp.com>
 
+	* examples/Makefile.am:
+	Install example nickle programs
+
+2004-12-16  Keith Packard  <keithp@keithp.com>
+
 	* Makefile.am:
 	* autogen.sh:
 	* cairo.5c:
