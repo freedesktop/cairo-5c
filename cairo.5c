@@ -105,5 +105,55 @@ extend namespace Cairo {
 	walk_path (current_path_flat_list (cr),
 		   move_to, line_to, no_curve_to, close_path);
     }
-}
 
+    real[3] to_hsv(real r, real g, real b)
+    {
+	real minimum = min (r, g, b);
+	real maximum = max (r, g, b);
+	real v = maximum;
+	real s = (maximum == 0) ? 0 : (maximum - minimum) / maximum;
+	real h = 0;
+	if (s != 0)
+	{
+	    switch (maximum) {
+	    case r:	h =       (g - b) / (maximum - minimum);  break;
+	    case g:	h = 2.0 + (b - r) / (maximum - minimum);  break;
+	    case b:	h = 4.0 + (r - g) / (maximum - minimum);  break;
+	    }
+	    h = h / 6;
+	}
+	return (real[3]) { h, s, v };
+    }
+
+    /* convert hsv to rgb */
+
+    real[3] from_hsv(real h, real s, real v)
+    {
+	if (v == 0.0)
+	    return (real[3]) { 0 ... };
+	else if (s == 0.0) {
+	    return (real[3]) { v ... };
+	} else {
+	    real h6 = (h * 6) % 6;
+	    int  i = floor (h6);
+	    real f = h6 - i;
+	    real p = v * (1 - s);
+	    real q = v * (1 - (s * f));
+	    real t = v * (1 - (s * (1 - f)));
+
+	    switch(i) {
+		default:return (real[3]) { v, t, p };
+	    case 1: return (real[3]) { q, v, p };
+	    case 2: return (real[3]) { p, v, t };
+	    case 3: return (real[3]) { p, q, v };
+	    case 4: return (real[3]) { t, p, v };
+	    case 5: return (real[3]) { v, p, q };
+	    }
+	}
+    }
+
+    public void set_hsv_color (cairo_t cr, real h, real s, real v)
+    {
+	Cairo::set_rgb_color (cr, from_hsv (h, s, v) ...);
+    }
+}

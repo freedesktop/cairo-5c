@@ -1,5 +1,10 @@
 2004-12-17  Keith Packard  <keithp@keithp.com>
 
+	* cairo.5c:
+	Add HSV color space routine to cairo.5c
+
+2004-12-17  Keith Packard  <keithp@keithp.com>
+
 	* cairo-5c.h:
 	* cairo.5c:
 	* draw.c: (path_new), (path_box), (cairo_5c_move_to),
