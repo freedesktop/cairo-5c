@@ -1,3 +1,28 @@
+2004-12-18  Keith Packard  <keithp@keithp.com>
+
+	* Makefile.am:
+	* cairo.5c:
+	* examples/animate.5c:
+	* examples/draw.5c:
+	* examples/pie.5c:
+	* examples/rottext.5c:
+	Fix examples to match API changes
+	
+	* gstate.c: (do_Cairo_transform_point),
+	(do_Cairo_transform_distance), (do_Cairo_inverse_transform_point),
+	(do_Cairo_inverse_transform_distance):
+	transforms take point_t, return point_t
+	
+	* cairo-5c.h:
+	* init.c: (nickle_init):
+	* pattern.c: (do_Cairo_Pattern_create_for_surface),
+	(premultiply_data), (create_surface_from_png),
+	(do_Cairo_Pattern_create_png):
+	* surface.c: (get_cairo_5c), (free_cairo_5c), (dirty_cairo_5c),
+	(enable_cairo_5c), (disable_cairo_5c), (do_Cairo_new_png),
+	(do_Cairo_new_scratch), (do_Cairo_dup), (do_Cairo_status):
+	Add png loading, scratch surfaces and surface patterns
+
 2004-12-17  Keith Packard  <keithp@keithp.com>
 
 	* Makefile.am:

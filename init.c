@@ -426,6 +426,10 @@ nickle_init (void)
     };
 	
     static const struct fbuiltin_1 funcs_1[] = {
+	{ do_Cairo_dup, "dup", CAIRO_S, CAIRO_S, "\n"
+	    " cairo_t dup (cairo_t cairo)\n"
+	    "\n"
+	    " Creates another rendering context pointing at the same surface\n"},
 	{ do_Cairo_width, "width", "i", CAIRO_S, "\n"
 	    " void width (cairo_t cairo)\n"
 	    "\n"
@@ -669,6 +673,10 @@ nickle_init (void)
 	    " cairo_t new_png (string filename, int width, int height)\n"
 	    "\n"
 	    " Create a cairo png file.\n" },
+	{ do_Cairo_new_scratch, "new_scratch", CAIRO_S, CAIRO_S "ii", "\n"
+	    " cairo_t new_scratch (cairo_t cr, int width, int height)\n"
+	    "\n"
+	    " Create a scratch surface related to the given surface.\n" },
 	{ do_Cairo_move_to, "move_to", "v", CAIRO_S "nn", "\n"
 	    " void move_to (cairo_t cr, real x, real y)\n"
 	    "\n"
@@ -753,6 +761,14 @@ nickle_init (void)
     };
 
     static const struct fbuiltin_1 patfuncs_1[] = {
+	{ do_Cairo_Pattern_create_png, "create_png", PATTERN_S, "s", "\n"
+	    " pattern_t create_png (string filename)\n"
+	    "\n"
+	    " Returns a pattern containing the specified png image\n" },
+	{ do_Cairo_Pattern_create_for_surface, "create_for_surface", PATTERN_S, CAIRO_S, "\n"
+	    " pattern_t create_for_surface (cairo_t cr)\n"
+	    "\n"
+	    " Returns a pattern referencing the specified surface\n" },
 	{ do_Cairo_Pattern_get_matrix, "get_matrix", MATRIX_S, PATTERN_S, "\n"
 	    " matrix_t get_matrix (pattern_t pattern)\n"
 	    "\n"

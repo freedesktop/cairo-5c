@@ -68,6 +68,7 @@ get_cairo_5c (Value av)
 	}
 	break;
     case CAIRO_5C_PNG:
+    case CAIRO_5C_SCRATCH:
 	break;
     }
     return c5c;
@@ -87,6 +88,9 @@ free_cairo_5c (void *v)
 	case CAIRO_5C_PNG:
 	    fflush (c5c->u.png.file);
 	    break;
+	case CAIRO_5C_SCRATCH:
+	    cairo_surface_destroy (c5c->u.scratch.surface);
+	    break;
 	}
         free (c5c);
     }
@@ -100,6 +104,7 @@ dirty_cairo_5c (cairo_5c_t *c5c)
 	dirty_x (c5c->u.window.x, 0, 0, 0, 0);
 	break;
     case CAIRO_5C_PNG:
+    case CAIRO_5C_SCRATCH:
 	break;
     }
 }
@@ -111,6 +116,7 @@ enable_cairo_5c (cairo_5c_t *c5c)
     case CAIRO_5C_WINDOW:
 	return enable_x (c5c->u.window.x);
     case CAIRO_5C_PNG:
+    case CAIRO_5C_SCRATCH:
 	break;
     }
     return True;
@@ -123,6 +129,7 @@ disable_cairo_5c (cairo_5c_t *c5c)
     case CAIRO_5C_WINDOW:
 	return disable_x (c5c->u.window.x);
     case CAIRO_5C_PNG:
+    case CAIRO_5C_SCRATCH:
 	break;
     }
     return True;
@@ -213,11 +220,82 @@ do_Cairo_new_png (Value fv, Value wv, Value hv)
     cairo_set_target_png (c5c->cr, c5c->u.png.file,
 			  CAIRO_FORMAT_ARGB32, c5c->width,
 			  c5c->height);
-    cairo_set_rgb_color (c5c->cr, 0, 0, 0);
-    cairo_set_alpha (c5c->cr, 0);
-    cairo_rectangle (c5c->cr, 0, 0, c5c->width, c5c->height);
-    cairo_fill (c5c->cr);
 
+    cairo_save (c5c->cr); {
+	cairo_set_rgb_color (c5c->cr, 0, 0, 0);
+	cairo_set_alpha (c5c->cr, 0);
+	cairo_set_operator (c5c->cr, CAIRO_OPERATOR_SRC);
+	cairo_rectangle (c5c->cr, 0, 0, c5c->width, c5c->height);
+	cairo_fill (c5c->cr);
+    } cairo_restore (c5c->cr);
+
+    cairo_set_rgb_color (c5c->cr, 0, 0, 0);
+
+    ret = NewForeign (CairoId, c5c, free_cairo_5c);
+
+    RETURN (ret);
+}
+
+Value
+do_Cairo_new_scratch (Value cov, Value wv, Value hv)
+{
+    ENTER ();
+    cairo_5c_t	*c5co = get_cairo_5c (cov);
+    cairo_5c_t	*c5c;
+    int		width = IntPart (wv, "invalid width");
+    int		height = IntPart (hv, "invalid height");
+    Value	ret;
+    
+    if (aborting)
+	RETURN (Void);
+    
+    c5c = malloc (sizeof (cairo_5c_t));
+    if (!c5c)
+	RETURN (Void);
+
+    c5c->kind = CAIRO_5C_SCRATCH;
+
+    c5c->u.scratch.surface = cairo_surface_create_similar (cairo_current_target_surface (c5co->cr),
+							   CAIRO_FORMAT_ARGB32,
+							   width, height);
+    c5c->width = width;
+    c5c->height = height;
+    c5c->cr = cairo_create ();
+    cairo_set_target_surface (c5c->cr, c5c->u.scratch.surface);
+
+    cairo_save (c5c->cr); {
+	cairo_set_rgb_color (c5c->cr, 0, 0, 0);
+	cairo_set_alpha (c5c->cr, 0);
+	cairo_set_operator (c5c->cr, CAIRO_OPERATOR_SRC);
+	cairo_rectangle (c5c->cr, 0, 0, c5c->width, c5c->height);
+	cairo_fill (c5c->cr);
+    } cairo_restore (c5c->cr);
+
+    cairo_set_rgb_color (c5c->cr, 0, 0, 0);
+
+    ret = NewForeign (CairoId, c5c, free_cairo_5c);
+
+    RETURN (ret);
+}
+
+Value
+do_Cairo_dup (Value cov)
+{
+    ENTER ();
+    cairo_5c_t	*c5co = get_cairo_5c (cov);
+    cairo_5c_t	*c5c;
+    Value	ret;
+    
+    if (aborting)
+	RETURN (Void);
+    
+    c5c = malloc (sizeof (cairo_5c_t));
+    if (!c5c)
+	RETURN (Void);
+
+    *c5c = *c5co;
+    c5c->cr = cairo_create ();
+    cairo_set_target_surface (c5c->cr, cairo_current_target_surface (c5co->cr));
     ret = NewForeign (CairoId, c5c, free_cairo_5c);
 
     RETURN (ret);
@@ -252,7 +330,7 @@ do_Cairo_status (Value cv)
 
     if (aborting)
 	return Void;
-    RETURN(NewInt (cairo_status (c5c->cr)));
+    RETURN(IntToEnum (typeCairoStatus, cairo_status (c5c->cr)));
 }
 
 Value

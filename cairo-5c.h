@@ -43,7 +43,7 @@
 #include <unistd.h>
 #undef Atom
 
-typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_PNG } cairo_5c_kind_t;
+typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_PNG, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
 
 typedef struct _cairo_5c_x_t {
     Display	*dpy;
@@ -68,6 +68,9 @@ typedef struct {
 	struct {
 	    FILE	    *file;
 	} png;
+	struct {
+	    cairo_surface_t *surface;
+	} scratch;
     } u;
 } cairo_5c_t;
 
@@ -111,6 +114,12 @@ do_Cairo_new (int n, Value *v);
 Value
 do_Cairo_new_png (Value fv, Value wv, Value hv);
 
+Value
+do_Cairo_new_scratch (Value cov, Value wv, Value hv);
+
+Value
+do_Cairo_dup (Value cov);
+    
 Value
 do_Cairo_width (Value av);
 
@@ -341,11 +350,17 @@ Value
 do_Cairo_set_pattern (Value cv, Value patv);
 
 Value
+do_Cairo_Pattern_create_png (Value filenamev);
+
+Value
 do_Cairo_Pattern_create_linear (Value x0v, Value y0v, Value x1v, Value y1v);
 
 Value
 do_Cairo_Pattern_create_radial (Value cx0v, Value cy0v, Value radius0v,
 				Value cx1v, Value cy1v, Value radius1v);
+
+Value
+do_Cairo_Pattern_create_for_surface (Value cv);
 
 Value
 do_Cairo_Pattern_add_color_stop (Value patv, Value offsetv,

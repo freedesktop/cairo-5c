@@ -42,6 +42,9 @@ extend namespace Cairo {
     public typedef void (real x, real y) line_to_func_t;
     public typedef void (real x1, real y1, real x2, real y2, real x3, real y3) curve_to_func_t;
     public typedef void () close_path_func_t;
+    public typedef struct { 
+	real hue, saturation, value;
+    } hsv_color_t;
     
     void walk_path (path_t  path,
 		    move_to_func_t move_to,
@@ -153,12 +156,31 @@ extend namespace Cairo {
     }
 
     public void set_hsv_color (cairo_t cr, real h, real s, real v)
+	/*
+	 * Set color using HSV specification
+	 *  H: hue	    0 = red, 0.{3} = green, 0.{6} = blue
+	 *  S: satuation    0..1
+	 *  V: value	    0..1
+	 */
     {
 	set_rgb_color (cr, from_hsv (h, s, v) ...);
     }
 
-    public real[3] current_hsv_color (cairo_t cr)
+    public hsv_color_t current_hsv_color (cairo_t cr)
+	/*
+	 * Return current color using HSV specification
+	 *
+	 *  H: hue	    0 = red, 0.{3} = green, 0.{6} = blue
+	 *  S: satuation    0..1
+	 *  V: value	    0..1
+	 */
     {
-	return to_hsv (current_rgb_color (cr) ...);
+	rgb_color_t rgb = current_rgb_color (cr);
+	real[3]	    t = to_hsv (rgb.red, rgb.green, rgb.blue);
+	return (hsv_color_t) { 
+	    hue = t[0],
+	    saturation = t[1],
+	    value = t[2]
+	};
     }
 }

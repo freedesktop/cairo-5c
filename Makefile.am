@@ -37,11 +37,11 @@ SUBDIRS = examples
 
 libcairo_5c_la_SOURCES = \
 	cairo-5c.h \
+	init.c \
 	draw.c \
 	event.c \
 	gstate.c \
 	gtk.c \
-	init.c \
 	matrix.c \
 	pattern.c \
 	surface.c \

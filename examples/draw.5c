@@ -47,9 +47,9 @@ void draw (cairo_t cr)
 
     void transform_inplace (&real x, &real y)
     {
-	real[2] a = inverse_transform_point (cr, (real[2]) { x, y });
-	x = a[0];
-	y = a[1];
+	point_t a = inverse_transform_point (cr, (point_t) { x = x, y = y });
+	x = a.x;
+	y = a.y;
     }
 
     while (!File::end (f))

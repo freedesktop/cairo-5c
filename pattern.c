@@ -33,6 +33,8 @@
  *      Keith Packard <keithp@keithp.com>
  */
 
+#include <png.h>
+#include <stdlib.h>
 #include "cairo-5c.h"
 
 static char CairoPatternId[] = "CairoPattern";
@@ -118,6 +120,192 @@ do_Cairo_Pattern_create_radial (Value cx0v, Value cy0v, Value radius0v,
 	RETURN(Void);
     RETURN (make_pattern_value (cairo_pattern_create_radial (cx0, cy0, radius0,
 							     cx1, cy1, radius1)));
+}
+
+Value
+do_Cairo_Pattern_create_for_surface (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    cairo_surface_t *surface;
+
+    if (aborting)
+	RETURN (Void);
+    surface = cairo_current_target_surface (c5c->cr);
+    RETURN (make_pattern_value (cairo_pattern_create_for_surface (surface)));
+}
+
+static void
+premultiply_data (png_structp   png,
+                  png_row_infop row_info,
+                  png_bytep     data)
+{
+    int i;
+
+    for (i = 0; i < row_info->rowbytes; i += 4) {
+	unsigned char  *base = &data[i];
+	unsigned char  blue = base[0];
+	unsigned char  green = base[1];
+	unsigned char  red = base[2];
+	unsigned char  alpha = base[3];
+	unsigned long	p;
+
+	red = (unsigned) red * (unsigned) alpha / 255;
+	green = (unsigned) green * (unsigned) alpha / 255;
+	blue = (unsigned) blue * (unsigned) alpha / 255;
+	p = (alpha << 24) | (red << 16) | (green << 8) | (blue << 0);
+	memcpy (base, &p, sizeof (unsigned long));
+    }
+}
+
+struct cairo_matrix {
+    double m[3][2];
+};
+
+struct cairo_surface {
+    const void *backend;
+
+    unsigned int ref_count;
+
+    cairo_matrix_t matrix;
+    cairo_filter_t filter;
+    int repeat;
+};
+
+struct cairo_image_surface {
+    cairo_surface_t base;
+
+    /* libic-specific fields */
+    char *data;
+    int owns_data;
+
+    int width;
+    int height;
+    int stride;
+    int depth;
+
+    pixman_image_t *pixman_image;
+};
+
+static cairo_surface_t *
+create_surface_from_png (const char *filename)
+{
+    FILE	    *f;
+    cairo_surface_t *surface;
+    char	    *buffer;
+    png_structp	    png;
+    png_infop	    info;
+    png_bytepp	    rows;
+    int		    i;
+    png_uint_32	    width, height;
+    png_uint_32	    stride;
+    int		    depth, color, interlace;
+    
+    png = png_create_read_struct (PNG_LIBPNG_VER_STRING, NULL, NULL, NULL);
+    if (png == NULL)
+	return NULL;
+    info = png_create_info_struct (png);
+    if (info == NULL)
+    {
+	png_destroy_read_struct (&png, NULL, NULL);
+	return NULL;
+    }
+    if (setjmp (png->jmpbuf))
+    {
+	png_destroy_read_struct (&png, &info, NULL);
+	return NULL;
+    }
+    f = fopen (filename, "rb");
+    if (f == NULL)
+    {
+	png_destroy_read_struct (&png, &info, NULL);
+	return NULL;
+    }
+    png_init_io (png, f);
+    png_read_info (png, info);
+    png_get_IHDR (png, info, &width, &height, &depth, &color, &interlace,
+		  NULL, NULL);
+
+    if (color == PNG_COLOR_TYPE_PALETTE && depth <= 8)
+	png_set_expand (png);
+
+    if (color == PNG_COLOR_TYPE_GRAY && depth < 8)
+	png_set_expand (png);
+
+    if (png_get_valid (png, info, PNG_INFO_tRNS))
+	png_set_expand (png);
+
+    if (depth == 16)
+	png_set_strip_16 (png);
+
+    if (depth < 8)
+	png_set_packing (png);
+
+    if (color == PNG_COLOR_TYPE_GRAY || color == PNG_COLOR_TYPE_GRAY_ALPHA)
+	png_set_gray_to_rgb (png);
+
+    if (interlace != PNG_INTERLACE_NONE)
+	png_set_interlace_handling (png);
+
+    png_set_bgr (png);
+    png_set_filler (png, 255, PNG_FILLER_AFTER);
+
+    png_set_read_user_transform_fn (png, premultiply_data);
+
+    png_read_update_info (png, info);
+
+    stride = width * 4;
+    buffer = malloc (stride * height);
+    
+    rows = malloc (sizeof (png_bytep) * height);
+
+    for (i = 0; i < height; i++)
+	rows[i] = (png_bytep) (buffer + i * stride);
+    
+    png_read_image (png, rows);
+    png_read_end (png, info);
+
+    free (rows);
+    fclose (f);
+    png_destroy_read_struct (&png, &info, NULL);
+
+    surface = cairo_surface_create_for_image (buffer, CAIRO_FORMAT_ARGB32, 
+					      width, height, stride);
+    if (!surface)
+    {
+	free (buffer);
+	return NULL;
+    }
+    
+    /*
+     * XXX hack internal structure contents to hand buffer to cairo 
+     */
+    ((struct cairo_image_surface *) surface)->owns_data = 1;
+    
+    return surface;
+}
+
+Value
+do_Cairo_Pattern_create_png (Value filenamev)
+{
+    ENTER ();
+    char	    *filename = StrzPart (filenamev, "invalid filename");
+    cairo_surface_t *image;
+    cairo_pattern_t *pattern;
+
+    if (aborting)
+	RETURN(Void);
+    image = create_surface_from_png (filename);
+    if (!image)
+    {
+	RaiseStandardException (exception_open_error,
+				"cannot read png file",
+				1, filenamev);
+	RETURN (Void);
+    }
+    pattern = cairo_pattern_create_for_surface (image);
+    cairo_surface_destroy (image);
+    RETURN (make_pattern_value (pattern));
 }
 
 Value

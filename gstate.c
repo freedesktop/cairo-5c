@@ -281,17 +281,18 @@ do_Cairo_transform_point (Value cv, Value pv)
     cairo_5c_t	    *c5c = get_cairo_5c (cv);
     double	    x, y;
     Value	    ret;
-    static int	dims[1] = { 2 };
+    BoxPtr	    box;
 
     if (aborting)
 	RETURN(Void);
     
-    x = DoublePart (ArrayValueGet (&pv->array, 0), "invalid coordinate");
-    y = DoublePart (ArrayValueGet (&pv->array, 1), "invalid coordinate");
+    x = DoublePart (StructMemValue (pv, AtomId("x")), "invalid x coordinate");
+    y = DoublePart (StructMemValue (pv, AtomId("y")), "invalid y coordinate");
     cairo_transform_point (c5c->cr, &x, &y);
-    ret = NewArray (False, False, typePrim[rep_float], 1, dims);
-    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
-    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
+    ret = NewStruct (TypeCanon (typeCairoPoint)->structs.structs, False);
+    box = ret->structs.values;
+    BoxValueSet (box, 0, NewDoubleFloat (x));
+    BoxValueSet (box, 1, NewDoubleFloat (y));
     RETURN (ret);
 }
 
@@ -302,17 +303,18 @@ do_Cairo_transform_distance (Value cv, Value pv)
     cairo_5c_t	    *c5c = get_cairo_5c (cv);
     double	    x, y;
     Value	    ret;
-    static int	dims[1] = { 2 };
+    BoxPtr	    box;
 
     if (aborting)
 	RETURN(Void);
     
-    x = DoublePart (ArrayValueGet (&pv->array, 0), "invalid coordinate");
-    y = DoublePart (ArrayValueGet (&pv->array, 1), "invalid coordinate");
+    x = DoublePart (StructMemValue (pv, AtomId("x")), "invalid x coordinate");
+    y = DoublePart (StructMemValue (pv, AtomId("y")), "invalid y coordinate");
     cairo_transform_distance (c5c->cr, &x, &y);
-    ret = NewArray (False, False, typePrim[rep_float], 1, dims);
-    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
-    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
+    ret = NewStruct (TypeCanon (typeCairoPoint)->structs.structs, False);
+    box = ret->structs.values;
+    BoxValueSet (box, 0, NewDoubleFloat (x));
+    BoxValueSet (box, 1, NewDoubleFloat (y));
     RETURN (ret);
 }
 
@@ -323,17 +325,18 @@ do_Cairo_inverse_transform_point (Value cv, Value pv)
     cairo_5c_t	    *c5c = get_cairo_5c (cv);
     double	    x, y;
     Value	    ret;
-    static int	dims[1] = { 2 };
+    BoxPtr	    box;
 
     if (aborting)
 	RETURN(Void);
     
-    x = DoublePart (ArrayValueGet (&pv->array, 0), "invalid coordinate");
-    y = DoublePart (ArrayValueGet (&pv->array, 1), "invalid coordinate");
+    x = DoublePart (StructMemValue (pv, AtomId("x")), "invalid x coordinate");
+    y = DoublePart (StructMemValue (pv, AtomId("y")), "invalid y coordinate");
     cairo_inverse_transform_point (c5c->cr, &x, &y);
-    ret = NewArray (False, False, typePrim[rep_float], 1, dims);
-    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
-    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
+    ret = NewStruct (TypeCanon (typeCairoPoint)->structs.structs, False);
+    box = ret->structs.values;
+    BoxValueSet (box, 0, NewDoubleFloat (x));
+    BoxValueSet (box, 1, NewDoubleFloat (y));
     RETURN (ret);
 }
 
@@ -344,17 +347,18 @@ do_Cairo_inverse_transform_distance (Value cv, Value pv)
     cairo_5c_t	    *c5c = get_cairo_5c (cv);
     double	    x, y;
     Value	    ret;
-    static int	dims[1] = { 2 };
+    BoxPtr	    box;
 
     if (aborting)
 	RETURN(Void);
     
-    x = DoublePart (ArrayValueGet (&pv->array, 0), "invalid coordinate");
-    y = DoublePart (ArrayValueGet (&pv->array, 1), "invalid coordinate");
+    x = DoublePart (StructMemValue (pv, AtomId("x")), "invalid x coordinate");
+    y = DoublePart (StructMemValue (pv, AtomId("y")), "invalid y coordinate");
     cairo_inverse_transform_distance (c5c->cr, &x, &y);
-    ret = NewArray (False, False, typePrim[rep_float], 1, dims);
-    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
-    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
+    ret = NewStruct (TypeCanon (typeCairoPoint)->structs.structs, False);
+    box = ret->structs.values;
+    BoxValueSet (box, 0, NewDoubleFloat (x));
+    BoxValueSet (box, 1, NewDoubleFloat (y));
     RETURN (ret);
 }
 
