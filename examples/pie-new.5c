@@ -1,0 +1,224 @@
+#!/usr/bin/env nickle
+/* $Id$
+ *
+ * Copyright © 2004 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
+
+autoimport Cairo;
+
+/*
+ * Adapted from algorithms found at
+ * http://research.compaq.com/SRC/m3sources/html/color/src/Color.i3.html
+ */
+
+real[3] to_hsv(real r, real g, real b)
+{
+    real minimum = min (r, g, b);
+    real maximum = max (r, g, b);
+    real v = maximum;
+    real s = (maximum == 0) ? 0 : (maximum - minimum) / maximum;
+    real h = 0;
+    if (s != 0)
+    {
+	switch (maximum) {
+	case r:	h =       (g - b) / (maximum - minimum);  break;
+	case g:	h = 2.0 + (b - r) / (maximum - minimum);  break;
+	case b:	h = 4.0 + (r - g) / (maximum - minimum);  break;
+	}
+	h = h / 6;
+    }
+    return (real[3]) { h, s, v };
+}
+
+/* convert hsv to rgb */
+
+real[3] from_hsv(real h, real s, real v)
+{
+    if (v == 0.0)
+	return (real[3]) { 0 ... };
+    else if (s == 0.0) {
+	return (real[3]) { v ... };
+    } else {
+	real h6 = (h * 6) % 6;
+	int  i = floor (h6);
+	real f = h6 - i;
+	real p = v * (1 - s);
+	real q = v * (1 - (s * f));
+	real t = v * (1 - (s * (1 - f)));
+
+	switch(i) {
+	default:return (real[3]) { v, t, p };
+	case 1: return (real[3]) { q, v, p };
+	case 2: return (real[3]) { p, v, t };
+	case 3: return (real[3]) { p, q, v };
+	case 4: return (real[3]) { t, p, v };
+	case 5: return (real[3]) { v, p, q };
+	}
+    }
+}
+
+void set_hsv_color (foreign cr, real h, real s, real v)
+{
+    real[3] rgb = from_hsv (h, s, v);
+    Cairo::set_rgb_color (cr, rgb[0], rgb[1], rgb[2]);
+}
+
+real π = pi;
+real text_width (cairo_t cr, string text) = text_extents (cr, text).width;
+real text_height(cairo_t cr, string text) = text_extents (cr, text).height;
+
+void circle_text (cairo_t cr, string text)
+{
+    real    circumference = 0;
+    
+    for (int i = 0; i < String::length(text); i++)
+	circumference += text_width (cr, String::substr(text,i,1));
+
+    real radius = circumference / (2 * π);
+
+    real height = text_height (cr, text) * 2;
+
+    translate (cr, radius + height, radius + height);
+
+    real θ = -π ÷ 2;
+    for (int i = 0; i < String::length(text); i++)
+    {
+	string	c = String::substr (text, i, 1);
+	real	width = text_width (cr, c);
+	
+	save (cr);
+	rotate (cr, θ + π ÷ 2);
+	
+	translate   (cr, -width ÷ 2, -radius);
+	
+	move_to (cr, 0, 0);
+	
+	if (true) 
+	{
+	    text_path (cr, c);
+	    fill (cr);
+	}
+	else
+	    show_text (cr, c);
+	restore (cr);
+	θ += asin ((width ÷ 2) / radius) * 2;
+    }
+}
+
+void spiral_text (cairo_t cr, string text)
+{
+    real    circumference = 0;
+    
+    translate (cr, width(cr) / 2, height(cr) / 2);
+
+    real height = text_height (cr, text) * 3;
+
+    real θ = -π ÷ 2;
+    for (int i = 0; i < String::length(text); i++)
+    {
+	string	c = String::substr (text, i, 1);
+	real	width = text_width (cr, c);
+	
+	real radius = ((θ + π) * height / (2 × π));
+
+	save (cr);
+	rotate (cr, θ + π ÷ 2);
+	set_hsv_color (cr, θ / (2 * pi), 1, 0.7);
+	
+	translate (cr, 0, -radius);
+/*	translate   (cr, -width ÷ 2, -radius); */
+	
+	move_to (cr, 0, 0);
+	
+	if (true)
+	{
+	    text_path (cr, c);
+	    fill (cr);
+	}
+	else
+	    show_text (cr, c);
+	restore (cr);
+	θ += atan2 (width, radius);
+    }
+}
+
+const int box_width = 40;
+const int box_height = 40;
+void spiral_boxes (cairo_t cr, int len)
+{
+    real    circumference = 0;
+    
+    translate (cr, width(cr) / 2, height(cr) / 2);
+
+    real height = box_height * 3;
+
+    real θ = -π ÷ 2;
+    for (int i = 0; i < len; i++)
+    {
+	real	width = box_width;
+	
+	real radius = ((θ + π) * height / (2 × π));
+
+	save (cr);
+	rotate (cr, θ + π ÷ 2);
+	set_hsv_color (cr, θ / (2 * pi), 1, 0.7);
+	
+	move_to (cr, 0, 0);
+	line_to (cr, 0, -radius);
+	stroke (cr);
+
+	translate (cr, -width ÷ 2, -radius);
+	
+	move_to (cr, 0, 0);
+	
+	rectangle (cr, 0, 0, box_width, -box_height);
+	fill (cr);
+	restore (cr);
+	θ += atan2 (width, radius);
+    }
+}
+
+void pie (int bits)
+{
+    cairo_t cr = new (700, 700);
+    spiral_boxes (cr, 20);
+    return;
+    set_font (cr, "sans\\-serif-40");
+    spiral_text (cr,
+    "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX");
+}
+
+if (dim(argv) > 0) {
+    pie (8192);
+    while (true) sleep (1000);
+}

@@ -1,6 +1,6 @@
 /* $Id$
  *
- * Copyright © 2005 Keith Packard
+ * Copyright © 2004 Keith Packard
  *
  * This library is free software; you can redistribute it and/or
  * modify it either under the terms of the GNU Lesser General Public
@@ -32,57 +32,80 @@
  * Contributor(s):
  *      Keith Packard <keithp@keithp.com>
  */
+
 autoimport Cairo;
 
-typedef struct {
-    real    min, max, space;
-} grid_t;
+const real off_x = -100;
+const real off_y = 30;
 
-void grid (cairo_t cr, grid_t h, grid_t v)
+void clear (cairo_t cr) {
+    save (cr);
+    identity_matrix (cr);
+    set_rgb_color (cr, 1, 1, 1);
+    rectangle (cr, 0, 0, width(cr), height(cr));
+    fill (cr);
+    restore (cr);
+}
+
+void picture (cairo_t cr)
 {
-    for (real x = h.min; x <= h.max; x += h.space)
-    {
-	move_to (cr, x, v.min);
-	line_to (cr, x, v.max);
-    }
-    for (real y = v.min; y <= v.max; y += v.space)
-    {
-	move_to (cr, h.min, y);
-	line_to (cr, h.max, y);
-    }
+    save (cr);
+    
+    set_rgb_color (cr, 0, 0, 0);
+    move_to (cr, off_x, off_y);
+#    show_text (cr, "nickle and cairo together");
+    text_path (cr, "C");
+    fill (cr);
+#    show_text (cr, "CAIRO");
+    
+    move_to (cr, off_x, off_y);
+    rel_line_to (cr, 250, 0);
+    set_rgb_color (cr, 0, 0, 1);
     stroke (cr);
+    
+    move_to (cr, 5, 0);
+    arc (cr, 5, 0, 5, 0, 10);
+    set_rgb_color (cr, 1, 0, 0);
+    fill (cr);
+    restore (cr);
 }
 
-void dots (cairo_t cr, grid_t h, grid_t v, real size)
+void transform (cairo_t cr, real t)
 {
-    for (real x = h.min; x <= h.max; x += h.space)
+    translate (cr, 50, 50);
+    rotate (cr, t * pi / 180);
+}
+
+void animate (cairo_t cr)
+{
+    cairo_t crl = create ();
+    set_target_surface (crl, current_target_surface (cr));
+    set_font (crl, "sans-12");
+    set_rgb_color (crl, 0, 0, 0);
+    real t = 0;
+    for (;;)
     {
-	for (real y = v.min; y <= v.max; y += v.space)
-	{
-	    move_to (cr, x - size, y);
-	    line_to (cr, x + size, y);
-	    move_to (cr, x, y - size);
-	    line_to (cr, x, y + size);
-	}
+	disable (cr);
+	save (cr);
+	translate (cr, 100, 100);
+	set_rgb_color (cr, 1, 1, 1);
+	clear (cr);
+	move_to (crl, 3, 20);
+	show_text (crl, sprintf ("%5.2f", t));
+	transform (cr, t);
+	picture (cr);
+	restore (cr);
+	enable (cr);
+	t += 1;
     }
-    stroke (cr);
 }
 
-void
-grid_png (string filename, int width, int height, real major, real x_minor, y_minor)
+void main ()
 {
-    cairo_t cr = new_png (filename, width, height);
-    set_line_width (cr, 2);
-    grid (cr, 
-	  (grid_t) { min = 0, max = width, space = major },
-	  (grid_t) { min = 0, max = height, space = major });
-    set_line_width (cr, 1);
-    dots (cr, 
-	  (grid_t) { min = 0.5 + x_minor//2, max = width + 0.5, space = x_minor },
-	  (grid_t) { min = 0.5 + y_minor//2, max = height + 0.5, space = y_minor },
-	  major / 20);
-    destroy (cr);
+    cairo_t cr = new ();
+    
+    set_font (cr, "bitstream vera sans-200");
+    animate (cr);
 }
 
-grid_png ("grid.png", 1000, 1000, 90, 18, 30);
-
+if (dim(argv) > 0) main ();

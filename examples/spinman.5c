@@ -1,0 +1,176 @@
+/* $Id$
+ *
+ * Copyright © 2004 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
+
+autoimport Cairo;
+
+const real off_x = -100;
+const real off_y = 30;
+
+void clear (cairo_t cr) {
+    save (cr);
+    identity_matrix (cr);
+    set_rgb_color (cr, 1, 1, 1);
+    rectangle (cr, 0, 0, width(cr), height(cr));
+    fill (cr);
+    restore (cr);
+}
+
+void picture (cairo_t cr)
+{
+    save (cr);
+    
+    set_rgb_color (cr, 0, 0, 0);
+    move_to (cr, off_x, off_y);
+#    show_text (cr, "nickle and cairo together");
+    show_text (cr, "CAIRO");
+    
+    move_to (cr, off_x, off_y);
+    rel_line_to (cr, 250, 0);
+    set_rgb_color (cr, 0, 0, 1);
+    stroke (cr);
+    
+    move_to (cr, 5, 0);
+    arc (cr, 5, 0, 5, 0, 10);
+    set_rgb_color (cr, 1, 0, 0);
+    fill (cr);
+    restore (cr);
+}
+
+typedef union {
+    struct {
+	int time;
+	real x, y;
+	int button;
+    } press;
+    struct {
+	int time;
+	real x, y;
+    } motion;
+    struct {
+	int time;
+	real x, y;
+	int button;
+    } release;
+} event_t;
+
+event_t
+read_event (file f, cairo_t cr)
+{
+    event_t	e;
+    string	line = File::fgets (f);
+    file	l = File::string_read (line);
+    File::fscanf (l, "%d %s", &(int time), &(string name));
+    
+    void transform_inplace (&real x, &real y)
+    {
+	point_t a = inverse_transform_point (cr, (point_t) { x = x, y = y });
+	x = a.x;
+	y = a.y;
+    }
+
+    switch (name) {
+    case "press":
+	File::fscanf (l, "%d %d %d", &(int button), &(real x), &(real y));
+        transform_inplace (&x, &y);
+	return (event_t) { press = {
+	    time = time, x = x, y = y, button = button
+	}};
+    case "release":
+	File::fscanf (l, "%d %d %d", &(int button), &(real x), &(real y));
+        transform_inplace (&x, &y);
+	return (event_t) { release = {
+	    time = time, x = x, y = y, button = button
+	}};
+    case "motion":
+	File::fscanf (l, "%d %d", &(real x), &(real y));
+        transform_inplace (&x, &y);
+	return (event_t) { motion = {
+	    time = time, x = x, y = y
+	}};
+    }
+    exit (0);
+}
+
+void animate (cairo_t cr)
+{
+    cairo_t crl = create ();
+    set_target_surface (crl, current_target_surface (cr));
+    set_font (crl, "sans-12");
+    set_rgb_color (crl, 0, 0, 0);
+    translate (cr, 150, 150);
+    real t = 0;
+    bool down = false;
+    file ef = open_event (cr);
+    for (;;)
+    {
+	event_t ev = read_event (ef, cr);
+	real x, y;
+	union switch (ev) {
+	case press p:
+	    down = true;
+	    x = p.x; y = p.y;
+	    break;
+	case motion m:
+	    x = m.x; y = m.y;
+	    break;
+	case release:
+	    down = false;
+	    break;
+	}
+	if (down)
+	{
+	    t = atan2 (y, x);
+	    disable (cr);
+	    save (cr);
+	    clear (cr);
+	    move_to (crl, 3, 20);
+	    show_text (crl, sprintf ("%5.2f", t));
+	    rotate (cr, t);
+	    picture (cr);
+	    restore (cr);
+	    enable (cr);
+	}
+    }
+}
+
+void main ()
+{
+    cairo_t cr = new ();
+    
+    set_font (cr, "bitstream vera sans-100");
+    animate (cr);
+}
+
+if (dim(argv) > 0) main ();

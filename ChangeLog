@@ -1,5 +1,21 @@
 2005-03-14  Keith Packard  <keithp@keithp.com>
 
+	* examples/animate.5c:
+	* examples/fob.5c:
+	* examples/grid.5c:
+	* examples/led.5c:
+	* examples/metrics.5c:
+	* examples/pie-new.5c:
+	* examples/spin-cairo.5c:
+	* examples/spin.5c:
+	* examples/spinman.5c:
+	* examples/text45.5c:
+	Add a bunch more examples, including the LED image
+	generation program used by the PSAS control software
+	and the FOB logo used by http://fob.po8.org
+
+2005-03-14  Keith Packard  <keithp@keithp.com>
+
 	* cairo-5c.h:
 	Must explicitly reference desired backends
 	

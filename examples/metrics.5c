@@ -1,6 +1,6 @@
 /* $Id$
  *
- * Copyright © 2005 Keith Packard
+ * Copyright © 2004 Keith Packard
  *
  * This library is free software; you can redistribute it and/or
  * modify it either under the terms of the GNU Lesser General Public
@@ -32,57 +32,15 @@
  * Contributor(s):
  *      Keith Packard <keithp@keithp.com>
  */
+
 autoimport Cairo;
 
-typedef struct {
-    real    min, max, space;
-} grid_t;
-
-void grid (cairo_t cr, grid_t h, grid_t v)
-{
-    for (real x = h.min; x <= h.max; x += h.space)
-    {
-	move_to (cr, x, v.min);
-	line_to (cr, x, v.max);
+cairo_t cr = new ();
+scale_font (cr, 12);
+for (t = 0; t <= 2 * pi; t += .1)
+#t = -45 * pi / 180;
+#t = 0;
+    twixt (save (cr); restore (cr)) {
+        rotate (cr, t);
+        printf ("text rotated %6.1f: %v\n", t, text_extents (cr, "cairo	nickle test"));
     }
-    for (real y = v.min; y <= v.max; y += v.space)
-    {
-	move_to (cr, h.min, y);
-	line_to (cr, h.max, y);
-    }
-    stroke (cr);
-}
-
-void dots (cairo_t cr, grid_t h, grid_t v, real size)
-{
-    for (real x = h.min; x <= h.max; x += h.space)
-    {
-	for (real y = v.min; y <= v.max; y += v.space)
-	{
-	    move_to (cr, x - size, y);
-	    line_to (cr, x + size, y);
-	    move_to (cr, x, y - size);
-	    line_to (cr, x, y + size);
-	}
-    }
-    stroke (cr);
-}
-
-void
-grid_png (string filename, int width, int height, real major, real x_minor, y_minor)
-{
-    cairo_t cr = new_png (filename, width, height);
-    set_line_width (cr, 2);
-    grid (cr, 
-	  (grid_t) { min = 0, max = width, space = major },
-	  (grid_t) { min = 0, max = height, space = major });
-    set_line_width (cr, 1);
-    dots (cr, 
-	  (grid_t) { min = 0.5 + x_minor//2, max = width + 0.5, space = x_minor },
-	  (grid_t) { min = 0.5 + y_minor//2, max = height + 0.5, space = y_minor },
-	  major / 20);
-    destroy (cr);
-}
-
-grid_png ("grid.png", 1000, 1000, 90, 18, 30);
-
