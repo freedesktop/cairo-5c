@@ -34,12 +34,7 @@
  *      Keith Packard <keithp@keithp.com>
  */
 
-if (!Command::valid_name ((string[]) { "Cairo" }))
-    Foreign::load ("libcairo-5c.so");
-    
-import Cairo;
-
-typedef foreign cairo_t;
+autoimport Cairo;
 
 /*
  * Adapted from algorithms found at

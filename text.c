@@ -40,8 +40,8 @@ do_Cairo_select_font (Value cv, Value fv, Value sv, Value wv)
 {
     cairo_5c_t		*c5c = get_cairo_5c (cv);
     char		*family = StrzPart (fv, "invalid family");
-    cairo_font_slant_t	slant = IntPart (sv, "invalid slant");
-    cairo_font_weight_t	weight = IntPart (wv, "invalid weight");
+    cairo_font_slant_t	slant = EnumIntPart (sv, "invalid slant");
+    cairo_font_weight_t	weight = EnumIntPart (wv, "invalid weight");
 
     if (!aborting)
 	cairo_select_font (c5c->cr, family, slant, weight);
@@ -97,7 +97,7 @@ do_Cairo_text_extents (Value cv, Value uv)
     if (aborting)
 	return Void;
     cairo_text_extents (c5c->cr, utf8, &extents);
-    ret = NewStruct (TypeCanon (typeTextExtents)->structs.structs, False);
+    ret = NewStruct (TypeCanon (typeCairoTextExtents)->structs.structs, False);
     box = ret->structs.values;
     BoxValueSet (box, 0, NewDoubleFloat (extents.x_bearing));
     BoxValueSet (box, 1, NewDoubleFloat (extents.y_bearing));
@@ -106,4 +106,11 @@ do_Cairo_text_extents (Value cv, Value uv)
     BoxValueSet (box, 4, NewDoubleFloat (extents.x_advance));
     BoxValueSet (box, 5, NewDoubleFloat (extents.y_advance));
     RETURN (ret);
+}
+
+Value
+do_Cairo_select_ft_font (Value pv)
+{
+    /* XXX */
+    return Void;
 }

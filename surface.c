@@ -156,6 +156,7 @@ do_Cairo_new (int n, Value *v)
 	RETURN (Void);
     }
     
+    c5c->recv_events = 0;
     c5c->u.window.x = start_x (width, height);
     c5c->width = c5c->u.window.x->width;
     c5c->height = c5c->u.window.x->height;

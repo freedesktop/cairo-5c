@@ -33,36 +33,9 @@
  *      Keith Packard <keithp@keithp.com>
  */
 
-autoimport Cairo;
+if (!Command::valid_name ((string[]) { "Cairo" }))
+    Foreign::load ("libcairo-5c.so");
 
-void clear (foreign cr) {
-    save (cr);
-    identity_matrix (cr);
-    set_rgb_color (cr, 1, 1, 1);
-    int w = width (cr);
-    int h = height (cr);
-    move_to (cr, 0, 0);
-    line_to (cr, w, 0);
-    line_to (cr, w, h);
-    line_to (cr, 0, h);
-    fill (cr);
-    restore (cr);
+extend namespace Cairo {
 }
 
-void draw_sin (foreign cr) {
-    set_line_width (cr, sqrt (width(cr)**2 + height(cr)**2) * 0.01);
-    real[3,2] m = current_matrix (cr);
-    translate (cr, width(cr)/2, height(cr)/2);
-    scale (cr, .95 * width(cr) / (2 * pi), .95 * height(cr) / 2);
-    move_to (cr, -pi, 0);
-    for (real a = -pi; a <= pi; a += pi/100) {
-	line_to (cr, a, sin(a));
-    }
-    set_matrix (cr, m);
-    clear (cr);
-    stroke (cr);
-}
-
-foreign cr = new ();
-draw_sin (cr);
-while (true) sleep (1000);

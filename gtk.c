@@ -95,6 +95,50 @@ expose_event( GtkWidget *widget, GdkEventExpose *event )
     return FALSE;
 }
 
+static gboolean
+motion_notify_event( GtkWidget *widget, GdkEventMotion *event )
+{
+    cairo_5c_gtk_t	*c5cg = GTK_DRAWING_AREA (widget)->draw_data;
+    
+    if (c5cg->x.send_events)
+    {
+	fprintf (c5cg->x.send_events, "%d motion %g %g\n",
+		 event->time, event->x, event->y);
+	fflush (c5cg->x.send_events);
+    }
+    return FALSE;
+}
+
+
+static gboolean
+button_press_event( GtkWidget *widget, GdkEventButton *event )
+{
+    cairo_5c_gtk_t	*c5cg = GTK_DRAWING_AREA (widget)->draw_data;
+    
+    if (c5cg->x.send_events)
+    {
+	fprintf (c5cg->x.send_events, "%d press %d %g %g\n",
+		 event->time, event->button, event->x, event->y);
+	fflush (c5cg->x.send_events);
+    }
+    return FALSE;
+}
+
+static gboolean
+button_release_event( GtkWidget *widget, GdkEventButton *event )
+{
+    cairo_5c_gtk_t	*c5cg = GTK_DRAWING_AREA (widget)->draw_data;
+    
+    if (c5cg->x.send_events)
+    {
+	fprintf (c5cg->x.send_events, "%d release %d %g %g\n",
+		 event->time, event->button, event->x, event->y);
+	fflush (c5cg->x.send_events);
+    }
+    return FALSE;
+}
+
+
 static cairo_5c_gtk_t *
 cairo_5c_window_new (int width, int height)
 {
@@ -102,6 +146,7 @@ cairo_5c_window_new (int width, int height)
     Display		*dpy;
 
     c5cg->pixmap = 0;
+    c5cg->x.send_events = 0;
     c5cg->x.dpy = gdk_x11_get_default_xdisplay ();
     dpy = c5cg->x.dpy;
     if (!width)
@@ -122,18 +167,18 @@ cairo_5c_window_new (int width, int height)
 		      (GtkSignalFunc) expose_event, NULL);
     g_signal_connect (GTK_OBJECT(c5cg->drawing_area),"configure_event",
 		      (GtkSignalFunc) configure_event, NULL);
-#if 0
-    gtk_signal_connect (GTK_OBJECT (c5cg->drawing_area), "motion_notify_event",
-			(GtkSignalFunc) motion_notify_event, NULL);
-    gtk_signal_connect (GTK_OBJECT (c5cg->drawing_area), "button_press_event",
-			(GtkSignalFunc) button_press_event, NULL);
-#endif
+    g_signal_connect (GTK_OBJECT (c5cg->drawing_area), "motion_notify_event",
+		      (GtkSignalFunc) motion_notify_event, NULL);
+    g_signal_connect (GTK_OBJECT (c5cg->drawing_area), "button_press_event",
+		      (GtkSignalFunc) button_press_event, NULL);
+    g_signal_connect (GTK_OBJECT (c5cg->drawing_area), "button_release_event",
+		      (GtkSignalFunc) button_release_event, NULL);
 
     gtk_widget_set_events (c5cg->drawing_area, GDK_EXPOSURE_MASK
 			   | GDK_LEAVE_NOTIFY_MASK
 			   | GDK_BUTTON_PRESS_MASK
-			   | GDK_POINTER_MOTION_MASK
-			   | GDK_POINTER_MOTION_HINT_MASK);
+			   | GDK_BUTTON_RELEASE_MASK
+			   | GDK_POINTER_MOTION_MASK);
 
     gtk_widget_realize (c5cg->window);
     gtk_widget_realize (c5cg->drawing_area);

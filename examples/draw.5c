@@ -1,0 +1,118 @@
+#!/usr/bin/env nickle
+/* $Id$
+ *
+ * Copyright © 2004 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
+
+autoimport Cairo;
+
+typedef foreign cairo_t;
+
+void draw (cairo_t cr)
+{
+    file    f = open_event (cr);
+    bool    down = false;
+    real    x, y;
+    real    ox, oy;
+
+    void transform_inplace (&real x, &real y)
+    {
+	real[2] a = inverse_transform_point (cr, (real[2]) { x, y });
+	x = a[0];
+	y = a[1];
+    }
+
+    while (!File::end (f))
+    {
+	string	line = File::fgets (f);
+	file	l = File::string_read (line);
+	File::fscanf (l, "%d %s", &(int time), &(string name));
+	switch (name) {
+	case "press":
+	    File::fscanf (l, "%d %d %d", &(int button), &ox, &oy);
+	    transform_inplace (&ox, &oy);
+	    switch (button) {
+	    case 1:
+		down = true;
+		break;
+	    case 2:
+		save (cr);
+		set_rgb_color (cr, 1, 0, 0);
+		move_to (cr, ox - 10, oy - 10);
+		line_to (cr, ox + 10, oy + 10);
+		move_to (cr, ox - 10, oy + 10);
+		line_to (cr, ox + 10, oy - 10);
+		stroke (cr);
+		restore (cr);
+		break;
+	    case 3:
+		save (cr);
+		identity_matrix (cr);
+		set_rgb_color (cr, 1, 1, 1);
+		move_to (cr, 0, 0);
+		line_to (cr, width(cr), 0);
+		line_to (cr, width(cr), height(cr));
+		line_to (cr, 0, height (cr));
+		fill (cr);
+		restore (cr);
+		break;
+	    }
+	    break;
+	case "motion":
+	    File::fscanf (l, "%d %d", &x, &y);
+	    transform_inplace (&x, &y);
+	    if (down) {
+		move_to (cr, ox, oy);
+		line_to (cr, x, y);
+		stroke (cr);
+	    }
+	    ox = x;
+	    oy = y;
+	    break;
+	case "release":
+	    File::fscanf (l, "%d %d %d", &(int button), &ox, &oy);
+	    transform_inplace (&ox, &oy);
+	    if (button == 1)
+		down = false;
+	    break;
+	}
+    }
+}
+
+void main ()
+{
+    cairo_t cr = new ();
+    draw (cr);
+}
+
+if (dim(argv) > 0) main();

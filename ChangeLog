@@ -1,3 +1,51 @@
+2004-12-16  Keith Packard  <keithp@keithp.com>
+
+	* Makefile.am:
+	* autogen.sh:
+	* cairo.5c:
+	* configure.in:
+	Add cairo.5c and install it to nickle libary
+	
+	* cairo-5c.h:
+	* draw.c: (do_Cairo_rectangle), (do_Cairo_in_stroke),
+	(do_Cairo_in_fill), (do_Cairo_stroke_extents),
+	(do_Cairo_fill_extents), (cairo_5c_move_to),
+	(do_Cairo_current_path), (do_Cairo_current_path_flat):
+	* gstate.c: (do_Cairo_set_operator), (do_Cairo_set_fill_rule),
+	(do_Cairo_set_line_cap), (do_Cairo_set_line_join),
+	(do_Cairo_set_dash), (do_Cairo_set_miter_limit),
+	(do_Cairo_default_matrix), (do_Cairo_transform_point),
+	(do_Cairo_transform_distance), (do_Cairo_inverse_transform_point),
+	(do_Cairo_inverse_transform_distance), (do_Cairo_init_clip),
+	(do_Cairo_clip), (do_Cairo_current_operator),
+	(do_Cairo_current_rgb_color), (do_Cairo_current_alpha),
+	(do_Cairo_current_tolerance), (do_Cairo_current_point),
+	(do_Cairo_current_fill_rule), (do_Cairo_current_line_width),
+	(do_Cairo_current_line_cap), (do_Cairo_current_line_join),
+	(do_Cairo_current_miter_limit):
+	* init.c: (make_typedef), (init_types), (EnumIntPart), (IntToEnum),
+	(nickle_init):
+	* text.c: (do_Cairo_select_font), (do_Cairo_text_extents),
+	(do_Cairo_select_ft_font):
+	Add a bunch more bindings.  Still more to do, especially the
+	path walkers.
+	Switch from int constants to enums for enumerated types.
+	
+	* gtk.c: (motion_notify_event), (button_press_event),
+	(button_release_event), (cairo_5c_window_new):
+	* surface.c: (do_Cairo_new):
+	Add mouse input support.
+
+	* examples/animate.5c:
+	* examples/cairo.5c:
+	* examples/draw.5c:
+	* examples/graph.5c:
+	* examples/pie.5c:
+	* examples/rottext.5c:
+	* examples/sin.5c:
+	* examples/test.5c:
+	Change examples to use cairo.5c file with autoimport
+	
 2004-12-14  Keith Packard  <keithp@keithp.com>
 
 	* cairo-5c.h:

@@ -33,13 +33,25 @@
 #       Keith Packard <keithp@keithp.com>
 #
 
+SUBDIRS = examples
+
 libcairo_5c_la_SOURCES = \
-	cairo-5c.h init.c \
+	cairo-5c.h \
 	draw.c \
+	event.c \
 	gstate.c \
-	surface.c \
 	gtk.c \
+	init.c \
+	surface.c \
 	text.c
+
+NICKLEFILES= cairo.5c
+
+EXTRA_DIST = $(NICKLEFILES) ChangeLog autogen.sh
+
+nicklelibdir=$(NICKLE_LIBDIR)
+
+nicklelib_DATA = $(NICKLEFILES)
 
 lib_LTLIBRARIES = libcairo-5c.la
 

@@ -54,6 +54,17 @@ do_Cairo_restore (Value cv)
 }
 
 Value
+do_Cairo_set_operator (Value cv, Value ov)
+{
+    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    int		o = EnumIntPart (ov, "invalid operator");
+
+    if (!aborting)
+	cairo_set_operator (c5c->cr, o);
+    return Void;
+}
+
+Value
 do_Cairo_set_rgb_color (Value cv, Value rv, Value gv, Value bv)
 {
     cairo_5c_t	*c5c = get_cairo_5c (cv);
@@ -89,6 +100,17 @@ do_Cairo_set_tolerance (Value cv, Value tv)
 }
 
 Value
+do_Cairo_set_fill_rule (Value cv, Value fv)
+{
+    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    int		f = EnumIntPart (fv, "invalid fill rule");
+
+    if (!aborting)
+	cairo_set_fill_rule (c5c->cr, f);
+    return Void;
+}
+
+Value
 do_Cairo_set_line_width (Value cv, Value lv)
 {
     cairo_5c_t	*c5c = get_cairo_5c (cv);
@@ -103,7 +125,7 @@ Value
 do_Cairo_set_line_cap (Value cv, Value lv)
 {
     cairo_5c_t		*c5c = get_cairo_5c (cv);
-    cairo_line_cap_t	l = IntPart (lv, "invalid line_cap");
+    cairo_line_cap_t	l = EnumIntPart (lv, "invalid line_cap");
 
     if (!aborting)
 	cairo_set_line_cap (c5c->cr, l);
@@ -114,10 +136,43 @@ Value
 do_Cairo_set_line_join (Value cv, Value lv)
 {
     cairo_5c_t		*c5c = get_cairo_5c (cv);
-    cairo_line_join_t	l = IntPart (lv, "invalid line_join");
+    cairo_line_join_t	l = EnumIntPart (lv, "invalid line_join");
 
     if (!aborting)
 	cairo_set_line_join (c5c->cr, l);
+    return Void;
+}
+
+Value
+do_Cairo_set_dash (Value cv, Value dv, Value ov)
+{
+    ENTER ();
+    cairo_5c_t		*c5c = get_cairo_5c (cv);
+    double		o = DoublePart (ov, "invalid dash offset");
+    int			ndash = ArrayLimits (&dv->array)[0];
+    double		*d = AllocateTemp (ndash * sizeof (double));
+    int			i;
+
+    if (aborting)
+	RETURN (Void);
+    for (i = 0; i < ndash; i++)
+    {
+	d[i] = DoublePart (ArrayValueGet(&dv->array, i), "invalid dash length");
+	if (aborting)
+	    RETURN (Void);
+    }
+    cairo_set_dash (c5c->cr, d, ndash, o);
+    RETURN(Void);
+}
+
+Value
+do_Cairo_set_miter_limit (Value cv, Value mv)
+{
+    cairo_5c_t		*c5c = get_cairo_5c (cv);
+    double		m = DoublePart (mv, "invalid miter limit");
+    
+    if (!aborting)
+	cairo_set_miter_limit (c5c->cr, m);
     return Void;
 }
 
@@ -130,6 +185,17 @@ do_Cairo_identity_matrix (Value cv)
     return Void;
 }
 
+Value
+do_Cairo_default_matrix (Value cv)
+{
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+
+    if (aborting)
+	return Void;
+    cairo_default_matrix (c5c->cr);
+    return Void;
+}
+    
 Value
 do_Cairo_translate (Value cv, Value xv, Value yv)
 {
@@ -231,3 +297,230 @@ do_Cairo_set_matrix (Value cv, Value mv)
     RETURN (Void);
 }
 
+Value
+do_Cairo_transform_point (Value cv, Value pv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    double	    x, y;
+    Value	    ret;
+    static int	dims[1] = { 2 };
+
+    if (aborting)
+	RETURN(Void);
+    
+    x = DoublePart (ArrayValueGet (&pv->array, 0), "invalid coordinate");
+    y = DoublePart (ArrayValueGet (&pv->array, 1), "invalid coordinate");
+    cairo_transform_point (c5c->cr, &x, &y);
+    ret = NewArray (False, False, typePrim[rep_float], 1, dims);
+    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
+    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
+    RETURN (ret);
+}
+
+Value
+do_Cairo_transform_distance (Value cv, Value pv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    double	    x, y;
+    Value	    ret;
+    static int	dims[1] = { 2 };
+
+    if (aborting)
+	RETURN(Void);
+    
+    x = DoublePart (ArrayValueGet (&pv->array, 0), "invalid coordinate");
+    y = DoublePart (ArrayValueGet (&pv->array, 1), "invalid coordinate");
+    cairo_transform_distance (c5c->cr, &x, &y);
+    ret = NewArray (False, False, typePrim[rep_float], 1, dims);
+    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
+    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
+    RETURN (ret);
+}
+
+Value
+do_Cairo_inverse_transform_point (Value cv, Value pv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    double	    x, y;
+    Value	    ret;
+    static int	dims[1] = { 2 };
+
+    if (aborting)
+	RETURN(Void);
+    
+    x = DoublePart (ArrayValueGet (&pv->array, 0), "invalid coordinate");
+    y = DoublePart (ArrayValueGet (&pv->array, 1), "invalid coordinate");
+    cairo_inverse_transform_point (c5c->cr, &x, &y);
+    ret = NewArray (False, False, typePrim[rep_float], 1, dims);
+    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
+    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
+    RETURN (ret);
+}
+
+Value
+do_Cairo_inverse_transform_distance (Value cv, Value pv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    double	    x, y;
+    Value	    ret;
+    static int	dims[1] = { 2 };
+
+    if (aborting)
+	RETURN(Void);
+    
+    x = DoublePart (ArrayValueGet (&pv->array, 0), "invalid coordinate");
+    y = DoublePart (ArrayValueGet (&pv->array, 1), "invalid coordinate");
+    cairo_inverse_transform_distance (c5c->cr, &x, &y);
+    ret = NewArray (False, False, typePrim[rep_float], 1, dims);
+    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
+    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
+    RETURN (ret);
+}
+
+Value
+do_Cairo_init_clip (Value cv)
+{
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    if (!aborting)
+	cairo_init_clip (c5c->cr);
+    return Void;
+}
+
+Value
+do_Cairo_clip (Value cv)
+{
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    if (!aborting)
+	cairo_clip (c5c->cr);
+    return Void;
+}
+
+Value
+do_Cairo_current_operator (Value cv)
+{
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	return Void;
+    return IntToEnum (typeCairoOperator, cairo_current_operator (c5c->cr));
+}
+
+Value
+do_Cairo_current_rgb_color (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    double	    r, g, b;
+    Value	    ret;
+    BoxPtr	    box;
+    
+    if (aborting)
+	return Void;
+    cairo_current_rgb_color (c5c->cr, &r, &g, &b);
+    ret = NewStruct (TypeCanon (typeCairoRgbColor)->structs.structs, False);
+    box = ret->structs.values;
+    BoxValueSet (box, 0, NewDoubleFloat (r));
+    BoxValueSet (box, 1, NewDoubleFloat (g));
+    BoxValueSet (box, 2, NewDoubleFloat (b));
+    RETURN (ret);
+}
+
+Value
+do_Cairo_current_alpha (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	RETURN(Void);
+    RETURN (NewDoubleFloat (cairo_current_alpha (c5c->cr)));
+}
+
+Value
+do_Cairo_current_tolerance (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	RETURN(Void);
+    RETURN (NewDoubleFloat (cairo_current_tolerance (c5c->cr)));
+}
+
+Value
+do_Cairo_current_point (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    double	    x, y;
+    Value	    ret;
+    BoxPtr	    box;
+    
+    if (aborting)
+	return Void;
+    cairo_current_point (c5c->cr, &x, &y);
+    ret = NewStruct (TypeCanon (typeCairoPoint)->structs.structs, False);
+    box = ret->structs.values;
+    BoxValueSet (box, 0, NewDoubleFloat (x));
+    BoxValueSet (box, 1, NewDoubleFloat (y));
+    RETURN (ret);
+}
+
+Value
+do_Cairo_current_fill_rule (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	RETURN(Void);
+    RETURN(IntToEnum (typeCairoFillRule, cairo_current_fill_rule (c5c->cr)));
+}
+
+Value
+do_Cairo_current_line_width (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	RETURN(Void);
+    RETURN(NewDoubleFloat (cairo_current_line_width (c5c->cr)));
+}
+
+Value
+do_Cairo_current_line_cap (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	RETURN(Void);
+    RETURN(IntToEnum (typeCairoLineCap, cairo_current_line_cap (c5c->cr)));
+}
+
+Value
+do_Cairo_current_line_join (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	RETURN(Void);
+    RETURN(IntToEnum (typeCairoLineJoin, cairo_current_line_join (c5c->cr)));
+}
+
+Value
+do_Cairo_current_miter_limit (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	    *c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	RETURN(Void);
+    RETURN(NewDoubleFloat (cairo_current_miter_limit (c5c->cr)));
+}

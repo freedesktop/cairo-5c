@@ -167,6 +167,20 @@ do_Cairo_rel_curve_to (Value cv,
 }
 
 Value
+do_Cairo_rectangle (Value cv, Value xv, Value yv, Value wv, Value hv)
+{
+    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    double	x = DoublePart (xv, "invalid x value");
+    double	y = DoublePart (yv, "invalid y value");
+    double	w = DoublePart (wv, "invalid width value");
+    double	h = DoublePart (hv, "invalid height value");
+    
+    if (!aborting)
+	cairo_rectangle (c5c->cr, x, y, w, h);
+    return Void;
+}
+
+Value
 do_Cairo_close_path (Value cv)
 {
     cairo_5c_t	*c5c = get_cairo_5c (cv);
@@ -198,5 +212,94 @@ do_Cairo_stroke (Value cv)
 	cairo_stroke (c5c->cr);
 	dirty_cairo_5c (c5c);
     }
+    return Void;
+}
+
+Value
+do_Cairo_in_stroke (Value cv, Value xv, Value yv)
+{
+    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    double	x = DoublePart (xv, "invalid X value");
+    double	y = DoublePart (yv, "invalid Y value");
+
+    if (aborting)
+	return Void;
+    
+    return cairo_in_stroke (c5c->cr, x, y) ? TrueVal : FalseVal;
+}
+
+Value
+do_Cairo_in_fill (Value cv, Value xv, Value yv)
+{
+    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    double	x = DoublePart (xv, "invalid X value");
+    double	y = DoublePart (yv, "invalid Y value");
+
+    if (aborting)
+	return Void;
+    
+    return cairo_in_fill (c5c->cr, x, y) ? TrueVal : FalseVal;
+}
+
+Value
+do_Cairo_stroke_extents (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    double	x, y, w, h;
+    Value	ret;
+    static int	dims[2] = { 2, 2 };
+    
+    if (aborting)
+	RETURN(Void);
+    cairo_stroke_extents (c5c->cr, &x, &y, &w, &h);
+    ret = NewArray (False, False, typePrim[rep_float], 2, dims);
+    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
+    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
+    ArrayValueSet(&ret->array, 2, NewDoubleFloat (w));
+    ArrayValueSet(&ret->array, 3, NewDoubleFloat (h));
+    RETURN (ret);
+}
+
+Value
+do_Cairo_fill_extents (Value cv)
+{
+    ENTER ();
+    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    double	x, y, w, h;
+    Value	ret;
+    static int	dims[2] = { 2, 2 };
+    
+    if (aborting)
+	RETURN(Void);
+    cairo_fill_extents (c5c->cr, &x, &y, &w, &h);
+    ret = NewArray (False, False, typePrim[rep_float], 2, dims);
+    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
+    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
+    ArrayValueSet(&ret->array, 2, NewDoubleFloat (w));
+    ArrayValueSet(&ret->array, 3, NewDoubleFloat (h));
+    RETURN (ret);
+}
+
+#if 0
+static void
+cairo_5c_move_to (void *closure, double x, double y)
+{
+    ENTER ();
+    EXIT ();
+}
+#endif
+
+Value
+do_Cairo_current_path (Value cv, Value mv, Value lv, Value cuv, Value clp)
+{
+    /* XXX */
+    return Void;
+}
+
+Value
+do_Cairo_current_path_flat (Value cv, Value mv, Value lv, Value clp)
+{
+    /* XXX */
     return Void;
 }
