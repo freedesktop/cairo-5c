@@ -214,6 +214,7 @@ static void *
 gtk_thread_main (void *closure)
 {
     gtk_main ();
+    gdk_threads_leave ();
     return 0;
 }
 

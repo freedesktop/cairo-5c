@@ -1,5 +1,12 @@
 2004-12-23  Keith Packard  <keithp@keithp.com>
 
+	* examples/grid.5c:
+	Destroy context to flush file
+	* gtk.c: (gtk_thread_main):
+	call gdk_threads_leave on thread exit to release mutex
+
+2004-12-23  Keith Packard  <keithp@keithp.com>
+
 	* Makefile.am:
 	* cairo-5c.h:
 	* cairo.5c:
