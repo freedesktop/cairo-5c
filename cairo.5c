@@ -154,6 +154,11 @@ extend namespace Cairo {
 
     public void set_hsv_color (cairo_t cr, real h, real s, real v)
     {
-	Cairo::set_rgb_color (cr, from_hsv (h, s, v) ...);
+	set_rgb_color (cr, from_hsv (h, s, v) ...);
+    }
+
+    public real[3] current_hsv_color (cairo_t cr)
+    {
+	return to_hsv (current_rgb_color (cr) ...);
     }
 }

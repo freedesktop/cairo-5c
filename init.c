@@ -36,6 +36,7 @@
 #include "cairo-5c.h"
 
 NamespacePtr	CairoNamespace;
+NamespacePtr	CairoPatternNamespace;
 Type		*typeCairo;
 Type		*typeCairoStatus;
 Type		*typeCairoOperator;
@@ -55,6 +56,9 @@ Type		*typeCairoMoveTo;
 Type		*typeCairoLineTo;
 Type		*typeCairoCurveTo;
 Type		*typeCairoClosePath;
+
+Type		*typeCairoPatternExtend;
+Type		*typeCairoPatternFilter;
 
 #define CAIRO_I		0
 #define CAIRO_S		"00"
@@ -95,8 +99,14 @@ Type		*typeCairoClosePath;
 #define CLOSE_PATH_I	18
 #define CLOSE_PATH_S	"18"
 
+#define EXTEND_I	30
+#define EXTEND_S	"30"
+#define FILTER_I	31
+#define FILTER_S	"31"
+
 static Type *
 make_typedef (char	*name_str,
+	      Namespace	*namespace,
 	      Publish	publish,
 	      int	usertype_id,
 	      Symbol	**sret,
@@ -108,7 +118,7 @@ make_typedef (char	*name_str,
     Type    *typed = NewTypeName (NewExprAtom (name, 0, False),
 				  sym);
     
-    NamespaceAddName (CairoNamespace, sym, publish);
+    NamespaceAddName (namespace, sym, publish);
     
     BuiltinSetUserdefType (typed, usertype_id);
     MemAddRoot (typed);
@@ -126,12 +136,14 @@ init_types (void)
     CairoNamespace = BuiltinNamespace (/* parent */ 0, "Cairo")->namespace.namespace;
 
     typeCairo = make_typedef ("cairo_t",
+			      CairoNamespace,
 			      publish_public,
 			      CAIRO_I,
 			      NULL,
 			      typePrim[rep_foreign]);
 
     typeCairoStatus = make_typedef ("status_t",
+				    CairoNamespace,
 				    publish_public,
 				    STATUS_I,
 				    NULL,
@@ -145,6 +157,7 @@ init_types (void)
 						   "NO_TARGET_SURFACE",
 						   "NULL_POINTER"));
     typeCairoOperator = make_typedef ("operator_t",
+				      CairoNamespace,
 				      publish_public,
 				      OPERATOR_I,
 				      NULL,
@@ -165,6 +178,7 @@ init_types (void)
 						     "SATURATE"));
 
     typeCairoFillRule = make_typedef ("fill_rule_t",
+				      CairoNamespace,
 				      publish_public,
 				      FILL_RULE_I,
 				      NULL,
@@ -173,6 +187,7 @@ init_types (void)
 						     "EVEN_ODD"));
 
     typeCairoLineCap = make_typedef ("line_cap_t",
+				     CairoNamespace,
 				     publish_public,
 				     LINE_CAP_I,
 				     NULL,
@@ -182,6 +197,7 @@ init_types (void)
 						    "SQUARE"));
 
     typeCairoLineJoin = make_typedef ("line_join_t",
+				      CairoNamespace,
 				      publish_public,
 				      LINE_JOIN_I,
 				      NULL,
@@ -191,6 +207,7 @@ init_types (void)
 						     "BEVEL"));
 
     typeCairoFontSlant = make_typedef ("font_slant_t",
+				       CairoNamespace,
 				       publish_public,
 				       FONT_SLANT_I,
 				       NULL,
@@ -199,6 +216,7 @@ init_types (void)
 						      "ITALIC",
 						      "OBLIQUE"));
     typeCairoFontWeight = make_typedef ("font_weight_t",
+					CairoNamespace,
 					publish_public,
 					FONT_WEIGHT_I,
 					NULL,
@@ -207,6 +225,7 @@ init_types (void)
 						       "BOLD"));
 
     typeCairoTextExtents = make_typedef ("text_extents_t",
+					 CairoNamespace,
 					 publish_public,
 					 TEXT_EXTENTS_I,
 					 NULL,
@@ -218,6 +237,7 @@ init_types (void)
 							  typePrim[rep_float], "x_advance",
 							  typePrim[rep_float], "y_advance"));
     typeCairoMatrix = make_typedef ("matrix_t",
+				    CairoNamespace,
 				    publish_public,
 				    MATRIX_I,
 				    NULL,
@@ -225,6 +245,7 @@ init_types (void)
 						    2, 2, 3));
 
     typeCairoPoint = make_typedef ("point_t",
+				   CairoNamespace,
 				   publish_public,
 				   POINT_I,
 				   NULL,
@@ -233,6 +254,7 @@ init_types (void)
 						    typePrim[rep_float], "y"));
 
     typeCairoRect = make_typedef ("rect_t",
+				  CairoNamespace,
 				  publish_public,
 				  RECT_I,
 				  NULL,
@@ -243,6 +265,7 @@ init_types (void)
 						   typePrim[rep_float], "height"));
 
     typeCairoRgbColor = make_typedef ("rgb_color_t",
+				      CairoNamespace,
 				      publish_public,
 				      RGB_COLOR_I,
 				      NULL,
@@ -252,6 +275,7 @@ init_types (void)
 						       typePrim[rep_float], "blue"));
 
     typeCairoPattern = make_typedef ("pattern_t",
+				     CairoNamespace,
 				     publish_public,
 				     PATTERN_I,
 				     NULL,
@@ -262,30 +286,35 @@ init_types (void)
      */
 
     typeCairoMoveTo = make_typedef ("move_to_t",
+				    CairoNamespace,
 				    publish_public,
 				    MOVE_TO_I,
 				    &mt,
 				    0);
 
     typeCairoLineTo = make_typedef ("line_to_t",
+				    CairoNamespace,
 				    publish_public,
 				    LINE_TO_I,
 				    &lt,
 				    0);
 
     typeCairoCurveTo = make_typedef ("curve_to_t",
+				     CairoNamespace,
 				     publish_public,
 				     CURVE_TO_I,
 				     &ct,
 				     0);
 
     typeCairoClosePath = make_typedef ("close_path_t",
+				       CairoNamespace,
 				       publish_public,
 				       CLOSE_PATH_I,
 				       &cp,
 				       0);
 
     typeCairoPath = make_typedef ("path_t",
+				  CairoNamespace,
 				  publish_public,
 				  PATH_I,
 				  &path,
@@ -317,6 +346,31 @@ init_types (void)
 
     cp->symbol.type = BuildStructType (1,
 				       typeCairoPath, "next");
+
+    CairoPatternNamespace = BuiltinNamespace (&CairoNamespace, "Pattern")->namespace.namespace;
+
+    typeCairoPatternExtend = make_typedef ("extend_t",
+					   CairoPatternNamespace,
+					   publish_public,
+					   EXTEND_I,
+					   NULL,
+					   BuildEnumType (3,
+							  "NONE",
+							  "REPEAT",
+							  "REFLECT"));
+
+    typeCairoPatternFilter = make_typedef ("filter_t",
+					   CairoPatternNamespace,
+					   publish_public,
+					   FILTER_I,
+					   NULL,
+					   BuildEnumType (6,
+							  "FAST",
+							  "GOOD",
+							  "BEST",
+							  "NEAREST",
+							  "BILINEAR",
+							  "GAUSSIAN"));
 
     EXIT();
 }
@@ -479,6 +533,10 @@ nickle_init (void)
 	    "\n"
 	    " Returns the current alpha\n" },
 	
+	{ do_Cairo_current_pattern, "current_pattern", PATTERN_S, CAIRO_S, "\n"
+	    " pattern_t current_pattern (cairo_t cairo)\n"
+	    "\n"
+	    " Returns the current pattern\n" },
 	{ do_Cairo_current_tolerance, "current_tolerance", "n", CAIRO_S, "\n"
 	    " real current_tolerance (cairo_t cairo)\n"
 	    "\n"
@@ -527,10 +585,14 @@ nickle_init (void)
     };
     
     static const struct fbuiltin_2 funcs_2[] = {
-	{ do_Cairo_set_operator, "set_alpha", "v", CAIRO_S OPERATOR_S, "\n"
+	{ do_Cairo_set_operator, "set_operator", "v", CAIRO_S OPERATOR_S, "\n"
 	    " void set_operator (cairo_t cr, operator_t operator)\n"
 	    "\n"
 	    " Set current operator\n" },
+	{ do_Cairo_set_pattern, "set_pattern", "v", CAIRO_S PATTERN_S, "\n"
+	    " void set_pattern (cairo_t cr, pattern_t pattern)\n"
+	    "\n"
+	    " Set current pattern\n" },
 	{ do_Cairo_set_alpha, "set_alpha", "v", CAIRO_S "n", "\n"
 	    " void set_alpha (cairo_t cr, real alpha)\n"
 	    "\n"
@@ -690,6 +752,58 @@ nickle_init (void)
 	{ 0 }
     };
 
+    static const struct fbuiltin_1 patfuncs_1[] = {
+	{ do_Cairo_Pattern_get_matrix, "get_matrix", MATRIX_S, PATTERN_S, "\n"
+	    " matrix_t get_matrix (pattern_t pattern)\n"
+	    "\n"
+	    " Returns current pattern transformation matrix\n" },
+	{ do_Cairo_Pattern_get_extend, "get_extend", EXTEND_S, PATTERN_S, "\n"
+	    " status_t get_extend (pattern_t pattern, extend_t extend)\n"
+	    "\n"
+	    " Returns current pattern extend method\n" },
+	{ do_Cairo_Pattern_get_filter, "get_filter", FILTER_S, PATTERN_S, "\n"
+	    " status_t get_filter (pattern_t pattern, filter_t filter)\n"
+	    "\n"
+	    " Returns current pattern filter method\n" },
+	{ 0 }
+    };
+    
+    static const struct fbuiltin_2 patfuncs_2[] = {
+	{ do_Cairo_Pattern_set_matrix, "set_matrix", STATUS_S, PATTERN_S MATRIX_S, "\n"
+	    " status_t set_matrix (pattern_t pattern, matrix_t matrix)\n"
+	    "\n"
+	    " Set a transformation matrix for a pattern\n" },
+	{ do_Cairo_Pattern_set_extend, "set_extend", STATUS_S, PATTERN_S EXTEND_S, "\n"
+	    " status_t set_extend (pattern_t pattern, extend_t extend)\n"
+	    "\n"
+	    " Set a extend method for a pattern\n" },
+	{ do_Cairo_Pattern_set_filter, "set_filter", STATUS_S, PATTERN_S FILTER_S, "\n"
+	    " status_t set_filter (pattern_t pattern, filter_t filter)\n"
+	    "\n"
+	    " Set a filter method for a pattern\n" },
+	{ 0 }
+    };
+	
+    static const struct fbuiltin_4 patfuncs_4[] = {
+	{ do_Cairo_Pattern_create_linear, "create_linear", PATTERN_S, "nnnn", "\n"
+	    " pattern_t create_linear (real x0, real y0, real x1, real y1)\n"
+	    "\n"
+	    " Create a linear gradient pattern\n" },
+	{ 0 }
+    };
+
+    static const struct fbuiltin_6 patfuncs_6[] = {
+	{ do_Cairo_Pattern_create_radial, "create_radial", PATTERN_S, "nnnnnn", "\n"
+	    " pattern_t create_radial (real cx0, real cy0, real radius0, real cx1, real cy1, real radius1)\n"
+	    "\n"
+	    " Create a radial gradient pattern\n" },
+	{ do_Cairo_Pattern_add_color_stop, "add_color_stop", STATUS_S, PATTERN_S "nnnnn", "\n"
+	    " status_t add_color_stop (pattern_t cr, real offset, real red, real green, real blue, real alpha)\n"
+	    "\n"
+	    " Add a color stop in a gradient pattern.\n" },
+	{ 0 }
+    };
+
     init_types ();
     
     BuiltinFuncsV (&CairoNamespace, funcs_v);
@@ -700,6 +814,11 @@ nickle_init (void)
     BuiltinFuncs5 (&CairoNamespace, funcs_5);
     BuiltinFuncs6 (&CairoNamespace, funcs_6);
     BuiltinFuncs7 (&CairoNamespace, funcs_7);
+
+    BuiltinFuncs1 (&CairoPatternNamespace, patfuncs_1);
+    BuiltinFuncs2 (&CairoPatternNamespace, patfuncs_2);
+    BuiltinFuncs4 (&CairoPatternNamespace, patfuncs_4);
+    BuiltinFuncs6 (&CairoPatternNamespace, patfuncs_6);
 
     RETURN(TrueVal);
 }

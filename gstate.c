@@ -80,7 +80,7 @@ do_Cairo_set_rgb_color (Value cv, Value rv, Value gv, Value bv)
 Value
 do_Cairo_set_alpha (Value cv, Value av)
 {
-   cairo_5c_t	*c5c = get_cairo_5c (cv);
+    cairo_5c_t	*c5c = get_cairo_5c (cv);
     double	a = DoublePart (av, "invalid alpha value");
 
     if (!aborting)
@@ -237,9 +237,7 @@ do_Cairo_current_matrix (Value cv)
     ENTER ();
     cairo_5c_t	    *c5c = get_cairo_5c (cv);
     cairo_matrix_t  *matrix;
-    double	    a, b, c, d, tx, ty;
     Value	    ret;
-    static int	dims[2] = { 2, 3 };
 
     if (aborting)
 	RETURN(Void);
@@ -254,15 +252,8 @@ do_Cairo_current_matrix (Value cv)
 	RETURN(Void);
     }
     cairo_current_matrix (c5c->cr, matrix);
-    cairo_matrix_get_affine (matrix, &a, &b, &c, &d, &tx, &ty);
+    ret = new_cairo_matrix (matrix);
     cairo_matrix_destroy (matrix);
-    ret = NewArray (False, False, typePrim[rep_float], 2, dims);
-    ArrayValueSet(&ret->array, 0, NewDoubleFloat (a));
-    ArrayValueSet(&ret->array, 1, NewDoubleFloat (b));
-    ArrayValueSet(&ret->array, 2, NewDoubleFloat (c));
-    ArrayValueSet(&ret->array, 3, NewDoubleFloat (d));
-    ArrayValueSet(&ret->array, 4, NewDoubleFloat (tx));
-    ArrayValueSet(&ret->array, 5, NewDoubleFloat (ty));
     RETURN (ret);
 }
 
@@ -272,26 +263,12 @@ do_Cairo_set_matrix (Value cv, Value mv)
     ENTER ();
     cairo_5c_t	    *c5c = get_cairo_5c (cv);
     cairo_matrix_t  *matrix;
-    double	    a, b, c, d, tx, ty;
 
     if (aborting)
 	RETURN(Void);
-    
-    matrix = cairo_matrix_create ();
-    if (!matrix)
-    {
-	RaiseStandardException (exception_invalid_argument,
-				"can't create matrix",
-				2, cv, Void);
+    matrix = cairo_matrix_part (mv, "invalid matrix");
+    if (aborting)
 	RETURN(Void);
-    }
-    a = DoublePart (ArrayValueGet(&mv->array, 0), "invalid matrix");
-    b = DoublePart (ArrayValueGet(&mv->array, 1), "invalid matrix");
-    c = DoublePart (ArrayValueGet(&mv->array, 2), "invalid matrix");
-    d = DoublePart (ArrayValueGet(&mv->array, 3), "invalid matrix");
-    tx = DoublePart (ArrayValueGet(&mv->array, 4), "invalid matrix");
-    ty = DoublePart (ArrayValueGet(&mv->array, 5), "invalid matrix");
-    cairo_matrix_set_affine (matrix, a, b, c, d, tx, ty);
     cairo_set_matrix (c5c->cr, matrix);
     cairo_matrix_destroy (matrix);
     RETURN (Void);

@@ -42,6 +42,8 @@ libcairo_5c_la_SOURCES = \
 	gstate.c \
 	gtk.c \
 	init.c \
+	matrix.c \
+	pattern.c \
 	surface.c \
 	text.c
 

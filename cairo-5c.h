@@ -90,6 +90,10 @@ extern Type		*typeCairoMoveTo;
 extern Type		*typeCairoLineTo;
 extern Type		*typeCairoCurveTo;
 extern Type		*typeCairoClosePath;
+extern Type		*typeCairoFilter;
+
+extern Type		*typeCairoPatternExtend;
+extern Type		*typeCairoPatternFilter;
 
 /* surface.c */
 cairo_5c_t *
@@ -318,6 +322,53 @@ do_Cairo_current_path_list (Value cv);
 
 Value
 do_Cairo_current_path_flat_list (Value cv);
+
+/* matrix.c */
+cairo_matrix_t *
+cairo_matrix_part (Value matrixv, char *err);
+
+Value
+new_cairo_matrix (cairo_matrix_t *matrix);
+
+/* pattern.c */
+cairo_pattern_t *
+get_cairo_pattern (Value pv);
+    
+Value
+do_Cairo_current_pattern (Value cv);
+
+Value
+do_Cairo_set_pattern (Value cv, Value patv);
+
+Value
+do_Cairo_Pattern_create_linear (Value x0v, Value y0v, Value x1v, Value y1v);
+
+Value
+do_Cairo_Pattern_create_radial (Value cx0v, Value cy0v, Value radius0v,
+				Value cx1v, Value cy1v, Value radius1v);
+
+Value
+do_Cairo_Pattern_add_color_stop (Value patv, Value offsetv,
+				 Value redv, Value greenv, Value bluev,
+				 Value alphav);
+
+Value
+do_Cairo_Pattern_set_matrix (Value patv, Value matrixv);
+
+Value
+do_Cairo_Pattern_get_matrix (Value patv);
+
+Value
+do_Cairo_Pattern_set_extend (Value patv, Value extendv);
+
+Value
+do_Cairo_Pattern_get_extend (Value patv);
+
+Value
+do_Cairo_Pattern_set_filter (Value patv, Value filterv);
+
+Value
+do_Cairo_Pattern_get_filter (Value patv);
 
 /* text.c */
 Value
