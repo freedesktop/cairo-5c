@@ -390,7 +390,13 @@ Value
 do_Cairo_select_font (Value cv, Value fv, Value sv, Value wv);
 
 Value
+do_Cairo_set_font (Value cv, Value fv);
+
+Value
 do_Cairo_scale_font (Value cv, Value sv);
+
+Value
+do_Cairo_transform_font (Value cv, Value mv);
 
 Value
 do_Cairo_show_text (Value cv, Value uv);

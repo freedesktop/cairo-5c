@@ -81,8 +81,6 @@ void transform (cairo_t cr, real t)
 void animate (cairo_t cr, int n, int m)
 {
     cr = dup (cr);
-    select_font (cr, "Gadget", font_slant_t.NORMAL, font_weight_t.NORMAL);
-    scale_font (cr, 20);
     real t = 0;
     for (;;)
     {
@@ -105,6 +103,7 @@ void main ()
 {
     cairo_t cr = new ();
     
+    set_font (cr, "Gadget-20");
     fork animate (cr, 0, 0);
     fork animate (cr, 1, 0);
     fork animate (cr, 2, 0);

@@ -1,5 +1,23 @@
 2004-12-18  Keith Packard  <keithp@keithp.com>
 
+	* cairo.5c:
+	Add matrix operations
+	
+	* cairo-5c.h:
+	* text.c: (do_Cairo_set_font), (do_Cairo_transform_font):
+	* init.c: (nickle_init):
+	Add set_font and transform_font interfaces
+	
+	* examples/animate.5c:
+	* examples/pie.5c:
+	use set_font interface
+	
+	* surface.c: (do_Cairo_dup):
+	Duplicate gstate in dup operator
+	
+
+2004-12-18  Keith Packard  <keithp@keithp.com>
+
 	* Makefile.am:
 	* cairo.5c:
 	* examples/animate.5c:

@@ -629,10 +629,18 @@ nickle_init (void)
 	    " void rotate (cairo_t cr, real radians)\n"
 	    "\n"
 	    " Rotate current transformation matrix by specified amount\n" },
+	{ do_Cairo_set_font, "set_font", "v", CAIRO_S "s", "\n"
+	    " void set_font (cairo_t cr, string name)\n"
+	    "\n"
+	    " Select and set current font from name.\n" },
 	{ do_Cairo_scale_font, "scale_font", "v", CAIRO_S "n", "\n"
 	    " void scale_font (cairo_t cr, real scale)\n"
 	    "\n"
 	    " Scales current font by specified amount\n" },
+	{ do_Cairo_transform_font, "transform_font", "v", CAIRO_S MATRIX_S, "\n"
+	    " void transform_font (cairo_t cr, matrix_t matrix)\n"
+	    "\n"
+	    " Transforms current font by specified matrix\n" },
 	{ do_Cairo_show_text, "show_text", "v", CAIRO_S "s", "\n"
 	    " void show_text (cairo_t cr, string text)\n"
 	    "\n"

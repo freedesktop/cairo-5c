@@ -296,6 +296,7 @@ do_Cairo_dup (Value cov)
     *c5c = *c5co;
     c5c->cr = cairo_create ();
     cairo_set_target_surface (c5c->cr, cairo_current_target_surface (c5co->cr));
+    cairo_copy (c5c->cr, c5co->cr);
     ret = NewForeign (CairoId, c5c, free_cairo_5c);
 
     RETURN (ret);

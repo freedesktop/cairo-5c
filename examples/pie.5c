@@ -163,8 +163,7 @@ void pie (int bits)
 {
     cairo_t cr = new (700, 700);
     sleep (100);
-    select_font (cr, "sans-serif", font_slant_t.NORMAL, font_weight_t.NORMAL);
-    scale_font (cr, 10);
+    set_font (cr, "sans\\-serif-10");
     spiral_text (cr, sprintf ("%.-g", pi_value (bits)));
 }
 

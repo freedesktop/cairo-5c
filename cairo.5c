@@ -183,4 +183,65 @@ extend namespace Cairo {
 	    value = t[2]
 	};
     }
+
+    public namespace Matrix {
+	matrix_t multiply_scalar (matrix_t a, real scalar) = 
+	    (matrix_t) { [row,col] = a[row,col] * scalar };
+
+	public matrix_t identity () =
+	    (matrix_t) { [row,col] = row == col ? 1 : 0 };
+
+	public real determinant (matrix_t m) = 
+	    m[0,0] * m[1,1] - m[0,1] * m[1,0];
+	
+	/* This function isn't a correct adjoint in that the implicit 1 in the
+	 homogeneous result should actually be ad-bc instead. But, since this
+	 adjoint is only used in the computation of the inverse, which
+	 divides by det (A)=ad-bc anyway, everything works out in the end. */
+	matrix_t adjoint (matrix_t m) = 
+	    (matrix_t) {
+		{    m[1,1], -m[0,1] },
+		{   -m[1,0],  m[0,0] },
+		{    m[1,0] * m[2,1] - m[1,1] * m[2,0], 
+		     m[0,1] * m[2,0] - m[0,0] * m[2,1] }};
+	
+	/* inv (A) = 1/det (A) * adj (A) */
+	public matrix_t invert (matrix_t a) =
+	    multiply_scalar (adjoint (a), 1 / determinant (a));
+
+	public matrix_t multiply (matrix_t a, matrix_t b) =
+	    (matrix_t) { [row,col] { 
+		real t = 0;
+		if (row == 2)
+		    t = b[2,col];
+		for (int n = 0; n < 2; n++)
+		    t += a[row,n] * b[n,col];
+		return t;
+	    }};
+
+	public matrix_t translate (matrix_t m, real tx, real ty) =
+	    multiply ((matrix_t) { { 1, 0 }, { 0, 1 }, { tx, ty } }, m);
+	
+	public matrix_t scale (matrix_t m, real sx, real sy) =
+	    multiply ((matrix_t) { { sx, 0 }, { 0, sy }, { 0, 0 } }, m);
+	
+	public matrix_t rotate (matrix_t m, real a) =
+	    multiply ((matrix_t) { 
+		{  (real c = cos(a)), (real s = sin(a)) },
+		{      -s,                c },
+		{       0,                0 } }, m);
+
+	public point_t point (matrix_t m, point_t p) =
+	    (point_t) { 
+		x = m[0,0] * p.x + m[1,0] * p.y + m[2,0],
+		y = m[0,1] * p.x + m[1,1] * p.y + m[2,1]
+	    };
+	
+	public point_t distance (matrix_t m, point_t p) =
+	    (point_t) { 
+		x = m[0,0] * p.x + m[1,0] * p.y,
+		y = m[0,1] * p.x + m[1,1] * p.y
+	    };
+	
+     }	
 }
