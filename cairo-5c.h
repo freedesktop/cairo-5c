@@ -100,6 +100,12 @@ do_Cairo_status_string (Value cv);
 Value
 do_Cairo_dispose (Value av);
 
+Value
+do_Cairo_enable (Value cv);
+
+Value
+do_Cairo_disable (Value cv);
+
 /* init.c */
 Value
 nickle_init (void);
@@ -224,4 +230,11 @@ repaint_x (cairo_5c_x_t *c5cx, int x, int y, int w, int h);
 void
 dirty_x (cairo_5c_x_t *c5cx, int x, int y, int w, int h);
 
+Bool
+enable_x  (cairo_5c_x_t *c5cx);
+
+Bool
+disable_x (cairo_5c_x_t *c5cx);
+
+    
 #endif /* _CAIRO_5C_H_ */

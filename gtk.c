@@ -43,6 +43,7 @@
 typedef struct _cairo_5c_gtk {
     cairo_5c_x_t    x;
     int		    dirty;
+    int		    disable;
     GtkWidget	    *window;
     GtkWidget	    *drawing_area;
     GdkPixmap	    *pixmap;
@@ -171,8 +172,11 @@ gtk_repaint_timeout (gpointer data)
 {
     cairo_5c_gtk_t  *c5cg = data;
 
-    c5cg->dirty = 0;
-    repaint_x (&c5cg->x, 0, 0, 0, 0);
+    if (c5cg->disable == 0)
+    {
+	c5cg->dirty = 0;
+	repaint_x (&c5cg->x, 0, 0, 0, 0);
+    }
     return FALSE;
 }
 
@@ -214,8 +218,37 @@ dirty_x (cairo_5c_x_t *c5cx, int x, int y, int w, int h)
     if (!c5cg->dirty)
     {
 	c5cg->dirty = 1;
+	if (c5cg->disable == 0)
+	{
+	    gdk_threads_enter ();
+	    g_timeout_add (16, gtk_repaint_timeout, c5cg);
+	    gdk_threads_leave ();
+	}
+    }
+}
+
+Bool
+disable_x (cairo_5c_x_t *c5cx)
+{
+    cairo_5c_gtk_t  *c5cg = (cairo_5c_gtk_t *) c5cx;
+
+    ++c5cg->disable;
+    return True;
+}
+
+Bool
+enable_x  (cairo_5c_x_t *c5cx)
+{
+    cairo_5c_gtk_t  *c5cg = (cairo_5c_gtk_t *) c5cx;
+
+    if (!c5cg->disable)
+	return False;
+    --c5cg->disable;
+    if (!c5cg->disable && c5cg->dirty)
+    {
 	gdk_threads_enter ();
-	g_timeout_add (16, gtk_repaint_timeout, c5cg);
+	g_timeout_add (0, gtk_repaint_timeout, c5cg);
 	gdk_threads_leave ();
     }
+    return True;
 }

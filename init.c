@@ -71,6 +71,14 @@ nickle_init (void)
 	    " void dispose (foreign cairo)\n"
 	    "\n"
 	    " Dispose a cairo surface\n" },
+	{ do_Cairo_enable, "enable", "v", "F", "\n"
+	    " void enable (foreign cairo)\n"
+	    "\n"
+	    " Enable screen updates from a cairo surface\n" },
+	{ do_Cairo_disable, "disable", "v", "F", "\n"
+	    " void disable (foreign cairo)\n"
+	    "\n"
+	    " Disable screen updates from a cairo surface\n" },
 	{ do_Cairo_save, "save", "v", "F", "\n"
 	    " void save (foreign cairo)\n"
 	    "\n"

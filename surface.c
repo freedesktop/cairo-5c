@@ -104,6 +104,30 @@ dirty_cairo_5c (cairo_5c_t *c5c)
     }
 }
 
+static Bool
+enable_cairo_5c (cairo_5c_t *c5c)
+{
+    switch (c5c->kind) {
+    case CAIRO_5C_WINDOW:
+	return enable_x (c5c->u.window.x);
+    case CAIRO_5C_PNG:
+	break;
+    }
+    return True;
+}
+
+static Bool
+disable_cairo_5c (cairo_5c_t *c5c)
+{
+    switch (c5c->kind) {
+    case CAIRO_5C_WINDOW:
+	return disable_x (c5c->u.window.x);
+    case CAIRO_5C_PNG:
+	break;
+    }
+    return True;
+}
+
 Value
 do_Cairo_new (int n, Value *v)
 {
@@ -253,4 +277,36 @@ do_Cairo_dispose (Value av)
 	av->foreign.data = 0;
     }
     RETURN (Void);
+}
+
+Value
+do_Cairo_enable (Value cv)
+{
+    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	return Void;
+    if (!enable_cairo_5c (c5c))
+    {
+	RaiseStandardException (exception_invalid_argument,
+				"already enabled",
+				2, NewInt(0), cv);
+    }
+    return Void;
+}
+
+Value
+do_Cairo_disable (Value cv)
+{
+    cairo_5c_t	*c5c = get_cairo_5c (cv);
+    
+    if (aborting)
+	return Void;
+    if (!disable_cairo_5c (c5c))
+    {
+	RaiseStandardException (exception_invalid_argument,
+				"can't disable",
+				2, NewInt(0), cv);
+    }
+    return Void;
 }

@@ -43,7 +43,7 @@ void picture (foreign cr)
 void transform (foreign cr, real t)
 {
     translate (cr, 50, 50);
-    rotate (cr, t * pi / 30);
+    rotate (cr, t * pi / 60);
 }
 
 void animate (foreign cr, mutex l, int n, int m)
@@ -52,6 +52,7 @@ void animate (foreign cr, mutex l, int n, int m)
     for (;;)
     {
 	Mutex::acquire (l);
+	disable (cr);
 	save (cr);
 	translate (cr, n * 100, m * 100);
 	set_rgb_color (cr, 1, 1, 1);
@@ -60,6 +61,7 @@ void animate (foreign cr, mutex l, int n, int m)
 	transform (cr, t);
 	picture (cr);
 	restore (cr);
+	enable (cr);
 	Mutex::release (l);
 	sleep (100);
 	t += n + m + 1;

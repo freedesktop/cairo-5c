@@ -1,5 +1,18 @@
 2004-12-14  Keith Packard  <keithp@keithp.com>
 
+	* cairo-5c.h:
+	* gtk.c: (gtk_repaint_timeout), (dirty_x), (disable_x), (enable_x):
+	* init.c: (nickle_init):
+	* surface.c: (enable_cairo_5c), (disable_cairo_5c),
+	(do_Cairo_enable), (do_Cairo_disable):
+	Add enable/disable to take advantage of double buffering for
+	smooth animation.
+	
+	* examples/animate.5c:
+	Use enable/disable to smooth this animation out
+
+2004-12-14  Keith Packard  <keithp@keithp.com>
+
 	* .cvsignore:
 	* Makefile.am:
 	* cairo-5c.h:
