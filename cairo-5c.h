@@ -38,7 +38,13 @@
 
 #include <nickle/builtin.h>
 #define Atom XAtom
+#undef True
+#undef False
 #include <cairo.h>
+#include <cairo-xlib.h>
+#include <cairo-png.h>
+#include <cairo-ps.h>
+#include <cairo-ft.h>
 #include <stdio.h>
 #include <unistd.h>
 #undef Atom

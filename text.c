@@ -54,25 +54,34 @@ do_Cairo_set_font (Value cv, Value fv)
     ENTER ();
     cairo_5c_t		*c5c = cairo_5c_get (cv);
     char		*name = StrzPart (fv, "invalid name");
-    FcPattern		*pat;
-    static FT_Library	ft_library;
+    FcPattern		*pat, *match;
     cairo_font_t	*font;
-    double		scale = 0;
+    double		size = 0;
+    cairo_matrix_t	*scale;
+    FcResult		result;
 
     if (aborting)
 	RETURN (Void);
-    if (!ft_library)
-	if (FT_Init_FreeType (&ft_library))
-	{
-	    RaiseStandardException (exception_open_error,
-				    "can't open FreeType",
-				    1, fv);
-	    RETURN (Void);
-	}
     pat = FcNameParse (name);
-    FcPatternGetDouble (pat, FC_SIZE, 0, &scale);
-    font = cairo_ft_font_create (ft_library, pat);
+
+    FcConfigSubstitute (0, pat, FcMatchPattern);
+    FcDefaultSubstitute (pat);
+
+    match = FcFontMatch (0, pat, &result);
     FcPatternDestroy (pat);
+    if (!match)
+    {
+	RaiseStandardException (exception_open_error,
+				"can't open font",
+				1, fv);
+	RETURN (Void);
+    }
+
+    FcPatternGetDouble (match, FC_SIZE, 0, &size);
+    scale = cairo_matrix_create ();
+    font = cairo_ft_font_create (match, scale);
+    cairo_matrix_destroy (scale);
+    FcPatternDestroy (match);
     if (!font)
     {
 	RaiseStandardException (exception_open_error,
@@ -81,8 +90,7 @@ do_Cairo_set_font (Value cv, Value fv)
 	RETURN (Void);
     }
     cairo_set_font (c5c->cr, font);
-    if (scale != 0)
-	cairo_scale_font(c5c->cr, scale);
+    cairo_scale_font (c5c->cr, size);
     cairo_font_destroy (font);
     RETURN(Void);
 }

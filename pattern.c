@@ -93,7 +93,7 @@ do_Cairo_current_pattern (Value cv)
 
     if (aborting)
 	return Void;
-    return make_pattern_value (cairo_current_pattern (c5c->cr));
+    return make_pattern_value (cairo_get_pattern (c5c->cr));
 }
 
 Value
@@ -164,13 +164,12 @@ premultiply_data (png_structp   png,
     }
 }
 
-struct cairo_matrix {
+struct _cairo_matrix {
     double m[3][2];
 };
 
-struct cairo_surface {
+struct _cairo_surface {
     const void *backend;
-
     unsigned int ref_count;
 
     cairo_matrix_t matrix;
@@ -184,13 +183,6 @@ struct cairo_image_surface {
     /* libic-specific fields */
     char *data;
     int owns_data;
-
-    int width;
-    int height;
-    int stride;
-    int depth;
-
-    pixman_image_t *pixman_image;
 };
 
 static cairo_surface_t *
@@ -275,8 +267,8 @@ create_surface_from_png (const char *filename)
     fclose (f);
     png_destroy_read_struct (&png, &info, NULL);
 
-    surface = cairo_surface_create_for_image (buffer, CAIRO_FORMAT_ARGB32, 
-					      width, height, stride);
+    surface = cairo_image_surface_create_for_data (buffer, CAIRO_FORMAT_ARGB32, 
+						   width, height, stride);
     if (!surface)
     {
 	free (buffer);

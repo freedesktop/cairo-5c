@@ -97,7 +97,7 @@ namespace Graph {
 	    text_extents_t  e = text_extents (cr, text);
 	    
 	    move_to (cr, scale (axis.scale, major) - e.x_advance / 2, 
-		     abs(f.height) * 1.2);
+		     -abs(f.height) * 1.2);
 	    show_text (cr, text);
 	}
     }

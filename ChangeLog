@@ -1,3 +1,17 @@
+2005-03-14  Keith Packard  <keithp@keithp.com>
+
+	* cairo-5c.h:
+	Must explicitly reference desired backends
+	
+	* pattern.c: (do_Cairo_current_pattern), (create_surface_from_png):
+	Switch from deprecated functions to current ones
+	
+	* text.c: (do_Cairo_set_font):
+	Fix sizing from supplied pattern
+	
+	* examples/graph.5c:
+	metrics got fixed.
+
 2005-01-02  Keith Packard  <keithp@keithp.com>
 
 	* cairo-5c.h:
