@@ -1,3 +1,11 @@
+2004-12-11  Keith Packard  <keithp@keithp.com>
+
+	* examples/pie.5c:
+	Replace hsv conversion functions with algorithms which
+	use 0 <= h <= 1, 0 <= v <= 1 and 0 <= s <= 1.  The
+	algorithms are adapted from the Modula III versions found at:
+	http://research.compaq.com/SRC/m3sources/html/color/src/Color.i3.html
+
 2004-12-10  Keith Packard  <keithp@keithp.com>
 
 	* examples/pie.5c:

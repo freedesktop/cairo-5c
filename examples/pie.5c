@@ -1,4 +1,38 @@
 #!/usr/bin/env nickle
+/* $Id$
+ *
+ * Copyright © 2004 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
 
 if (!Command::valid_name ((string[]) { "Cairo" }))
     Foreign::load ("libcairo-5c.so");
@@ -7,84 +41,60 @@ import Cairo;
 
 typedef foreign cairo_t;
 
-real[3] rgb_to_hsv(real[3] rgb)
+/*
+ * Adapted from algorithms found at
+ * http://research.compaq.com/SRC/m3sources/html/color/src/Color.i3.html
+ */
+
+real[3] to_hsv(real r, real g, real b)
 {
-    real min, max, delta;
-    int i, w;
-    real[3] hsv;
-
-    w = 0;
-    min = max = rgb[0];
-    for(i=0; i<3; i++) {
-	if (rgb[i]<min) min = rgb[i];
-	if (rgb[i]>max) { max = rgb[i]; w = i; }
-    }
-
-    /* calculate V */
-    hsv[2] = max;
-
-    /* calculate S */
-    if (max>0.00000001)
-	hsv[1] = ((max-min)/max);
-    else
-	hsv[1] = 0.0;
-
-    /* calculate H */
-    if (hsv[1]<=0.000001) {
-
-    } else {
-	delta = max-min;
-	switch(w) {
-	case 0: hsv[0] = 60.0*(0.0 + (rgb[1]-rgb[2])/delta); break;
-	case 1: hsv[0] = 60.0*(2.0 + (rgb[2]-rgb[0])/delta); break;
-	case 2: hsv[0] = 60.0*(4.0 + (rgb[0]-rgb[1])/delta); break;
+    real minimum = min (r, g, b);
+    real maximum = max (r, g, b);
+    real v = maximum;
+    real s = (maximum == 0) ? 0 : (maximum - minimum) / maximum;
+    real h = 0;
+    if (s != 0)
+    {
+	switch (maximum) {
+	case r:	h =       (g - b) / (maximum - minimum);  break;
+	case g:	h = 2.0 + (b - r) / (maximum - minimum);  break;
+	case b:	h = 4.0 + (r - g) / (maximum - minimum);  break;
 	}
-	while (hsv[0] < 0.0) hsv[0] += 360.0;
+	h = h / 6;
     }
-    return hsv;
+    return (real[3]) { h, s, v };
 }
 
 /* convert hsv to rgb */
 
-real[3] hsv_to_rgb(real[3] hsv) 
+real[3] from_hsv(real h, real s, real v)
 {
-    real h,s,v,f,p,q,t;
-    int i;
-    real[3] rgb;
-
-    h = hsv[0];
-    s = hsv[1];
-    v = hsv[2];
-
-    if(s <= 0.0000001) {
-	for(i=0; i<3; i++)
-	    rgb[i] = v;
+    if (v == 0.0)
+	return (real[3]) { 0 ... };
+    else if (s == 0.0) {
+	return (real[3]) { v ... };
     } else {
-	while(h<0.0) h+=360.0;
-	while(h>=360.0) h-=360.0;
-
-	h /= 60.0;
-	i = floor (h);
-	f = h - i;
-	p = v*(1.0-s);
-	q = v*(1.0-(s*f));
-	t = v*(1.0-(s*(1.0-f)));
+	real h6 = (h * 6) % 6;
+	int  i = floor (h6);
+	real f = h6 - i;
+	real p = v * (1 - s);
+	real q = v * (1 - (s * f));
+	real t = v * (1 - (s * (1 - f)));
 
 	switch(i) {
-	case 0: rgb[0] = v; rgb[1] = t; rgb[2] = p; break;
-	case 1: rgb[0] = q; rgb[1] = v; rgb[2] = p; break;
-	case 2: rgb[0] = p; rgb[1] = v; rgb[2] = t; break;
-	case 3: rgb[0] = p; rgb[1] = q; rgb[2] = v; break;
-	case 4: rgb[0] = t; rgb[1] = p; rgb[2] = v; break;
-	case 5: rgb[0] = v; rgb[1] = p; rgb[2] = q; break;
+	default:return (real[3]) { v, t, p };
+	case 1: return (real[3]) { q, v, p };
+	case 2: return (real[3]) { p, v, t };
+	case 3: return (real[3]) { p, q, v };
+	case 4: return (real[3]) { t, p, v };
+	case 5: return (real[3]) { v, p, q };
 	}
     }
-    return rgb;
 }
 
 void set_hsv_color (foreign cr, real h, real s, real v)
 {
-    real[3] rgb = hsv_to_rgb ((real[3]) { h, s, v });
+    real[3] rgb = from_hsv (h, s, v);
     Cairo::set_rgb_color (cr, rgb[0], rgb[1], rgb[2]);
 }
 
@@ -142,7 +152,7 @@ void spiral_text (cairo_t cr, string text)
 
 	save (cr);
 	rotate (cr, θ + π ÷ 2);
-	set_hsv_color (cr, θ * 180 / π, 1, 0.7);
+	set_hsv_color (cr, θ / (2 * pi), 1, 0.7);
 	
 	translate   (cr, -width ÷ 2, -radius);
 	
