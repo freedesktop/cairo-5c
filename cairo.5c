@@ -47,13 +47,13 @@ extend namespace Cairo {
     } hsv_color_t;
     
     public int width (cairo_t cr) = 
-	Surface::width (current_target_surface (cr));
+	Surface::width (get_target_surface (cr));
     
     public int height (cairo_t cr) = 
-	Surface::height (current_target_surface (cr));
+	Surface::height (get_target_surface (cr));
     
     public file open_event (cairo_t cr) =
-	Surface::open_event (current_target_surface (cr));
+	Surface::open_event (get_target_surface (cr));
 
     public cairo_t new (int args...) {
 	int w = dim(args) > 0 ? args[0] : 0;
@@ -82,7 +82,7 @@ extend namespace Cairo {
 		    string name = (dim (argv) > 0) ? argv[0] : "nickle";
 		    surface.surface = Surface::create_window (name, w, h);
 		    set_target_surface (cr, surface.surface);
-		    set_rgb_color (cr, 1, 1, 1);
+		    set_source_rgba (cr, 1, 1, 1, 1);
 		    rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));
 		    fill (cr);
 		    break;
@@ -100,7 +100,7 @@ extend namespace Cairo {
 	    surface = surface_or_none_t.none;
 	    ensure_surface ();
 	}
-	set_rgb_color (cr, 0, 0, 0);
+	set_source_rgba (cr, 0, 0, 0, 1);
 	return cr;
     }
 
@@ -111,27 +111,31 @@ extend namespace Cairo {
 	cairo_t	    cr = create ();
 	
 	set_target_surface (cr, surface);
-	set_rgb_color (cr, 1, 1, 1);
+	set_source_rgba (cr, 1, 1, 1, 1);
 	rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));
 	fill (cr);
-	set_rgb_color (cr, 0, 0, 0);
+	set_source_rgba (cr, 0, 0, 0, 1);
 	return cr;
     }
 
-    public cairo_t new_png (string filename, int width, int height)
+    public cairo_t new_image (int width, int height)
     {
-	surface_t   surface = Surface::create_png (filename, width, height);
+	surface_t   surface = Surface::create_image (width, height);
 	cairo_t	    cr = create ();
 	set_target_surface (cr, surface);
-	set_rgb_color (cr, 0, 0, 0);
-	set_alpha (cr, 0);
+	set_source_rgba (cr, 0, 0, 0, 0);
 	set_operator (cr, operator_t.SRC);
 	rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));
 	fill (cr);
 	set_operator (cr, operator_t.OVER);
-	set_rgb_color (cr, 0, 0, 0);
-	set_alpha (cr, 1);
+	set_source_rgba (cr, 0, 0, 0, 1);
 	return cr;
+    }
+    
+    public void write_to_png (cairo_t cr, string filename)
+    {
+	surface_t   surface = get_target_surface (cr);
+	Surface::write_to_png (surface, filename);
     }
     
     public cairo_t new_ps (string filename, 
@@ -142,10 +146,10 @@ extend namespace Cairo {
 						  xppi, yppi);
 	cairo_t	    cr = create ();
 	set_target_surface (cr, surface);
-	set_rgb_color (cr, 1, 1, 1);
+	set_source_rgba (cr, 1, 1, 1, 1);
 	rectangle (cr, 0, 0, Cairo::width (cr), Cairo::height (cr));
 	fill (cr);
-	set_rgb_color (cr, 0, 0, 0);
+	set_source_rgba (cr, 0, 0, 0, 1);
 	return cr;
     }
     
@@ -153,7 +157,7 @@ extend namespace Cairo {
     {
 	cairo_t	n = create ();
 
-	set_target_surface (n, current_target_surface (cr));
+	set_target_surface (n, get_target_surface (cr));
 	copy (n, cr);
 	return n;
     }
@@ -267,7 +271,7 @@ extend namespace Cairo {
 	}
     }
 
-    public void set_hsv_color (cairo_t cr, real h, real s, real v)
+    public void set_source_hsv (cairo_t cr, real h, real s, real v)
 	/*
 	 * Set color using HSV specification
 	 *  H: hue	    0 = red, 0.{3} = green, 0.{6} = blue
@@ -275,36 +279,25 @@ extend namespace Cairo {
 	 *  V: value	    0..1
 	 */
     {
-	set_rgb_color (cr, from_hsv (h, s, v) ...);
-    }
-
-    public hsv_color_t current_hsv_color (cairo_t cr)
-	/*
-	 * Return current color using HSV specification
-	 *
-	 *  H: hue	    0 = red, 0.{3} = green, 0.{6} = blue
-	 *  S: satuation    0..1
-	 *  V: value	    0..1
-	 */
-    {
-	rgb_color_t rgb = current_rgb_color (cr);
-	real[3]	    t = to_hsv (rgb.red, rgb.green, rgb.blue);
-	return (hsv_color_t) { 
-	    hue = t[0],
-	    saturation = t[1],
-	    value = t[2]
-	};
+	set_source_rgb (cr, from_hsv (h, s, v) ...);
     }
 
     public namespace Matrix {
 	matrix_t multiply_scalar (matrix_t a, real scalar) = 
-	    (matrix_t) { [row,col] = a[row,col] * scalar };
+	    (matrix_t) { 
+		xx = a.xx * scalar, yx = a.yx * scalar,
+		xy = a.xy * scalar, yy = a.yy * scalar,
+		x0 = a.x0 * scalar, y0 = a.y0 * scalar };
+		
 
 	public matrix_t identity () =
-	    (matrix_t) { [row,col] = row == col ? 1 : 0 };
+	    (matrix_t) { 
+		xx = 1, yx = 0,
+		xy = 0, yy = 1,
+		x0 = 0, y0 = 0 };
 
 	public real determinant (matrix_t m) = 
-	    m[0,0] * m[1,1] - m[0,1] * m[1,0];
+	    m.xx * m.yy - m.yx * m.xy;
 	
 	/* This function isn't a correct adjoint in that the implicit 1 in the
 	 homogeneous result should actually be ad-bc instead. But, since this
@@ -312,47 +305,52 @@ extend namespace Cairo {
 	 divides by det (A)=ad-bc anyway, everything works out in the end. */
 	matrix_t adjoint (matrix_t m) = 
 	    (matrix_t) {
-		{    m[1,1], -m[0,1] },
-		{   -m[1,0],  m[0,0] },
-		{    m[1,0] * m[2,1] - m[1,1] * m[2,0], 
-		     m[0,1] * m[2,0] - m[0,0] * m[2,1] }};
+		xx = m.yy,  yx = -m.xy,
+		xy = -m.yx, yy = m.xx,
+		x0 = m.yx * m.y0 - m.yy * m.x0,
+		y0 = m.xy * m.x0 - m.xx * m.y0 };
 	
 	/* inv (A) = 1/det (A) * adj (A) */
 	public matrix_t invert (matrix_t a) =
 	    multiply_scalar (adjoint (a), 1 / determinant (a));
 
 	public matrix_t multiply (matrix_t a, matrix_t b) =
-	    (matrix_t) { [row,col] { 
-		real t = 0;
-		if (row == 2)
-		    t = b[2,col];
-		for (int n = 0; n < 2; n++)
-		    t += a[row,n] * b[n,col];
-		return t;
-	    }};
+	    (matrix_t) {
+		xx = a.xx * b.xx + a.yx * b.xy,
+		yx = a.xx * b.yx + a.yx * b.yy,
+		xy = a.xy * b.xx + a.yy * b.xy,
+		yy = a.xy * b.yx + a.yy * b.yy,
+		x0 = a.x0 * b.xx + a.y0 * b.xy + b.x0,
+		y0 = a.x0 * b.yx + a.y0 * b.yy + b.y0 };
 
 	public matrix_t translate (matrix_t m, real tx, real ty) =
-	    multiply ((matrix_t) { { 1, 0 }, { 0, 1 }, { tx, ty } }, m);
+	    multiply ((matrix_t) { 
+		xx = 1,  yx = 0,
+		xy = 0,  yy = 1,
+		x0 = tx, y0 = ty }, m);
 	
 	public matrix_t scale (matrix_t m, real sx, real sy) =
-	    multiply ((matrix_t) { { sx, 0 }, { 0, sy }, { 0, 0 } }, m);
+	    multiply ((matrix_t) { 
+		xx = sx, yx =  0,
+		xy =  0, yy = sy,
+		x0 =  0, y0 =  0 }, m);
 	
 	public matrix_t rotate (matrix_t m, real a) =
 	    multiply ((matrix_t) { 
-		{  (real c = cos(a)), (real s = sin(a)) },
-		{      -s,                c },
-		{       0,                0 } }, m);
+		xx = (real c = cos(a)), yx = (real s = sin(a)),
+		xy = -s,                yy = c,
+		x0 = 0,                 y0 = 0 }, m);
 
 	public point_t point (matrix_t m, point_t p) =
 	    (point_t) { 
-		x = m[0,0] * p.x + m[1,0] * p.y + m[2,0],
-		y = m[0,1] * p.x + m[1,1] * p.y + m[2,1]
+		x = m.xx * p.x + m.yx * p.y + m.x0,
+		y = m.xy * p.x + m.yy * p.y + m.y0
 	    };
 	
 	public point_t distance (matrix_t m, point_t p) =
 	    (point_t) { 
-		x = m[0,0] * p.x + m[1,0] * p.y,
-		y = m[0,1] * p.x + m[1,1] * p.y
+		x = m.xx * p.x + m.yx * p.y,
+		y = m.xy * p.x + m.yy * p.y
 	    };
 	
      }	

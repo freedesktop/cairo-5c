@@ -50,7 +50,7 @@ void main ()
 	    twixt (save (cr); restore (cr)) 
 	    {
 		identity_matrix (cr);
-		set_rgb_color (cr, 1, 1, 1);
+		set_source_rgb (cr, 1, 1, 1);
 		rectangle (cr, 0, 0, width(cr), height(cr));
 		fill (cr);
 	    }
@@ -58,7 +58,7 @@ void main ()
 	    {
 		translate (cr, off_x, off_x);
 		rotate (cr, t * pi / 60);
-		set_rgb_color (cr, 0, 0, 0);
+		set_source_rgb (cr, 0, 0, 0);
 		move_to (cr, -off_x, -off_y);
 		show_text (cr, "CAIRO");
 	    }

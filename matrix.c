@@ -35,47 +35,31 @@
 
 #include "cairo-5c.h"
 
-cairo_matrix_t *
-cairo_matrix_part (Value mv, char *err)
+void
+cairo_matrix_part (Value mv, cairo_matrix_t *matrix, char *err)
 {
-    double a = DoublePart (ArrayValue(&mv->array, 0), "invalid matrix");
-    double b = DoublePart (ArrayValue(&mv->array, 1), "invalid matrix");
-    double c = DoublePart (ArrayValue(&mv->array, 2), "invalid matrix");
-    double d = DoublePart (ArrayValue(&mv->array, 3), "invalid matrix");
-    double tx = DoublePart (ArrayValue(&mv->array, 4), "invalid matrix");
-    double ty = DoublePart (ArrayValue(&mv->array, 5), "invalid matrix");
-    cairo_matrix_t  *matrix;
-
-    if (aborting)
-	return 0;
-
-    matrix = cairo_matrix_create ();
-    if (!matrix)
-    {
-	RaiseStandardException (exception_invalid_argument,
-				err,
-				1, mv);
-	return 0;
-    }
-    cairo_matrix_set_affine (matrix, a, b, c, d, tx, ty);
-    return matrix;
+    matrix->xx = DoublePart (StructMemValue (mv, AtomId("xx")), "invalid xx");
+    matrix->yx = DoublePart (StructMemValue (mv, AtomId("yx")), "invalid yx");
+    matrix->xy = DoublePart (StructMemValue (mv, AtomId("xy")), "invalid xy");
+    matrix->yy = DoublePart (StructMemValue (mv, AtomId("yy")), "invalid yy");
+    matrix->x0 = DoublePart (StructMemValue (mv, AtomId("x0")), "invalid x0");
+    matrix->y0 = DoublePart (StructMemValue (mv, AtomId("y0")), "invalid y0");
 }
 
 Value
 new_cairo_matrix (cairo_matrix_t *matrix)
 {
     ENTER ();
-    double  a, b, c, d, tx, ty;
     Value   ret;
-    static int	dims[2] = { 2, 3 };
-    
-    cairo_matrix_get_affine (matrix, &a, &b, &c, &d, &tx, &ty);
-    ret = NewArray (False, False, typePrim[rep_float], 2, dims);
-    ArrayValueSet(&ret->array, 0, NewDoubleFloat (a));
-    ArrayValueSet(&ret->array, 1, NewDoubleFloat (b));
-    ArrayValueSet(&ret->array, 2, NewDoubleFloat (c));
-    ArrayValueSet(&ret->array, 3, NewDoubleFloat (d));
-    ArrayValueSet(&ret->array, 4, NewDoubleFloat (tx));
-    ArrayValueSet(&ret->array, 5, NewDoubleFloat (ty));
+    BoxPtr  box;
+
+    ret = NewStruct (TypeCanon (typeCairoMatrix)->structs.structs, False);
+    box = ret->structs.values;
+    BoxValueSet (box, 0, NewDoubleFloat (matrix->xx));
+    BoxValueSet (box, 1, NewDoubleFloat (matrix->yx));
+    BoxValueSet (box, 2, NewDoubleFloat (matrix->xy));
+    BoxValueSet (box, 3, NewDoubleFloat (matrix->yy));
+    BoxValueSet (box, 4, NewDoubleFloat (matrix->x0));
+    BoxValueSet (box, 5, NewDoubleFloat (matrix->y0));
     RETURN (ret);
 }

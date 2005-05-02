@@ -39,7 +39,7 @@ autoimport Cairo;
 void text45 () {
     cairo_t	cr = new ();
     set_font (cr, "sans-20");
-    set_rgb_color (cr, 0, 0, 0);
+    set_source_rgb (cr, 0, 0, 0);
     
     save (cr);
     translate (cr, 150, 150);

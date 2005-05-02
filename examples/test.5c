@@ -35,15 +35,14 @@
     
 autoimport Cairo;
 
-typedef foreign cairo_t;
-
-cr = new ();
-set_rgb_color (cr,0,0,0);
+cairo_t cr = new ();
+set_source_rgb (cr,0,0,0);
 move_to (cr, 10, 10);
 line_to (cr, 100, 100);
 stroke (cr);
 move_to (cr, 50, 50);
-set_rgb_color (cr, 0.8, 0, 0.5);
+set_source_rgb (cr, 0.8, 0, 0.5);
 set_alpha (cr, 0.5);
 scale_font (cr, 12);
 show_text (cr, "Hello, cairo");
+sleep (100000);

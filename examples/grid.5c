@@ -71,7 +71,7 @@ void dots (cairo_t cr, grid_t h, grid_t v, real size)
 void
 grid_png (string filename, int width, int height, real major, real x_minor, y_minor)
 {
-    cairo_t cr = new_png (filename, width, height);
+    cairo_t cr = new_image (width, height);
     set_line_width (cr, 2);
     grid (cr, 
 	  (grid_t) { min = 0, max = width, space = major },
@@ -81,6 +81,7 @@ grid_png (string filename, int width, int height, real major, real x_minor, y_mi
 	  (grid_t) { min = 0.5 + x_minor//2, max = width + 0.5, space = x_minor },
 	  (grid_t) { min = 0.5 + y_minor//2, max = height + 0.5, space = y_minor },
 	  major / 20);
+    write_to_png (cr, filename);
     destroy (cr);
 }
 

@@ -65,7 +65,7 @@ do_Cairo_set_operator (Value cv, Value ov)
 }
 
 Value
-do_Cairo_set_rgb_color (Value cv, Value rv, Value gv, Value bv)
+do_Cairo_set_source_rgb (Value cv, Value rv, Value gv, Value bv)
 {
     cairo_5c_t	*c5c = cairo_5c_get (cv);
     double	r = DoublePart (rv, "invalid red value");
@@ -73,18 +73,21 @@ do_Cairo_set_rgb_color (Value cv, Value rv, Value gv, Value bv)
     double	b = DoublePart (bv, "invalid blue value");
     
     if (!aborting)
-	cairo_set_rgb_color (c5c->cr, r, g, b);
+	cairo_set_source_rgb (c5c->cr, r, g, b);
     return Void;
 }
 
 Value
-do_Cairo_set_alpha (Value cv, Value av)
+do_Cairo_set_source_rgba (Value cv, Value rv, Value gv, Value bv, Value av)
 {
     cairo_5c_t	*c5c = cairo_5c_get (cv);
+    double	r = DoublePart (rv, "invalid red value");
+    double	g = DoublePart (gv, "invalid green value");
+    double	b = DoublePart (bv, "invalid blue value");
     double	a = DoublePart (av, "invalid alpha value");
-
+    
     if (!aborting)
-	cairo_set_alpha (c5c->cr, a);
+	cairo_set_source_rgba (c5c->cr, r, g, b, a);
     return Void;
 }
 
@@ -232,28 +235,18 @@ do_Cairo_rotate (Value cv, Value av)
 }
 
 Value
-do_Cairo_current_matrix (Value cv)
+do_Cairo_get_matrix (Value cv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
-    cairo_matrix_t  *matrix;
+    cairo_matrix_t  matrix;
     Value	    ret;
 
     if (aborting)
 	RETURN(Void);
     
-    matrix = cairo_matrix_create ();
-
-    if (!matrix)
-    {
-	RaiseStandardException (exception_invalid_argument,
-				"can't create matrix",
-				2, cv, Void);
-	RETURN(Void);
-    }
-    cairo_current_matrix (c5c->cr, matrix);
-    ret = new_cairo_matrix (matrix);
-    cairo_matrix_destroy (matrix);
+    cairo_get_matrix (c5c->cr, &matrix);
+    ret = new_cairo_matrix (&matrix);
     RETURN (ret);
 }
 
@@ -262,15 +255,14 @@ do_Cairo_concat_matrix (Value cv, Value mv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
-    cairo_matrix_t  *matrix;
+    cairo_matrix_t  matrix;
 
     if (aborting)
 	RETURN(Void);
-    matrix = cairo_matrix_part (mv, "invalid matrix");
+    cairo_matrix_part (mv, &matrix, "invalid matrix");
     if (aborting)
 	RETURN(Void);
-    cairo_concat_matrix (c5c->cr, matrix);
-    cairo_matrix_destroy (matrix);
+    cairo_concat_matrix (c5c->cr, &matrix);
     RETURN (Void);
 }
 
@@ -279,15 +271,14 @@ do_Cairo_set_matrix (Value cv, Value mv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
-    cairo_matrix_t  *matrix;
+    cairo_matrix_t  matrix;
 
     if (aborting)
 	RETURN(Void);
-    matrix = cairo_matrix_part (mv, "invalid matrix");
+    cairo_matrix_part (mv, &matrix, "invalid matrix");
     if (aborting)
 	RETURN(Void);
-    cairo_set_matrix (c5c->cr, matrix);
-    cairo_matrix_destroy (matrix);
+    cairo_set_matrix (c5c->cr, &matrix);
     RETURN (Void);
 }
 
@@ -398,15 +389,16 @@ do_Cairo_clip (Value cv)
 }
 
 Value
-do_Cairo_current_operator (Value cv)
+do_Cairo_get_operator (Value cv)
 {
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
     
     if (aborting)
 	return Void;
-    return IntToEnum (typeCairoOperator, cairo_current_operator (c5c->cr));
+    return IntToEnum (typeCairoOperator, cairo_get_operator (c5c->cr));
 }
 
+#if 0
 Value
 do_Cairo_current_rgb_color (Value cv)
 {
@@ -437,20 +429,21 @@ do_Cairo_current_alpha (Value cv)
 	RETURN(Void);
     RETURN (NewDoubleFloat (cairo_current_alpha (c5c->cr)));
 }
+#endif
 
 Value
-do_Cairo_current_tolerance (Value cv)
+do_Cairo_get_tolerance (Value cv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
     
     if (aborting)
 	RETURN(Void);
-    RETURN (NewDoubleFloat (cairo_current_tolerance (c5c->cr)));
+    RETURN (NewDoubleFloat (cairo_get_tolerance (c5c->cr)));
 }
 
 Value
-do_Cairo_current_point (Value cv)
+do_Cairo_get_current_point (Value cv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
@@ -460,7 +453,7 @@ do_Cairo_current_point (Value cv)
     
     if (aborting)
 	return Void;
-    cairo_current_point (c5c->cr, &x, &y);
+    cairo_get_current_point (c5c->cr, &x, &y);
     ret = NewStruct (TypeCanon (typeCairoPoint)->structs.structs, False);
     box = ret->structs.values;
     BoxValueSet (box, 0, NewDoubleFloat (x));
@@ -469,56 +462,56 @@ do_Cairo_current_point (Value cv)
 }
 
 Value
-do_Cairo_current_fill_rule (Value cv)
+do_Cairo_get_fill_rule (Value cv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
     
     if (aborting)
 	RETURN(Void);
-    RETURN(IntToEnum (typeCairoFillRule, cairo_current_fill_rule (c5c->cr)));
+    RETURN(IntToEnum (typeCairoFillRule, cairo_get_fill_rule (c5c->cr)));
 }
 
 Value
-do_Cairo_current_line_width (Value cv)
+do_Cairo_get_line_width (Value cv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
     
     if (aborting)
 	RETURN(Void);
-    RETURN(NewDoubleFloat (cairo_current_line_width (c5c->cr)));
+    RETURN(NewDoubleFloat (cairo_get_line_width (c5c->cr)));
 }
 
 Value
-do_Cairo_current_line_cap (Value cv)
+do_Cairo_get_line_cap (Value cv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
     
     if (aborting)
 	RETURN(Void);
-    RETURN(IntToEnum (typeCairoLineCap, cairo_current_line_cap (c5c->cr)));
+    RETURN(IntToEnum (typeCairoLineCap, cairo_get_line_cap (c5c->cr)));
 }
 
 Value
-do_Cairo_current_line_join (Value cv)
+do_Cairo_get_line_join (Value cv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
     
     if (aborting)
 	RETURN(Void);
-    RETURN(IntToEnum (typeCairoLineJoin, cairo_current_line_join (c5c->cr)));
+    RETURN(IntToEnum (typeCairoLineJoin, cairo_get_line_join (c5c->cr)));
 }
 
 Value
-do_Cairo_current_miter_limit (Value cv)
+do_Cairo_get_miter_limit (Value cv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
     
     if (aborting)
 	RETURN(Void);
-    RETURN(NewDoubleFloat (cairo_current_miter_limit (c5c->cr)));
+    RETURN(NewDoubleFloat (cairo_get_miter_limit (c5c->cr)));
 }

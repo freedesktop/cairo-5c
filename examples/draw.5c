@@ -67,7 +67,7 @@ void draw (cairo_t cr)
 		break;
 	    case 2:
 		save (cr);
-		set_rgb_color (cr, 1, 0, 0);
+		set_source_rgb (cr, 1, 0, 0);
 		move_to (cr, ox - 10, oy - 10);
 		line_to (cr, ox + 10, oy + 10);
 		move_to (cr, ox - 10, oy + 10);
@@ -78,7 +78,7 @@ void draw (cairo_t cr)
 	    case 3:
 		save (cr);
 		identity_matrix (cr);
-		set_rgb_color (cr, 1, 1, 1);
+		set_source_rgb (cr, 1, 1, 1);
 		move_to (cr, 0, 0);
 		line_to (cr, width(cr), 0);
 		line_to (cr, width(cr), height(cr));

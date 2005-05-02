@@ -75,25 +75,25 @@ make_pattern_value (cairo_pattern_t *pat)
 }
 
 Value
-do_Cairo_set_pattern (Value cv, Value patv)
+do_Cairo_set_source (Value cv, Value patv)
 {
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
     cairo_pattern_t *pat = get_cairo_pattern (patv);
 
     if (aborting)
 	return Void;
-    cairo_set_pattern (c5c->cr, pat);
+    cairo_set_source (c5c->cr, pat);
     return Void;
 }
 
 Value
-do_Cairo_current_pattern (Value cv)
+do_Cairo_get_source (Value cv)
 {
     cairo_5c_t	*c5c = cairo_5c_get (cv);
 
     if (aborting)
 	return Void;
-    return make_pattern_value (cairo_get_pattern (c5c->cr));
+    return make_pattern_value (cairo_get_source (c5c->cr));
 }
 
 Value
@@ -164,9 +164,11 @@ premultiply_data (png_structp   png,
     }
 }
 
+#if 0
 struct _cairo_matrix {
     double m[3][2];
 };
+#endif
 
 struct _cairo_surface {
     const void *backend;
@@ -327,18 +329,17 @@ do_Cairo_Pattern_add_color_stop (Value patv, Value offsetv,
 }
 
 Value
-do_Cairo_Pattern_set_matrix (Value patv, Value matrixv)
+do_Cairo_Pattern_set_matrix (Value patv, Value mv)
 {
     ENTER ();
     cairo_pattern_t *pat = get_cairo_pattern (patv);
-    cairo_matrix_t  *mat;
+    cairo_matrix_t  matrix;
     cairo_status_t  status;
 
     if (aborting)
 	RETURN(Void);
-    mat = cairo_matrix_part (matrixv, "invalid pattern matrix");
-    status = cairo_pattern_set_matrix (pat, mat);
-    cairo_matrix_destroy (mat);
+    cairo_matrix_part (mv, &matrix, "invalid pattern matrix");
+    status = cairo_pattern_set_matrix (pat, &matrix);
     RETURN (IntToEnum (typeCairoStatus, status));
 }
 
@@ -347,15 +348,13 @@ do_Cairo_Pattern_get_matrix (Value patv)
 {
     ENTER ();
     cairo_pattern_t *pat = get_cairo_pattern (patv);
-    cairo_matrix_t  *matrix;
+    cairo_matrix_t  matrix;
     Value	    ret;
 
     if (aborting)
 	RETURN (Void);
-    matrix = cairo_matrix_create ();
-    cairo_pattern_get_matrix (pat, matrix);
-    ret = new_cairo_matrix (matrix);
-    cairo_matrix_destroy (matrix);
+    cairo_pattern_get_matrix (pat, &matrix);
+    ret = new_cairo_matrix (&matrix);
     RETURN (ret);
 }
 

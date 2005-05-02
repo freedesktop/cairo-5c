@@ -89,7 +89,7 @@ namespace Graph {
 	    rel_line_to (cr, 0, 10);
 	}
 	stroke (cr);
-        font_extents_t  f = current_font_extents (cr);
+        font_extents_t  f = font_extents (cr);
 	printf ("font extents: %v\n", f);
 	for (real major = axis.scale.low; major <= axis.scale.high; major += axis.major)
 	{
@@ -108,9 +108,14 @@ namespace Graph {
 	axis_draw (cr, g.bottom);
 	restore (cr);
 	save (cr);
-	transform_font (cr, (matrix_t) { { 1, 0 }, { 0, -1 }, { 0, 0 } });
-	set_matrix (cr, Matrix::multiply ((matrix_t) { { 0, 1 }, 
-	    { 1, 0 }, { 0, 0 } }, current_matrix (cr)));
+	set_font_matrix (cr, (matrix_t) {
+	    xx = 1, yx = 0,
+	    xy = 0, yy = -1,
+	    x0 = 0, y0 = 0 });
+	set_matrix (cr, Matrix::multiply ((matrix_t) { 
+	    xx = 0, yx = 1,
+	    xy = 1, yy = 0,
+	    x0 = 0, y0 = 0 }, get_matrix (cr)));
 				  
 	axis_draw (cr, g.left);
 	restore (cr);
@@ -118,7 +123,10 @@ namespace Graph {
         
     public graph_t new (cairo_t cr) {
 	set_font (cr, "sans-12");
-	transform_font (cr, (matrix_t) { { 1, 0 }, { 0, -1 }, { 0, 0 } });
+	set_font_matrix (cr, (matrix_t) {
+	    xx = 1, yx = 0,
+	    xy = 0, yy = -1,
+	    x0 = 0, y0 = 0 });
 	translate (cr, 0, height(cr));
 	Cairo::scale (cr, 1, -1);
 	

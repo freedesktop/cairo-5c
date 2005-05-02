@@ -155,7 +155,7 @@ cairo_5c_dirty (cairo_5c_t *c5c)
 	    case CAIRO_5C_WINDOW:
 		cairo_5c_tool_dirty (c5s);
 		break;
-	    case CAIRO_5C_PNG:
+	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PS:
 	    case CAIRO_5C_SCRATCH:
 		break;
@@ -177,7 +177,7 @@ cairo_5c_enable (cairo_5c_t *c5c)
 	    case CAIRO_5C_WINDOW:
 		cairo_5c_tool_enable (c5s);
 		break;
-	    case CAIRO_5C_PNG:
+	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PS:
 	    case CAIRO_5C_SCRATCH:
 		break;
@@ -200,7 +200,7 @@ cairo_5c_disable (cairo_5c_t *c5c)
 	    case CAIRO_5C_WINDOW:
 		cairo_5c_tool_disable (c5s);
 		break;
-	    case CAIRO_5C_PNG:
+	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PS:
 	    case CAIRO_5C_SCRATCH:
 		break;
@@ -225,7 +225,7 @@ do_Cairo_set_target_surface (Value cv, Value sv)
 }
 
 Value
-do_Cairo_current_target_surface (Value cv)
+do_Cairo_get_target_surface (Value cv)
 {
     ENTER ();
     cairo_5c_t		*c5c = cairo_5c_get (cv);

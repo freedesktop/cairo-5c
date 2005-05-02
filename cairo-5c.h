@@ -49,7 +49,7 @@
 #include <unistd.h>
 #undef Atom
 
-typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_PNG, CAIRO_5C_PS, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
+typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_IMAGE, CAIRO_5C_PS, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
 
 typedef struct _cairo_5c_tool	cairo_5c_tool_t;
 
@@ -59,10 +59,6 @@ typedef struct _cairo_5c_window_t {
     cairo_5c_tool_t *tool;
     FILE	    *send_events;
 } cairo_5c_window_t;
-
-typedef struct _cairo_png_t {
-    FILE	*file;
-} cairo_5c_png_t;
 
 typedef struct _cairo_ps_t {
     FILE	*file;
@@ -85,7 +81,6 @@ typedef struct _cairo_5c_surface_t {
     Bool	    copied;
     union {
 	cairo_5c_window_t   window;
-	cairo_5c_png_t	    png;
 	cairo_5c_ps_t	    ps;
     } u;
 } cairo_5c_surface_t;
@@ -105,6 +100,7 @@ extern Type		*typeCairoMatrix;
 extern Type		*typeCairoPoint;
 extern Type		*typeCairoRect;
 extern Type		*typeCairoRgbColor;
+extern Type		*typeCairoRgbaColor;
 extern Type		*typeCairoPattern;
 extern Type		*typeCairoPath;
 extern Type		*typeCairoMoveTo;
@@ -134,7 +130,7 @@ Value
 do_Cairo_set_target_surface (Value cv, Value sv);
     
 Value
-do_Cairo_current_target_surface (Value cv);
+do_Cairo_get_target_surface (Value cv);
     
 Value
 do_Cairo_copy (Value dstv, Value srcv);
@@ -160,7 +156,10 @@ Value
 do_Cairo_Surface_create_window (Value namev, Value wv, Value hv);
 
 Value
-do_Cairo_Surface_create_png (Value fv, Value wv, Value hv);
+do_Cairo_Surface_create_image (Value wv, Value hv);
+
+Value
+do_Cairo_Surface_write_to_png (Value sv, Value fv);
 
 Value
 do_Cairo_Surface_create_ps (Value fv, Value wv, Value hv, Value xppiv, Value yppiv);
@@ -209,10 +208,10 @@ Value
 do_Cairo_identity_matrix (Value cv);
 
 Value
-do_Cairo_set_rgb_color (Value av, Value rv, Value gv, Value bv);
+do_Cairo_set_source_rgb (Value cv, Value rv, Value gv, Value bv);
 
 Value
-do_Cairo_set_alpha (Value cv, Value av);
+do_Cairo_set_source_rgba (Value cv, Value rv, Value gv, Value bv, Value av);
 
 Value
 do_Cairo_set_tolerance (Value cv, Value tv);
@@ -245,7 +244,7 @@ Value
 do_Cairo_rotate (Value cv, Value av);
 
 Value
-do_Cairo_current_matrix (Value cv);
+do_Cairo_get_matrix (Value cv);
 
 Value
 do_Cairo_concat_matrix (Value cv, Value mv);
@@ -272,34 +271,28 @@ Value
 do_Cairo_clip (Value cv);
 
 Value
-do_Cairo_current_operator (Value cv);
+do_Cairo_get_operator (Value cv);
 
 Value
-do_Cairo_current_rgb_color (Value cv);
+do_Cairo_get_tolerance (Value cv);
 
 Value
-do_Cairo_current_alpha (Value cv);
+do_Cairo_get_current_point (Value cv);
 
 Value
-do_Cairo_current_tolerance (Value cv);
+do_Cairo_get_fill_rule (Value cv);
 
 Value
-do_Cairo_current_point (Value cv);
+do_Cairo_get_line_width (Value cv);
 
 Value
-do_Cairo_current_fill_rule (Value cv);
+do_Cairo_get_line_cap (Value cv);
 
 Value
-do_Cairo_current_line_width (Value cv);
+do_Cairo_get_line_join (Value cv);
 
 Value
-do_Cairo_current_line_cap (Value cv);
-
-Value
-do_Cairo_current_line_join (Value cv);
-
-Value
-do_Cairo_current_miter_limit (Value cv);
+do_Cairo_get_miter_limit (Value cv);
 
 /* draw.c */
 Value
@@ -378,8 +371,8 @@ Value
 do_Cairo_current_path_flat_list (Value cv);
 
 /* matrix.c */
-cairo_matrix_t *
-cairo_matrix_part (Value matrixv, char *err);
+void
+cairo_matrix_part (Value matrixv, cairo_matrix_t *matrix, char *err);
 
 Value
 new_cairo_matrix (cairo_matrix_t *matrix);
@@ -389,10 +382,10 @@ cairo_pattern_t *
 get_cairo_pattern (Value pv);
     
 Value
-do_Cairo_current_pattern (Value cv);
+do_Cairo_get_source (Value cv);
 
 Value
-do_Cairo_set_pattern (Value cv, Value patv);
+do_Cairo_set_source (Value cv, Value patv);
 
 Value
 do_Cairo_Pattern_create_png (Value filenamev);
@@ -438,13 +431,13 @@ Value
 do_Cairo_set_font (Value cv, Value fv);
 
 Value
-do_Cairo_scale_font (Value cv, Value sv);
+do_Cairo_set_font_size (Value cv, Value sv);
 
 Value
-do_Cairo_transform_font (Value cv, Value mv);
+do_Cairo_set_font_matrix (Value cv, Value mv);
 
 Value
-do_Cairo_current_font_extents (Value cv);
+do_Cairo_font_extents (Value cv);
 
 Value
 do_Cairo_show_text (Value cv, Value uv);

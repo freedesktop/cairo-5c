@@ -41,7 +41,7 @@ const real off_y = 30;
 void clear (cairo_t cr) {
     save (cr);
     identity_matrix (cr);
-    set_rgb_color (cr, 1, 1, 1);
+    set_source_rgb (cr, 1, 1, 1);
     rectangle (cr, 0, 0, width(cr), height(cr));
     fill (cr);
     restore (cr);
@@ -51,7 +51,7 @@ void picture (cairo_t cr)
 {
     save (cr);
     
-    set_rgb_color (cr, 0, 0, 0);
+    set_source_rgb (cr, 0, 0, 0);
     move_to (cr, off_x, off_y);
 #    show_text (cr, "nickle and cairo together");
     text_path (cr, "C");
@@ -60,12 +60,12 @@ void picture (cairo_t cr)
     
     move_to (cr, off_x, off_y);
     rel_line_to (cr, 250, 0);
-    set_rgb_color (cr, 0, 0, 1);
+    set_source_rgb (cr, 0, 0, 1);
     stroke (cr);
     
     move_to (cr, 5, 0);
     arc (cr, 5, 0, 5, 0, 10);
-    set_rgb_color (cr, 1, 0, 0);
+    set_source_rgb (cr, 1, 0, 0);
     fill (cr);
     restore (cr);
 }
@@ -79,16 +79,16 @@ void transform (cairo_t cr, real t)
 void animate (cairo_t cr)
 {
     cairo_t crl = create ();
-    set_target_surface (crl, current_target_surface (cr));
+    set_target_surface (crl, get_target_surface (cr));
     set_font (crl, "sans-12");
-    set_rgb_color (crl, 0, 0, 0);
+    set_source_rgb (crl, 0, 0, 0);
     real t = 0;
     for (;;)
     {
 	disable (cr);
 	save (cr);
 	translate (cr, 100, 100);
-	set_rgb_color (cr, 1, 1, 1);
+	set_source_rgb (cr, 1, 1, 1);
 	clear (cr);
 	move_to (crl, 3, 20);
 	show_text (crl, sprintf ("%5.2f", t));

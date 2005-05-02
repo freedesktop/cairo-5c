@@ -39,7 +39,7 @@ autoimport Cairo;
 void rottext () {
     cairo_t	cr = new ();
     set_font (cr, "sans-20");
-    set_rgb_color (cr, 0, 0, 0);
+    set_source_rgb (cr, 0, 0, 0);
     
     for (real a = 0; a < 2 * pi; a += pi / 10) {
 	save (cr);

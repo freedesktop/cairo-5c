@@ -52,7 +52,7 @@ void fob (cairo_t cr)
 	pattern_t pat = Pattern::create_radial (12, 12, 0, 9, 9, 7);
 	Pattern::add_color_stop (pat, 0, 1, 1, 1, 1);
 	Pattern::add_color_stop (pat, 1, 1, .8, .6, 1);
-	set_pattern (cr, pat);
+	set_source (cr, pat);
 	fill (cr);
 	restore (cr);
 	scale (cr, 1/3.5, 1/4);
@@ -64,7 +64,7 @@ void fob (cairo_t cr)
     {
 	save (cr);
 	translate (cr, x, y);
-	set_rgb_color (cr, 1, 1, 1);
+	set_source_rgb (cr, 1, 1, 1);
 	arc (cr, 0, 0, 4, 0, 2*pi);
 	fill (cr);
 	restore (cr);
@@ -74,7 +74,7 @@ void fob (cairo_t cr)
     {
 	save (cr);
 	translate (cr, x, y);
-	set_rgb_color (cr, .5, .5, 1);
+	set_source_rgb (cr, .5, .5, 1);
 	arc (cr, 0, 0, 2.5, 0, 2*pi);
 	fill (cr);
 	restore (cr);
@@ -84,7 +84,7 @@ void fob (cairo_t cr)
     {
 	save (cr);
 	translate (cr, x, y);
-	set_rgb_color (cr, 0, 0, 0);
+	set_source_rgb (cr, 0, 0, 0);
 	arc (cr, 0, 0, 1.8, 0, 2*pi);
 	fill (cr);
 	restore (cr);
@@ -98,7 +98,7 @@ void fob (cairo_t cr)
 	Pattern::add_color_stop (pat, 0, 1, 1, 1, .5);
 	Pattern::add_color_stop (pat, .5, 0, 0, 0, 0);
 	Pattern::add_color_stop (pat, 1, 0, 0, 0, 0);
-	set_pattern (cr, pat);
+	set_source (cr, pat);
 	arc (cr, 0, 0, 4, 0, 2*pi);
 	fill (cr);
 	restore (cr);
@@ -129,7 +129,7 @@ void fob (cairo_t cr)
 		pattern_t pat = Pattern::create_linear (0, 0, 11, 11);
 		Pattern::add_color_stop (pat, 0, .4, .4, .4, 1);
 		Pattern::add_color_stop (pat, 1, 1, 1, 1, 1);
-		set_pattern (cr, pat);
+		set_source (cr, pat);
 	    }
 	    else
 	    {
@@ -137,7 +137,7 @@ void fob (cairo_t cr)
 							6.5, 6.5, 8);
 		Pattern::add_color_stop (pat, 0, 1, 1, 1, 1);
 		Pattern::add_color_stop (pat, 1, .3, .3, .3, 1);
-		set_pattern (cr, pat);
+		set_source (cr, pat);
 	    }
 	    fill (cr); 
 	    restore (cr);
@@ -149,7 +149,7 @@ void fob (cairo_t cr)
     {
 	save (cr);
 	select_font (cr, "sans", font_slant_t.NORMAL, font_weight_t.NORMAL);
-	scale_font (cr, 40);
+	set_font_size (cr, 40);
 	rotate (cr, 90 * pi / 180);
 	translate (cr, 12, -20);
 	move_to (cr, 0, 0);
@@ -165,8 +165,9 @@ void fob (cairo_t cr)
 	save (cr);
 	set_line_width (cr, 3);
 	move_to (cr, 12, 20);
-	set_rgb_color (cr, 0, 0, 0);
-	rel_curve_to (cr, 3, 0, 2, 3, 5, 6);
+	set_source_rgba (cr, 0, 0, 0, 1);
+#	rel_curve_to (cr, 3, 0, 2, 3, 5, 6);
+	curve_to (cr, 15, 20, 14, 23, 17, 26);
 	stroke (cr);
 	restore (cr);
     }
@@ -180,33 +181,39 @@ void fob (cairo_t cr)
     earpiece (cr);
 }
 
-if (true)
+void
+fob_to_png (cairo_t cr, string filename)
 {
-    cairo_t cr = new_png ("fob.png", 80, 90);
-    fob (cr);
+    fob (cr); write_to_png (cr, filename);
+}
+
+if (false)
+{
+    cairo_t cr = new_image (80, 90);
+    fob_to_png (cr, "fob.png");
     destroy (cr);
     
-    cairo_t cr = new_png ("fob-450.png", 400, 450);
+    cairo_t cr = new_image (400, 450);
     scale (cr, 5, 5);
-    fob (cr);
+    fob_to_png (cr, "fob-450.png");
     destroy (cr);
     
-    cairo_t cr = new_png ("fob-16.png", 16, 16);
+    cairo_t cr = new_image (16, 16);
     scale (cr, 0.1{7}, 0.1{7});
     translate (cr, 5, 0);
-    fob (cr);
+    fob_to_png (cr, "fob-16.png");
     destroy (cr);
 
-    cairo_t cr = new_png ("fob-32.png", 32, 32);
+    cairo_t cr = new_image (32, 32);
     scale (cr, 0.3{5}, 0.3{5});
     translate (cr, 5, 0);
-    fob (cr);
+    fob_to_png (cr, "fob-32.png");
     destroy (cr);
     
-    cairo_t cr = new_png ("fob-48.png", 48, 48);
+    cairo_t cr = new_image (48, 48);
     scale (cr, 0.5{3}, 0.5{3});
     translate (cr, 5, 0);
-    fob (cr);
+    fob_to_png (cr, "fob-48.png");
     destroy (cr);
 }
 else

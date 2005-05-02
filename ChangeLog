@@ -1,3 +1,48 @@
+2005-05-02  Keith Packard  <keithp@keithp.com>
+
+	* cairo-5c.h:
+	* cairo.5c:
+	* cairo.c: (cairo_5c_dirty), (cairo_5c_enable), (cairo_5c_disable),
+	(do_Cairo_get_target_surface):
+	* event.c: (do_Cairo_Surface_open_event):
+	* gstate.c: (do_Cairo_set_source_rgb), (do_Cairo_set_source_rgba),
+	(do_Cairo_get_matrix), (do_Cairo_concat_matrix),
+	(do_Cairo_set_matrix), (do_Cairo_get_operator),
+	(do_Cairo_get_tolerance), (do_Cairo_get_current_point),
+	(do_Cairo_get_fill_rule), (do_Cairo_get_line_width),
+	(do_Cairo_get_line_cap), (do_Cairo_get_line_join),
+	(do_Cairo_get_miter_limit):
+	* gtk.c: (delete_drawing_area), (motion_notify_event),
+	(button_press_event), (button_release_event),
+	(gtk_repaint_timeout), (gtk_thread_main), (gtk_global_free),
+	(create_gtk_global), (cairo_5c_tool_dirty), (cairo_5c_tool_enable):
+	* init.c: (init_types), (nickle_init):
+	* matrix.c: (cairo_matrix_part), (new_cairo_matrix):
+	* pattern.c: (do_Cairo_set_source), (do_Cairo_get_source),
+	(do_Cairo_Pattern_set_matrix), (do_Cairo_Pattern_get_matrix):
+	* surface.c: (cairo_5c_surface_get), (cairo_5c_surface_mark),
+	(cairo_5c_surface_destroy), (do_Cairo_Surface_create_image),
+	(do_Cairo_Surface_write_to_png):
+	* text.c: (do_Cairo_set_font), (do_Cairo_set_font_size),
+	(do_Cairo_set_font_matrix), (do_Cairo_font_extents):
+	Match cairo API as of today.
+
+	* examples/draw.5c:
+	* examples/fob.5c:
+	* examples/graph.5c:
+	* examples/grid.5c:
+	* examples/led.5c:
+	* examples/pie-new.5c:
+	* examples/pie.5c:
+	* examples/rottext.5c:
+	* examples/sin.5c:
+	* examples/spin-cairo.5c:
+	* examples/spin.5c:
+	* examples/spinman.5c:
+	* examples/test.5c:
+	* examples/text45.5c:
+	Update examples to match API changes
+
 2005-03-14  Keith Packard  <keithp@keithp.com>
 
 	* examples/animate.5c:

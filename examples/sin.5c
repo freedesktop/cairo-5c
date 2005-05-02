@@ -38,7 +38,7 @@ autoimport Cairo;
 void clear (foreign cr) {
     save (cr);
     identity_matrix (cr);
-    set_rgb_color (cr, 1, 1, 1);
+    set_source_rgb (cr, 1, 1, 1);
     int w = width (cr);
     int h = height (cr);
     move_to (cr, 0, 0);
@@ -50,19 +50,19 @@ void clear (foreign cr) {
 }
 
 void draw_sin (foreign cr) {
+    clear (cr);
     set_line_width (cr, sqrt (width(cr)**2 + height(cr)**2) * 0.01);
-    real[3,2] m = current_matrix (cr);
+    save (cr);
     translate (cr, width(cr)/2, height(cr)/2);
     scale (cr, .95 * width(cr) / (2 * pi), .95 * height(cr) / 2);
     move_to (cr, -pi, 0);
     for (real a = -pi; a <= pi; a += pi/100) {
 	line_to (cr, a, sin(a));
     }
-    set_matrix (cr, m);
-    clear (cr);
+    restore (cr);
     stroke (cr);
 }
 
-foreign cr = new ();
+cairo_t cr = new ();
 draw_sin (cr);
 while (true) sleep (1000);

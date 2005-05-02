@@ -48,7 +48,7 @@ void led (cairo_t cr, real red, real green, real blue, bool on)
     
     if (true)
     {
-	set_rgb_color (cr, red *.4, green *.4, blue *.4);
+	set_source_rgb (cr, red *.4, green *.4, blue *.4);
 	move_to (cr, 1, 1/2);
 	arc (cr, .5, .5, .5, 0, pi*2);
 	fill (cr);
@@ -62,7 +62,7 @@ void led (cairo_t cr, real red, real green, real blue, bool on)
 	Pattern::add_color_stop (led, 0, red, green, blue, 1);
 	Pattern::add_color_stop (led, .5, red, green, blue, .8);
 	Pattern::add_color_stop (led, 1, red, green, blue, 0);
-	set_pattern (cr, led);
+	set_source (cr, led);
 	move_to (cr, 1, 1/2);
 	arc (cr, .5, .5, .5, 0, pi*2);
 	fill (cr);
@@ -75,7 +75,7 @@ void led (cairo_t cr, real red, real green, real blue, bool on)
 	Pattern::add_color_stop (ring, 0, 0, 0, 0, 1);
 	Pattern::add_color_stop (ring, .5, 0, 0, 0, 1);
 	Pattern::add_color_stop (ring, 1, .5, .5, .5, 1);
-	set_pattern (cr, ring);
+	set_source (cr, ring);
 	move_to (cr, 1, 1/2);
 	arc (cr, .5, .5, .5, 0, pi*2);
 	move_to (cr, 1, 1/2);
@@ -89,7 +89,7 @@ void led (cairo_t cr, real red, real green, real blue, bool on)
 	pattern_t	room = Pattern::create_radial (1/3, 1/3, 0, 1/3, 1/3, 1/2);
 	Pattern::add_color_stop (room, 0, 1, 1, 1, .4);
 	Pattern::add_color_stop (room, 1, 1, 1, 1, 0);
-	set_pattern (cr, room);
+	set_source (cr, room);
 	move_to (cr, 1, 1/2);
 	arc (cr, .5, .5, .5, 0, pi*2);
 	fill (cr);
@@ -104,11 +104,13 @@ int diameter = 12;
 
 void do_one (string name, real red, real green, real blue, bool on)
 {
-    cairo_t cr = new_png (name, diameter, diameter);
+    cairo_t cr = new_image (diameter, diameter);
     
     translate (cr, -width(cr)/2, -height(cr)/2);
     scale (cr, width(cr), height(cr));
     led (cr, red, green, blue, on);
+    write_to_png (cr, name);
+    destroy (cr);
 }
 
 void doit ()

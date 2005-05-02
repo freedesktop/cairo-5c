@@ -59,7 +59,8 @@ static gtk_global_t *gtk_global;
 
 /*
  * This part runs in the gtk thread, so it must not refer to or use
- * any memory managed by nickle
+ * any memory managed by nickle.  Called from signal handler with
+ * gdk lock held.
  */
 static gboolean
 configure_event (GtkWidget *widget, GdkEventConfigure *event)
@@ -93,6 +94,9 @@ configure_event (GtkWidget *widget, GdkEventConfigure *event)
     return TRUE;
 }
 
+/*
+ * Called from signal handler with gdk lock held
+ */
 static gboolean
 expose_event( GtkWidget *widget, GdkEventExpose *event )
 {
@@ -108,6 +112,9 @@ expose_event( GtkWidget *widget, GdkEventExpose *event )
     return FALSE;
 }
 
+/*
+ * Called from delete_event with gdk lock held
+ */
 static void
 delete_drawing_area (GtkWidget *widget, gpointer data)
 {			   
@@ -116,8 +123,10 @@ delete_drawing_area (GtkWidget *widget, gpointer data)
     
     if (c5s->u.window.send_events)
     {
+	gdk_threads_leave ();
 	fprintf (c5s->u.window.send_events, "%d delete\n", 0);
 	fflush (c5s->u.window.send_events);
+	gdk_threads_enter ();
     }
     tool->drawing_area = NULL;
     tool->window = NULL;
@@ -129,6 +138,9 @@ delete_drawing_area (GtkWidget *widget, gpointer data)
     c5s->u.window.pixmap = None;
 }
 
+/*
+ * Called from signal handler with lock held
+ */
 static gboolean
 delete_event( GtkWidget *widget, GdkEventAny *event )
 {
@@ -136,6 +148,9 @@ delete_event( GtkWidget *widget, GdkEventAny *event )
     return FALSE;
 }
 
+/*
+ * Called from signal handler with lock held
+ */
 static gboolean
 motion_notify_event( GtkWidget *widget, GdkEventMotion *event )
 {
@@ -143,14 +158,19 @@ motion_notify_event( GtkWidget *widget, GdkEventMotion *event )
     
     if (c5s->u.window.send_events)
     {
+	gdk_threads_leave ();
 	fprintf (c5s->u.window.send_events, "%d motion %g %g\n",
 		 event->time, event->x, event->y);
 	fflush (c5s->u.window.send_events);
+	gdk_threads_enter ();
     }
     return FALSE;
 }
 
 
+/*
+ * Called from signal handler with lock held
+ */
 static gboolean
 button_press_event( GtkWidget *widget, GdkEventButton *event )
 {
@@ -158,13 +178,18 @@ button_press_event( GtkWidget *widget, GdkEventButton *event )
     
     if (c5s->u.window.send_events)
     {
+	gdk_threads_leave ();
 	fprintf (c5s->u.window.send_events, "%d press %d %g %g\n",
 		 event->time, event->button, event->x, event->y);
 	fflush (c5s->u.window.send_events);
+	gdk_threads_enter ();
     }
     return FALSE;
 }
 
+/*
+ * Called from signal handler with lock held
+ */
 static gboolean
 button_release_event( GtkWidget *widget, GdkEventButton *event )
 {
@@ -172,13 +197,18 @@ button_release_event( GtkWidget *widget, GdkEventButton *event )
     
     if (c5s->u.window.send_events)
     {
+	gdk_threads_leave ();
 	fprintf (c5s->u.window.send_events, "%d release %d %g %g\n",
 		 event->time, event->button, event->x, event->y);
 	fflush (c5s->u.window.send_events);
+	gdk_threads_enter ();
     }
     return FALSE;
 }
 
+/*
+ * Called from signal handler with lock held
+ */
 static void
 gtk_repaint (cairo_5c_surface_t *c5s, int x, int y, int w, int h)
 {
@@ -205,23 +235,31 @@ gtk_repaint (cairo_5c_surface_t *c5s, int x, int y, int w, int h)
     }
 }
 
+/*
+ * Called from timeout with gdk lock not held
+ */
 static gboolean
 gtk_repaint_timeout (gpointer data)
 {
-    cairo_5c_surface_t	*c5s = data;
-    cairo_5c_tool_t	*tool = c5s->u.window.tool;
-
-    if (tool->disable == 0)
+    gdk_threads_enter ();
     {
-	tool->dirty = 0;
-	gtk_repaint (c5s, 0, 0, 0, 0);
+	cairo_5c_surface_t	*c5s = data;
+	cairo_5c_tool_t	*tool = c5s->u.window.tool;
+    
+	if (tool->disable == 0)
+	{
+	    tool->dirty = 0;
+	    gtk_repaint (c5s, 0, 0, 0, 0);
+	}
     }
+    gdk_threads_leave ();
     return FALSE;
 }
 
 static void *
 gtk_thread_main (void *closure)
 {
+    gdk_threads_enter ();
     gtk_main ();
     gdk_threads_leave ();
     return 0;
@@ -242,9 +280,9 @@ gtk_global_free (void *object)
 
     gdk_threads_enter ();
     gtk_main_quit ();
-    gdk_threads_leave ();
     if (gg == gtk_global)
 	gtk_global = NULL;
+    gdk_threads_leave ();
     return 1;
 }
 
@@ -262,12 +300,13 @@ create_gtk_global (void)
 
     if (!been_here)
     {
-	XInitThreads ();
+	/* trust to gdk to lock the display; Xlib is horribly broken */
+/*	XInitThreads (); */
 	g_thread_init (NULL);
 	gdk_threads_init ();
 	been_here = 1;
     }
-    
+    gdk_threads_enter ();
     if (!gtk_init_check (&argc, &argv))
     {
 	const char *display_name_arg = gdk_get_display_arg_name ();
@@ -284,6 +323,7 @@ create_gtk_global (void)
     pthread_create (&gg->gtk_thread, 0, gtk_thread_main, gg);
     if (!gtk_global)
 	gtk_global = gg;
+    gdk_threads_leave ();
     RETURN (gg);
 }
 
@@ -299,6 +339,9 @@ gtk_tool_mark (void *object)
     MemReference (tool->global);
 }
 
+/*
+ * Called from nickle with gdk lock not held
+ */
 static int
 gtk_tool_free (void *object)
 {
@@ -321,6 +364,10 @@ gtk_tool_free (void *object)
 }
 
 static DataType gtk_tool_type = { gtk_tool_mark, gtk_tool_free, "GtkTool" };
+
+/*
+ * Called from nickle with gdk lock not held
+ */
 
 Bool
 cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height)
@@ -401,6 +448,9 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height
     return True;
 }
 
+/*
+ * called from nickle with the gdk lock not held
+ */
 Bool
 cairo_5c_tool_destroy (cairo_5c_surface_t *c5s)
 {
@@ -429,9 +479,7 @@ cairo_5c_tool_dirty (cairo_5c_surface_t *c5s)
 	tool->dirty = 1;
 	if (tool->disable == 0)
 	{
-	    gdk_threads_enter ();
 	    g_timeout_add (16, gtk_repaint_timeout, c5s);
-	    gdk_threads_leave ();
 	}
     }
 }
@@ -445,6 +493,10 @@ cairo_5c_tool_disable (cairo_5c_surface_t *c5s)
     return True;
 }
 
+/*
+ * Called from nickle with gdk lock not held.  As no gtk/gdk
+ * functions are called, I don't think we need to grab it.
+ */
 Bool
 cairo_5c_tool_enable (cairo_5c_surface_t *c5s)
 {
@@ -454,11 +506,7 @@ cairo_5c_tool_enable (cairo_5c_surface_t *c5s)
 	return False;
     --tool->disable;
     if (!tool->disable && tool->dirty)
-    {
-	gdk_threads_enter ();
 	g_timeout_add (0, gtk_repaint_timeout, c5s);
-	gdk_threads_leave ();
-    }
     return True;
 }
 

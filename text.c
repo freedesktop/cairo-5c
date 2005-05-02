@@ -55,9 +55,8 @@ do_Cairo_set_font (Value cv, Value fv)
     cairo_5c_t		*c5c = cairo_5c_get (cv);
     char		*name = StrzPart (fv, "invalid name");
     FcPattern		*pat, *match;
-    cairo_font_t	*font;
+    cairo_font_face_t	*font_face;
     double		size = 0;
-    cairo_matrix_t	*scale;
     FcResult		result;
 
     if (aborting)
@@ -78,53 +77,50 @@ do_Cairo_set_font (Value cv, Value fv)
     }
 
     FcPatternGetDouble (match, FC_SIZE, 0, &size);
-    scale = cairo_matrix_create ();
-    font = cairo_ft_font_create (match, scale);
-    cairo_matrix_destroy (scale);
+    font_face = cairo_ft_font_face_create_for_pattern (match);
     FcPatternDestroy (match);
-    if (!font)
+    if (!font_face)
     {
 	RaiseStandardException (exception_open_error,
 				"can't open font",
 				1, fv);
 	RETURN (Void);
     }
-    cairo_set_font (c5c->cr, font);
-    cairo_scale_font (c5c->cr, size);
-    cairo_font_destroy (font);
+    cairo_set_font_face (c5c->cr, font_face);
+    cairo_set_font_size (c5c->cr, size);
+    cairo_font_face_destroy (font_face);
     RETURN(Void);
 }
 
 Value
-do_Cairo_scale_font (Value cv, Value sv)
+do_Cairo_set_font_size (Value cv, Value sv)
 {
     cairo_5c_t		*c5c = cairo_5c_get (cv);
-    double		scale = DoublePart (sv, "invalid scale");
+    double		size = DoublePart (sv, "invalid size");
     
     if (!aborting)
-	cairo_scale_font (c5c->cr, scale);
+	cairo_set_font_size (c5c->cr, size);
     return Void;
 }
 
 Value
-do_Cairo_transform_font (Value cv, Value mv)
+do_Cairo_set_font_matrix (Value cv, Value mv)
 {
     ENTER ();
     cairo_5c_t		*c5c = cairo_5c_get (cv);
-    cairo_matrix_t	*matrix;
+    cairo_matrix_t	matrix;
     
     if (aborting)
 	RETURN(Void);
-    matrix = cairo_matrix_part (mv, "invalid matrix");
+    cairo_matrix_part (mv, &matrix, "invalid matrix");
     if (aborting)
 	RETURN(Void);
-    cairo_transform_font (c5c->cr, matrix);
-    cairo_matrix_destroy (matrix);
+    cairo_set_font_matrix (c5c->cr, &matrix);
     RETURN(Void);
 }
 
 Value
-do_Cairo_current_font_extents (Value cv)
+do_Cairo_font_extents (Value cv)
 {
     ENTER ();
     cairo_5c_t		    *c5c = cairo_5c_get (cv);
@@ -134,7 +130,7 @@ do_Cairo_current_font_extents (Value cv)
 
     if (aborting)
 	return Void;
-    cairo_current_font_extents (c5c->cr, &extents);
+    cairo_font_extents (c5c->cr, &extents);
     ret = NewStruct (TypeCanon (typeCairoFontExtents)->structs.structs, False);
     box = ret->structs.values;
     BoxValueSet (box, 0, NewDoubleFloat (extents.ascent));
