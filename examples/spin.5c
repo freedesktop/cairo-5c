@@ -78,10 +78,6 @@ void transform (cairo_t cr, real t)
 
 void animate (cairo_t cr)
 {
-    cairo_t crl = create ();
-    set_target_surface (crl, get_target_surface (cr));
-    set_font (crl, "sans-12");
-    set_source_rgb (crl, 0, 0, 0);
     real t = 0;
     for (;;)
     {
@@ -90,8 +86,12 @@ void animate (cairo_t cr)
 	translate (cr, 100, 100);
 	set_source_rgb (cr, 1, 1, 1);
 	clear (cr);
-	move_to (crl, 3, 20);
-	show_text (crl, sprintf ("%5.2f", t));
+	save (cr);
+	set_font (cr, "sans-12");
+	move_to (cr, 3, 20);
+        set_source_rgb (cr, 0, 0, 0);
+	show_text (cr, sprintf ("%5.2f", t));
+	restore (cr);
 	transform (cr, t);
 	picture (cr);
 	restore (cr);

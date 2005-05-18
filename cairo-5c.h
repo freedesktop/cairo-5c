@@ -43,13 +43,13 @@
 #include <cairo.h>
 #include <cairo-xlib.h>
 #include <cairo-png.h>
-#include <cairo-ps.h>
+#include <cairo-pdf.h>
 #include <cairo-ft.h>
 #include <stdio.h>
 #include <unistd.h>
 #undef Atom
 
-typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_IMAGE, CAIRO_5C_PS, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
+typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_IMAGE, CAIRO_5C_PDF, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
 
 typedef struct _cairo_5c_tool	cairo_5c_tool_t;
 
@@ -60,9 +60,13 @@ typedef struct _cairo_5c_window_t {
     FILE	    *send_events;
 } cairo_5c_window_t;
 
-typedef struct _cairo_ps_t {
-    FILE	*file;
-} cairo_5c_ps_t;
+typedef struct _cairo_5c_pdf_t {
+    Value	    file;
+} cairo_5c_pdf_t;
+
+typedef struct _cairo_5c_image_t {
+    int		    unused;
+} cairo_5c_image_t;
 
 typedef struct _cairo_5c_t {
     DataType	    *data;
@@ -74,16 +78,32 @@ typedef struct _cairo_5c_surface_t {
     DataType	    *data;
     cairo_5c_kind_t kind;
     cairo_surface_t *surface;
-    int		    width;
-    int		    height;
+    double    	    width;
+    double    	    height;
     Bool	    dirty;
     Value	    recv_events;
     Bool	    copied;
     union {
 	cairo_5c_window_t   window;
-	cairo_5c_ps_t	    ps;
+	cairo_5c_pdf_t	    pdf;
+	cairo_5c_image_t    image;
     } u;
 } cairo_5c_surface_t;
+
+typedef struct _cairo_5c_pattern_t {
+    DataType	    *data;
+    cairo_pattern_t *pattern;
+} cairo_5c_pattern_t;
+
+typedef struct _cairo_5c_scaled_font_t {
+    DataType		*data;
+    cairo_scaled_font_t	*scaled_font;
+} cairo_5c_scaled_font_t;
+
+typedef struct _cairo_5c_font_face_t {
+    DataType		*data;
+    cairo_font_face_t	*font_face;
+} cairo_5c_font_face_t;
 
 extern Type		*typeCairo;
 extern Type		*typeCairoSurface;
@@ -103,11 +123,10 @@ extern Type		*typeCairoRgbColor;
 extern Type		*typeCairoRgbaColor;
 extern Type		*typeCairoPattern;
 extern Type		*typeCairoPath;
-extern Type		*typeCairoMoveTo;
-extern Type		*typeCairoLineTo;
 extern Type		*typeCairoCurveTo;
-extern Type		*typeCairoClosePath;
 extern Type		*typeCairoFilter;
+extern Type		*typeCairoScaledFont;
+extern Type		*typeCairoFontFace;
 
 extern Type		*typeCairoPatternExtend;
 extern Type		*typeCairoPatternFilter;
@@ -121,19 +140,15 @@ void
 cairo_5c_dirty (cairo_5c_t *c5c);
 
 Value
-do_Cairo_create (void);
+do_Cairo_create (Value sv);
 
 Value
 do_Cairo_destroy (Value cv);
 
 Value
-do_Cairo_set_target_surface (Value cv, Value sv);
-    
-Value
-do_Cairo_get_target_surface (Value cv);
-    
-Value
-do_Cairo_copy (Value dstv, Value srcv);
+do_Cairo_get_target (Value cv);
+
+/* Error status queries */
 
 Value
 do_Cairo_status (Value cv);
@@ -156,19 +171,43 @@ Value
 do_Cairo_Surface_create_window (Value namev, Value wv, Value hv);
 
 Value
-do_Cairo_Surface_create_image (Value wv, Value hv);
+do_Cairo_Image_surface_create (Value fv, Value wv, Value hv);
 
 Value
-do_Cairo_Surface_write_to_png (Value sv, Value fv);
+do_Cairo_Image_surface_create_from_png (Value fnv);
 
 Value
-do_Cairo_Surface_create_ps (Value fv, Value wv, Value hv, Value xppiv, Value yppiv);
+do_Cairo_Image_surface_create_from_png_file (Value fv);
+
+Value
+do_Cairo_Pdf_surface_create (Value fnv, Value wv, Value hv);
+
+Value
+do_Cairo_Pdf_surface_create_for_file (Value fv, Value wv, Value hv);
+
+Value
+do_Cairo_Surface_write_to_png (Value sv, Value fnv);
+
+Value
+do_Cairo_Surface_write_to_png_file (Value sv, Value fv);
 
 Value
 do_Cairo_Surface_create_similar (Value sv, Value wv, Value hv);
 
 Value
+do_Cairo_Surface_finish (Value sv);
+
+Value
 do_Cairo_Surface_destroy (Value sv);
+
+Value
+do_Cairo_Surface_write_to_png (Value sv, Value fnv);
+
+Value
+do_Cairo_Surface_write_to_png_file (Value sv, Value fv);
+
+Value
+do_Cairo_Surface_set_device_offset (Value sv, Value xv, Value yv);
 
 Value
 do_Cairo_Surface_width (Value sv);
@@ -202,9 +241,6 @@ Value
 do_Cairo_set_operator (Value cv, Value ov);
 
 Value
-do_Cairo_default_matrix (Value cv);
-
-Value
 do_Cairo_identity_matrix (Value cv);
 
 Value
@@ -212,6 +248,9 @@ do_Cairo_set_source_rgb (Value cv, Value rv, Value gv, Value bv);
 
 Value
 do_Cairo_set_source_rgba (Value cv, Value rv, Value gv, Value bv, Value av);
+
+Value
+do_Cairo_set_source_surface (Value cv, Value sv, Value xv, Value yv);
 
 Value
 do_Cairo_set_tolerance (Value cv, Value tv);
@@ -244,31 +283,27 @@ Value
 do_Cairo_rotate (Value cv, Value av);
 
 Value
-do_Cairo_get_matrix (Value cv);
-
-Value
-do_Cairo_concat_matrix (Value cv, Value mv);
+do_Cairo_transform (Value cv, Value mv);
 
 Value
 do_Cairo_set_matrix (Value cv, Value mv);
 
 Value
-do_Cairo_transform_point (Value cv, Value pv);
+do_Cairo_identity_matrix (Value cv);
 
 Value
-do_Cairo_transform_distance (Value cv, Value pv);
+do_Cairo_user_to_device (Value cv, Value pv);
 
 Value
-do_Cairo_inverse_transform_point (Value cv, Value pv);
+do_Cairo_user_to_device_distance (Value cv, Value pv);
 
 Value
-do_Cairo_inverse_transform_distance (Value cv, Value pv);
+do_Cairo_device_to_user (Value cv, Value pv);
 
 Value
-do_Cairo_init_clip (Value cv);
+do_Cairo_device_to_user_distance (Value cv, Value pv);
 
-Value
-do_Cairo_clip (Value cv);
+/* Query functions */
 
 Value
 do_Cairo_get_operator (Value cv);
@@ -293,6 +328,9 @@ do_Cairo_get_line_join (Value cv);
 
 Value
 do_Cairo_get_miter_limit (Value cv);
+
+Value
+do_Cairo_get_matrix (Value cv);
 
 /* draw.c */
 Value
@@ -340,11 +378,30 @@ do_Cairo_rectangle (Value cv, Value xv, Value yv, Value wv, Value hv);
 Value
 do_Cairo_close_path (Value cv);
 
+/* Painting functions */
+Value
+do_Cairo_paint (Value cv);
+
+Value
+do_Cairo_paint_with_alpha (Value cv, Value av);
+
+Value
+do_Cairo_mask (Value cv, Value pv);
+
+Value
+do_Cairo_mask_surface (Value cv, Value sv, Value xv, Value yv);
+
+Value
+do_Cairo_stroke (Value cv);
+
+Value
+do_Cairo_stroke_preserve (Value cv);
+
 Value
 do_Cairo_fill (Value cv);
 
 Value
-do_Cairo_stroke (Value cv);
+do_Cairo_fill_preserve (Value cv);
 
 Value
 do_Cairo_copy_page (Value cv);
@@ -352,23 +409,38 @@ do_Cairo_copy_page (Value cv);
 Value
 do_Cairo_show_page (Value cv);
 
+/* Insideness testing */
 Value
 do_Cairo_in_stroke (Value cv, Value xv, Value yv);
 
 Value
 do_Cairo_in_fill (Value cv, Value xv, Value yv);
 
+/* Rectangular extents */
 Value
 do_Cairo_stroke_extents (Value cv);
 
 Value
 do_Cairo_fill_extents (Value cv);
 
+/* Clipping */
 Value
-do_Cairo_current_path_list (Value cv);
+do_Cairo_reset_clip (Value cv);
 
 Value
-do_Cairo_current_path_flat_list (Value cv);
+do_Cairo_clip (Value cv);
+
+Value
+do_Cairo_clip_preserve (Value cv);
+
+Value
+do_Cairo_copy_path (Value cv);
+
+Value
+do_Cairo_copy_path_flat (Value cv);
+
+Value
+do_Cairo_append_path (Value cv, Value pv);
 
 /* matrix.c */
 void
@@ -388,7 +460,7 @@ Value
 do_Cairo_set_source (Value cv, Value patv);
 
 Value
-do_Cairo_Pattern_create_png (Value filenamev);
+do_Cairo_Pattern_create_for_surface (Value sv);
 
 Value
 do_Cairo_Pattern_create_linear (Value x0v, Value y0v, Value x1v, Value y1v);
@@ -398,12 +470,13 @@ do_Cairo_Pattern_create_radial (Value cx0v, Value cy0v, Value radius0v,
 				Value cx1v, Value cy1v, Value radius1v);
 
 Value
-do_Cairo_Pattern_create_for_surface (Value cv);
+do_Cairo_Pattern_add_color_stop_rgb (Value patv, Value offsetv,
+				     Value redv, Value greenv, Value bluev);
 
 Value
-do_Cairo_Pattern_add_color_stop (Value patv, Value offsetv,
-				 Value redv, Value greenv, Value bluev,
-				 Value alphav);
+do_Cairo_Pattern_add_color_stop_rgba (Value patv, Value offsetv,
+				      Value redv, Value greenv, Value bluev,
+				      Value alphav);
 
 Value
 do_Cairo_Pattern_set_matrix (Value patv, Value matrixv);
@@ -425,10 +498,10 @@ do_Cairo_Pattern_get_filter (Value patv);
 
 /* text.c */
 Value
-do_Cairo_select_font (Value cv, Value fv, Value sv, Value wv);
+do_Cairo_select_font_face (Value cv, Value fv, Value sv, Value wv);
 
 Value
-do_Cairo_set_font (Value cv, Value fv);
+do_Cairo_set_font (Value cv, Value fnv);
 
 Value
 do_Cairo_set_font_size (Value cv, Value sv);
@@ -437,17 +510,38 @@ Value
 do_Cairo_set_font_matrix (Value cv, Value mv);
 
 Value
-do_Cairo_font_extents (Value cv);
+do_Cairo_get_font_matrix (Value cv);
 
 Value
 do_Cairo_show_text (Value cv, Value uv);
 
 Value
-do_Cairo_text_path (Value cv, Value uv);
+do_Cairo_font_extents (Value cv);
+
+Value
+do_Cairo_set_font_face (Value cv, Value fv);
 
 Value
 do_Cairo_text_extents (Value cv, Value uv);
 
+Value
+do_Cairo_text_path (Value cv, Value uv);
+
+/* Portable interface to general font features. */
+
+#if 0
+
+/* not actually useful until we expose freetype/fontconfig to nickle apps */
+Value
+do_Cairo_scaled_font_create (Value fv, Value mv, Value ctm);
+
+Value
+do_Cairo_scaled_font_extents (Value sfv);
+
+Value
+do_Cairo_scaled_text_extents (Value sfv, Value uv);
+
+#endif
 
 /* gtk.c */
 

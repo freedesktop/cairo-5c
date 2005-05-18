@@ -63,8 +63,10 @@ cairo_5c_get (Value av)
 	c5s = cairo_5c_surface_get (c5c->surface);
 	if (!c5s)
 	    return 0;
+#if 0
 	if (c5s->surface != cairo_current_target_surface (c5c->cr))
 	    cairo_set_target_surface (c5c->cr, c5s->surface);
+#endif
     }
     return c5c;
 }
@@ -119,14 +121,18 @@ cairo_foreign_free (void *object)
 }
 
 Value
-do_Cairo_create (void)
+do_Cairo_create (Value sv)
 {
     ENTER ();
-    Value	ret;
-    cairo_5c_t	*c5c;
-    cairo_t	*cr;
+    cairo_5c_surface_t	*c5s;
+    Value		ret;
+    cairo_5c_t		*c5c;
+    cairo_t		*cr;
 
-    cr = cairo_create ();
+    c5s = cairo_5c_surface_get (sv);
+    if (aborting)
+	RETURN (Void);
+    cr = cairo_create (c5s->surface);
     if (!cr)
     {
 	RaiseStandardException (exception_invalid_argument,
@@ -136,7 +142,7 @@ do_Cairo_create (void)
     }
     c5c = ALLOCATE (&Cairo5cType, sizeof (cairo_5c_t));
     c5c->cr = cr;
-    c5c->surface = Void;
+    c5c->surface = sv;
     ret = NewForeign (CairoId, c5c, 
 		      cairo_foreign_mark, cairo_foreign_free);
     RETURN (ret);
@@ -156,7 +162,7 @@ cairo_5c_dirty (cairo_5c_t *c5c)
 		cairo_5c_tool_dirty (c5s);
 		break;
 	    case CAIRO_5C_IMAGE:
-	    case CAIRO_5C_PS:
+	    case CAIRO_5C_PDF:
 	    case CAIRO_5C_SCRATCH:
 		break;
 	    }
@@ -178,7 +184,7 @@ cairo_5c_enable (cairo_5c_t *c5c)
 		cairo_5c_tool_enable (c5s);
 		break;
 	    case CAIRO_5C_IMAGE:
-	    case CAIRO_5C_PS:
+	    case CAIRO_5C_PDF:
 	    case CAIRO_5C_SCRATCH:
 		break;
 	    }
@@ -201,7 +207,7 @@ cairo_5c_disable (cairo_5c_t *c5c)
 		cairo_5c_tool_disable (c5s);
 		break;
 	    case CAIRO_5C_IMAGE:
-	    case CAIRO_5C_PS:
+	    case CAIRO_5C_PDF:
 	    case CAIRO_5C_SCRATCH:
 		break;
 	    }
@@ -211,34 +217,13 @@ cairo_5c_disable (cairo_5c_t *c5c)
 }
 
 Value
-do_Cairo_set_target_surface (Value cv, Value sv)
-{
-    ENTER ();
-    cairo_5c_t		*c5c = cairo_5c_get (cv);
-    cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
-
-    if (aborting)
-	RETURN (Void);
-    cairo_set_target_surface (c5c->cr, c5s->surface);
-    c5c->surface = sv;
-    RETURN (Void);
-}
-
-Value
-do_Cairo_get_target_surface (Value cv)
+do_Cairo_get_target (Value cv)
 {
     ENTER ();
     cairo_5c_t		*c5c = cairo_5c_get (cv);
 
     if (aborting)
 	RETURN (Void);
-    if (c5c->surface == Void)
-    {
-	RaiseStandardException (exception_invalid_argument,
-				"No current surface",
-				2, NewInt (0), cv);
-	RETURN (Void);
-    }
     RETURN (c5c->surface);
 }
 
@@ -254,21 +239,6 @@ do_Cairo_destroy (Value cv)
     cv->foreign.data = 0;
     cairo_5c_free (c5c);
     
-    RETURN (Void);
-}
-
-Value
-do_Cairo_copy (Value dstv, Value srcv)
-{
-    ENTER ();
-    cairo_5c_t	*dst = cairo_5c_get (dstv);
-    cairo_5c_t	*src = cairo_5c_get (srcv);
-    
-    if (aborting)
-	RETURN (Void);
-    
-    cairo_copy (dst->cr, src->cr);
-
     RETURN (Void);
 }
 

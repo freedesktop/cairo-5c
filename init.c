@@ -38,6 +38,8 @@
 NamespacePtr	CairoNamespace;
 NamespacePtr	CairoSurfaceNamespace;
 NamespacePtr	CairoPatternNamespace;
+NamespacePtr	CairoImageNamespace;
+NamespacePtr	CairoPdfNamespace;
 Type		*typeCairo;
 Type		*typeCairoSurface;
 Type		*typeCairoStatus;
@@ -56,10 +58,9 @@ Type		*typeCairoRgbColor;
 Type		*typeCairoRgbaColor;
 Type		*typeCairoPattern;
 Type		*typeCairoPath;
-Type		*typeCairoMoveTo;
-Type		*typeCairoLineTo;
 Type		*typeCairoCurveTo;
-Type		*typeCairoClosePath;
+Type		*typeCairoScaledFont;
+Type		*typeCairoFontFace;
 
 Type		*typeCairoPatternExtend;
 Type		*typeCairoPatternFilter;
@@ -100,14 +101,12 @@ Type		*typeCairoPatternFilter;
 #define PATTERN_S	"16"
 #define PATH_I		17
 #define PATH_S		"17"
-#define MOVE_TO_I	18
-#define MOVE_TO_S	"18"
-#define LINE_TO_I	19
-#define LINE_TO_S	"19"
 #define CURVE_TO_I	20
 #define CURVE_TO_S	"20"
-#define CLOSE_PATH_I	21
-#define CLOSE_PATH_S	"21"
+#define SCALED_FONT_I	22
+#define SCALED_FONT_S	"22"
+#define FONT_FACE_I	23
+#define FONT_FACE_S	"23"
 
 #define EXTEND_I	30
 #define EXTEND_S	"30"
@@ -140,7 +139,7 @@ make_typedef (char	*name_str,
 static void
 init_types (void)
 {
-    Symbol  *mt, *lt, *ct, *cp, *path;
+    Symbol  *ct, *path;
     ENTER ();
 
     CairoNamespace = BuiltinNamespace (/* parent */ 0, "Cairo")->namespace.namespace;
@@ -326,23 +325,9 @@ init_types (void)
 				     typePrim[rep_foreign]);
 
     /*
-     * Recursive datatypes aren't supported by the simple API
+     * Path data structures
      */
-
-    typeCairoMoveTo = make_typedef ("move_to_t",
-				    CairoNamespace,
-				    publish_public,
-				    MOVE_TO_I,
-				    &mt,
-				    0);
-
-    typeCairoLineTo = make_typedef ("line_to_t",
-				    CairoNamespace,
-				    publish_public,
-				    LINE_TO_I,
-				    &lt,
-				    0);
-
+    
     typeCairoCurveTo = make_typedef ("curve_to_t",
 				     CairoNamespace,
 				     publish_public,
@@ -350,37 +335,7 @@ init_types (void)
 				     &ct,
 				     0);
 
-    typeCairoClosePath = make_typedef ("close_path_t",
-				       CairoNamespace,
-				       publish_public,
-				       CLOSE_PATH_I,
-				       &cp,
-				       0);
-
-    typeCairoPath = make_typedef ("path_t",
-				  CairoNamespace,
-				  publish_public,
-				  PATH_I,
-				  &path,
-				  BuildUnionType(5,
-						 NewTypeRef (typeCairoMoveTo, True), "move_to",
-						 NewTypeRef (typeCairoLineTo, True), "line_to",
-						 NewTypeRef (typeCairoCurveTo, True), "curve_to",
-						 NewTypeRef (typeCairoClosePath, True), "close_path",
-						 typePrim[rep_void], "end"));
-
-    mt->symbol.type = BuildStructType (3,
-				       typeCairoPath, "next",
-				       typePrim[rep_float], "x",
-				       typePrim[rep_float], "y");
-
-    lt->symbol.type = BuildStructType (3,
-				       typeCairoPath, "next",
-				       typePrim[rep_float], "x",
-				       typePrim[rep_float], "y");
-
-    ct->symbol.type = BuildStructType (7,
-				       typeCairoPath, "next",
+    ct->symbol.type = BuildStructType (6,
 				       typePrim[rep_float], "x1",
 				       typePrim[rep_float], "y1",
 				       typePrim[rep_float], "x2",
@@ -388,13 +343,23 @@ init_types (void)
 				       typePrim[rep_float], "x3",
 				       typePrim[rep_float], "y3");
 
-    cp->symbol.type = BuildStructType (1,
-				       typeCairoPath, "next");
+    typeCairoPath = make_typedef ("path_t",
+				  CairoNamespace,
+				  publish_public,
+				  PATH_I,
+				  &path,
+				  BuildUnionType(5,
+						 NewTypeRef (typeCairoPoint, True), "move_to",
+						 NewTypeRef (typeCairoPoint, True), "line_to",
+						 NewTypeRef (typeCairoCurveTo, True), "curve_to",
+						 typePrim[rep_void], "close_path"));
 
-    
 
     CairoSurfaceNamespace = BuiltinNamespace (&CairoNamespace, "Surface")->namespace.namespace;
 
+    CairoImageNamespace = BuiltinNamespace (&CairoNamespace, "Image")->namespace.namespace;
+    
+    CairoPdfNamespace = BuiltinNamespace (&CairoNamespace, "Pdf")->namespace.namespace;
 
     CairoPatternNamespace = BuiltinNamespace (&CairoNamespace, "Pattern")->namespace.namespace;
 
@@ -420,6 +385,19 @@ init_types (void)
 							  "NEAREST",
 							  "BILINEAR",
 							  "GAUSSIAN"));
+
+    typeCairoScaledFont = make_typedef ("scaled_font_t",
+					CairoNamespace,
+					publish_public,
+					SCALED_FONT_I,
+					NULL,
+					typePrim[rep_foreign]);
+    typeCairoFontFace = make_typedef ("font_face_t",
+				      CairoNamespace,
+				      publish_public,
+				      FONT_FACE_I,
+				      NULL,
+				      typePrim[rep_foreign]);
 
     EXIT();
 }
@@ -466,180 +444,182 @@ nickle_init (void)
 {
     ENTER ();
 	
-    static const struct fbuiltin_0 funcs_0[] = {
-	{ do_Cairo_create, "create", CAIRO_S, "", "\n"
-	    " cairo_t create ()\n"
-	    "\n"
-	    " Create a cairo context.\n"
-	},
-	{ 0 },
-    };
-    
     static const struct fbuiltin_1 funcs_1[] = {
+	{ do_Cairo_create, "create", CAIRO_S, SURFACE_S, "\n"
+	    " cairo_t create (surface_t sv)\n"
+	    "\n"
+	    " Create a cairo context for the specified surface.\n"
+	},
 	{ do_Cairo_destroy, "destroy", "v", CAIRO_S, "\n"
-	    " void destroy (cairo_t cairo)\n"
+	    " void destroy (cairo_t cr)\n"
 	    "\n"
 	    " destroy a rendering context.\n"},
-	{ do_Cairo_get_target_surface, "get_target_surface", SURFACE_S, CAIRO_S, "\n"
-	    " surface_t get_target_surface (cairo_t cairo)\n"
+	{ do_Cairo_get_target, "get_target", SURFACE_S, CAIRO_S, "\n"
+	    " surface_t get_target (cairo_t cr)\n"
 	    "\n"
 	    " Return current target surface\n" },
 	{ do_Cairo_status, "status", STATUS_S, CAIRO_S, "\n"
-	    " status_t status (cairo_t cairo)\n"
+	    " status_t status (cairo_t cr)\n"
 	    "\n"
 	    " Return the status of a cairo surface\n" },
 	{ do_Cairo_status_string, "status_string", "s", CAIRO_S, "\n"
-	    " string status_string (cairo_t cairo)\n"
+	    " string status_string (cairo_t cr)\n"
 	    "\n"
 	    " Return the status string of a cairo surface\n" },
 	{ do_Cairo_enable, "enable", "v", CAIRO_S, "\n"
-	    " void enable (cairo_t cairo)\n"
+	    " void enable (cairo_t cr)\n"
 	    "\n"
 	    " Enable screen updates from a cairo surface\n" },
 	{ do_Cairo_disable, "disable", "v", CAIRO_S, "\n"
-	    " void disable (cairo_t cairo)\n"
+	    " void disable (cairo_t cr)\n"
 	    "\n"
 	    " Disable screen updates from a cairo surface\n" },
 	{ do_Cairo_save, "save", "v", CAIRO_S, "\n"
-	    " void save (cairo_t cairo)\n"
+	    " void save (cairo_t cr)\n"
 	    "\n"
 	    " Save graphics state\n" },
 	{ do_Cairo_restore, "restore", "v", CAIRO_S, "\n"
-	    " void restore (cairo_t cairo)\n"
+	    " void restore (cairo_t cr)\n"
 	    "\n"
 	    " Restore graphics state\n" },
 	{ do_Cairo_identity_matrix, "identity_matrix", "v", CAIRO_S, "\n"
-	    " void identity_matrix (cairo_t cairo)\n"
+	    " void identity_matrix (cairo_t cr)\n"
 	    "\n"
 	    " Set transformation matrix to identity\n" },
-	{ do_Cairo_default_matrix, "default_matrix", "v", CAIRO_S, "\n"
-	    " void default_matrix (cairo_t cairo)\n"
-	    "\n"
-	    " Set transformation matrix to default\n" },
 	{ do_Cairo_new_path, "new_path", "v", CAIRO_S, "\n"
-	    " void new_path (cairo_t cairo)\n"
+	    " void new_path (cairo_t cr)\n"
 	    "\n"
 	    " Starts a new path\n" },
 	{ do_Cairo_close_path, "close_path", "v", CAIRO_S, "\n"
-	    " void close_path (cairo_t cairo)\n"
+	    " void close_path (cairo_t cr)\n"
 	    "\n"
 	    " Closes the current path\n" },
 	{ do_Cairo_fill, "fill", "v", CAIRO_S, "\n"
-	    " void fill (cairo_t cairo)\n"
+	    " void fill (cairo_t cr)\n"
 	    "\n"
 	    " Fill the current path\n" },
 	
+	{ do_Cairo_fill_preserve, "fill_preserve", "v", CAIRO_S, "\n"
+	    " void fill_preserve (cairo_t cr)\n"
+	    "\n"
+	    " Fill the current path without making an implicit call to new_path\n" },
+	
 	{ do_Cairo_stroke, "stroke", "v", CAIRO_S, "\n"
-	    " void stroke (cairo_t cairo)\n"
+	    " void stroke (cairo_t cr)\n"
 	    "\n"
 	    " Stroke the current path\n" },
 	
+	{ do_Cairo_stroke_preserve, "stroke_preserve", "v", CAIRO_S, "\n"
+	    " void stroke_preserve (cairo_t cr)\n"
+	    "\n"
+	    " Stroke the current path without making an implicit call to new_path\n" },
+	
 	{ do_Cairo_copy_page, "copy_page", "v", CAIRO_S, "\n"
-	    " void copy_page (cairo_t cairo)\n"
+	    " void copy_page (cairo_t cr)\n"
 	    "\n"
 	    " Write out the current page, leaving it intact.\n" },
 	
 	{ do_Cairo_show_page, "show_page", "v", CAIRO_S, "\n"
-	    " void show_page (cairo_t cairo)\n"
+	    " void show_page (cairo_t cr)\n"
 	    "\n"
 	    " Write out the current page, and erase it.\n" },
 	
-	{ do_Cairo_current_path_flat_list, "current_path_flat_list", PATH_S, CAIRO_S, "\n"
-	    " void current_path_flat (cairo_t cr)\n"
-	    "\n"
-	    " Returns the current path with curves tesselated to lines\n" },
-
-	{ do_Cairo_current_path_list, "current_path_list", PATH_S, CAIRO_S, "\n"
-	    " void current_path (cairo_t cr)\n"
+	{ do_Cairo_copy_path, "copy_path", PATH_S, CAIRO_S, "\n"
+	    " void copy_path (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current path\n" },
-	
-	{ do_Cairo_init_clip, "init_clip", "v", CAIRO_S, "\n"
-	    " void init_clip (cairo_t cairo)\n"
+
+	{ do_Cairo_copy_path_flat, "copy_path_flat", PATH_S, CAIRO_S, "\n"
+	    " void copy_path (cairo_t cr)\n"
 	    "\n"
-	    " Resets clip list to whole surface\n" },
+	    " Returns the current path with curves tesselated to lines\n" },
 	
+	{ do_Cairo_reset_clip, "reset_clip", "v", CAIRO_S, "\n"
+	    " void reset_clip (cairo_t cr)\n"
+	    "\n"
+	    " Reset clip to the entire surface.\n" },
+
 	{ do_Cairo_clip, "clip", "v", CAIRO_S, "\n"
-	    " void clip (cairo_t cairo)\n"
+	    " void clip (cairo_t cr)\n"
 	    "\n"
-	    " Clip to current path.  Does not empty path.\n" },
+	    " Clip to current path. Consumes path.\n" },
+
+	{ do_Cairo_clip_preserve, "clip_preserve", "v", CAIRO_S, "\n"
+	    " void clip_preserve (cairo_t cr)\n"
+	    "\n"
+	    " Clip to current path without consuming path.\n" },
 
 	{ do_Cairo_stroke_extents, "stroke_extents", RECT_S, CAIRO_S, "\n"
-	    " rect_t stroke_extents (cairo_t cairo)\n"
+	    " rect_t stroke_extents (cairo_t cr)\n"
 	    "\n"
 	    " Returns bounding box of stroking current path\n" },
 	
 	{ do_Cairo_fill_extents, "fill_extents", RECT_S, CAIRO_S, "\n"
-	    " rect_t fill_extents (cairo_t cairo)\n"
+	    " rect_t fill_extents (cairo_t cr)\n"
 	    "\n"
 	    " Returns bounding box of filling current path\n" },
 	
 	{ do_Cairo_get_operator, "get_operator", OPERATOR_S, CAIRO_S, "\n"
-	    " operator_t get_operator (cairo_t cairo)\n"
+	    " operator_t get_operator (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current operator\n" },
 	
 	{ do_Cairo_get_source, "get_source", PATTERN_S, CAIRO_S, "\n"
-	    " pattern_t get_source (cairo_t cairo)\n"
+	    " pattern_t get_source (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current source pattern\n" },
 	
 	{ do_Cairo_get_tolerance, "get_tolerance", "n", CAIRO_S, "\n"
-	    " real get_tolerance (cairo_t cairo)\n"
+	    " real get_tolerance (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current tolerance\n" },
 	
 	{ do_Cairo_get_current_point, "get_current_point", POINT_S, CAIRO_S, "\n"
-	    " point_t current_point (cairo_t cairo)\n"
+	    " point_t current_point (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current point\n" },
 	
 	{ do_Cairo_get_fill_rule, "get_fill_rule", FILL_RULE_S, CAIRO_S, "\n"
-	    " fill_rule_t get_fill_rule (cairo_t cairo)\n"
+	    " fill_rule_t get_fill_rule (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current fill rule\n" },
 	
 	{ do_Cairo_get_line_width, "get_line_width", "n", CAIRO_S, "\n"
-	    " real get_line_width (cairo_t cairo)\n"
+	    " real get_line_width (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current line width\n" },
-	
 	{ do_Cairo_get_line_cap, "get_line_cap", LINE_CAP_S, CAIRO_S, "\n"
-	    " line_cap_t get_line_cap (cairo_t cairo)\n"
+	    " line_cap_t get_line_cap (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current line_cap\n" },
-	
 	{ do_Cairo_get_line_join, "get_line_join", LINE_JOIN_S, CAIRO_S, "\n"
-	    " line_join_t get_line_join (cairo_t cairo)\n"
+	    " line_join_t get_line_join (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current line join\n" },
-	
 	{ do_Cairo_get_miter_limit, "get_miter_limit", "n", CAIRO_S, "\n"
-	    " real get_miter_limit (cairo_t cairo)\n"
+	    " real get_miter_limit (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current miter limit\n" },
-	
 	{ do_Cairo_get_matrix, "get_matrix", MATRIX_S, CAIRO_S, "\n"
-	    " matrix_t get_matrix (cairo_t cairo)\n"
+	    " matrix_t get_matrix (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current transformation matrix\n" },
-	
+	{ do_Cairo_paint, "paint", "v", CAIRO_S, "\n"
+	    " void paint (cairo_t cr)\n"
+	    "\n"
+	    " Fill cr with the pattern\n" },
+	{ do_Cairo_get_font_matrix, "get_font_matrix", MATRIX_S, CAIRO_S, "\n"
+	    " matrix_t get_font_matrix (cairo_t cr)\n"
+	    "\n"
+	    " Returns the current font matrix\n" },
 	{ do_Cairo_font_extents, "font_extents", FONT_EXTENTS_S, CAIRO_S, "\n"
-	    " font_extents_t font_extents (cairo_t cairo)\n"
+	    " font_extents_t font_extents (cairo_t cr)\n"
 	    "\n"
 	    " Returns metrics for current font\n" },
 	{ 0 }
     };
     
     static const struct fbuiltin_2 funcs_2[] = {
-	{ do_Cairo_set_target_surface, "set_target_surface", "v", CAIRO_S SURFACE_S, "\n"
-	    " void set_target_surface (cairo_t cr, surface_t surface)\n"
-	    "\n"
-	    " Set target surface for drawing operations\n" },
-	{ do_Cairo_copy, "copy", "v", CAIRO_S CAIRO_S, "\n"
-	    " void copy (cairo_t dst, cairo_t src)\n"
-	    "\n"
-	    " Copy state from one rendering context to another\n" },
 	{ do_Cairo_set_operator, "set_operator", "v", CAIRO_S OPERATOR_S, "\n"
 	    " void set_operator (cairo_t cr, operator_t operator)\n"
 	    "\n"
@@ -676,10 +656,22 @@ nickle_init (void)
 	    " void rotate (cairo_t cr, real radians)\n"
 	    "\n"
 	    " Rotate current transformation matrix by specified amount\n" },
-	{ do_Cairo_set_font, "set_font", "v", CAIRO_S "s", "\n"
-	    " void set_font (cairo_t cr, string name)\n"
+	{ do_Cairo_paint_with_alpha, "paint_with_alpha", "v", CAIRO_S "n", "\n"
+	    " void paint_with_alpha (cairo_t cr, real alpha)\n"
 	    "\n"
-	    " Select and set current font from name.\n" },
+	    " Fill cr with the source with the constant mask alpha\n" },
+	{ do_Cairo_mask, "mask", "v", CAIRO_S PATTERN_S, "\n"
+	    " void mask (cairo_t cr, pattern_t pattern)\n"
+	    "\n"
+	    " Fill cr with the source with the specified mask\n" },
+	{ do_Cairo_append_path, "append_path", "v", CAIRO_S PATH_S, "\n"
+	    " void append_path (cairo_t cr, path_t path)\n"
+	    "\n"
+	    " Append path to cr\n" },
+	{ do_Cairo_set_font, "set_font", "v", CAIRO_S "s", "\n"
+	    " void set_font (cairo_t cr, string fontname)\n"
+	    "\n"
+	    " Sets the current font using fontname\n" },
 	{ do_Cairo_set_font_size, "set_font_size", "v", CAIRO_S "n", "\n"
 	    " void set_font_size (cairo_t cr, real size)\n"
 	    "\n"
@@ -700,44 +692,34 @@ nickle_init (void)
 	    " text_extents_t text_extents (cairo_t cr, string text)\n"
 	    "\n"
 	    " Appends text to current path\n" },
-	{ do_Cairo_concat_matrix, "concat_matrix", "v", CAIRO_S MATRIX_S, "\n"
-	    " void concat_matrix (cairo_t cr, matrix_t matrix)\n"
+	{ do_Cairo_transform, "transform", "v", CAIRO_S MATRIX_S, "\n"
+	    " void transform (cairo_t cr, matrix_t matrix)\n"
 	    "\n"
 	    " Mixes in another matrix to the current transformation\n" },
 	{ do_Cairo_set_matrix, "set_matrix", "v", CAIRO_S MATRIX_S, "\n"
 	    " void set_matrix (cairo_t cr, matrix_t matrix)\n"
 	    "\n"
 	    " Sets the transformation matrix\n" },
-	{ do_Cairo_transform_point, "transform_point", POINT_S, CAIRO_S POINT_S, "\n"
-	    " point_t transform_point (cairo_t cr, point_t)\n"
+	{ do_Cairo_user_to_device, "user_to_device", POINT_S, CAIRO_S POINT_S, "\n"
+	    " point_t user_to_device (cairo_t cr, point_t)\n"
 	    "\n"
 	    " Transform a point from user to device space\n" },
-	{ do_Cairo_transform_distance, "transform_distance", POINT_S, CAIRO_S POINT_S, "\n"
-	    " point_t transform_distance (cairo_t cr, point_t point)\n"
+	{ do_Cairo_user_to_device_distance, "user_to_device_distance", POINT_S, CAIRO_S POINT_S, "\n"
+	    " point_t user_to_device_distance (cairo_t cr, point_t point)\n"
 	    "\n"
 	    " Transform a distance from user to device space\n" },
-	{ do_Cairo_inverse_transform_point, "inverse_transform_point", POINT_S, CAIRO_S POINT_S, "\n"
-	    " point_t inverse_transform_point (cairo_t cr, point_t point)\n"
+	{ do_Cairo_device_to_user, "device_to_user", POINT_S, CAIRO_S POINT_S, "\n"
+	    " point_t device_to_user (cairo_t cr, point_t point)\n"
 	    "\n"
 	    " Transform a point from device to user space\n" },
-	{ do_Cairo_inverse_transform_distance, "inverse_transform_distance", POINT_S, CAIRO_S POINT_S, "\n"
-	    " point_t inverse_transform_distance (cairo_t cr, point_t point)\n"
+	{ do_Cairo_device_to_user_distance, "device_to_user_distance", POINT_S, CAIRO_S POINT_S, "\n"
+	    " point_t device_to_user_distance (cairo_t cr, point_t point)\n"
 	    "\n"
 	    " Transform a distance from device to user space\n" },
 	{ 0 }
     };
 
     static const struct fbuiltin_3 funcs_3[] = {
-#if 0
-	{ do_Cairo_new_png, "new_png", CAIRO_S, "sii", "\n"
-	    " cairo_t new_png (string filename, int width, int height)\n"
-	    "\n"
-	    " Create a cairo png file.\n" },
-	{ do_Cairo_new_scratch, "new_scratch", CAIRO_S, CAIRO_S "ii", "\n"
-	    " cairo_t new_scratch (cairo_t cr, int width, int height)\n"
-	    "\n"
-	    " Create a scratch surface related to the given surface.\n" },
-#endif
 	{ do_Cairo_move_to, "move_to", "v", CAIRO_S "nn", "\n"
 	    " void move_to (cairo_t cr, real x, real y)\n"
 	    "\n"
@@ -767,11 +749,11 @@ nickle_init (void)
 	    "\n"
 	    " Sets current dash pattern and offset\n" },
 	{ do_Cairo_in_fill, "in_fill", "b", CAIRO_S "nn", "\n"
-	    " bool in_fill (cairo_t cairo, real x, real y)\n"
+	    " bool in_fill (cairo_t cr, real x, real y)\n"
 	    "\n"
 	    " Test whether (x,y) would be covered by filling the current path\n" },
 	{ do_Cairo_in_stroke, "in_stroke", "b", CAIRO_S "nn", "\n"
-	    " bool in_stroke (cairo_t cairo, real x, real y)\n"
+	    " bool in_stroke (cairo_t cr, real x, real y)\n"
 	    "\n"
 	    " Test whether (x,y) would be covered by stroking the current path\n" },
 	{ 0 }
@@ -782,10 +764,18 @@ nickle_init (void)
 	    " void set_source_rgb (cairo_t cr, real red, real green, real blue)\n"
 	    "\n"
 	    " Set solid color source\n" },
-	{ do_Cairo_select_font, "select_font", "v", CAIRO_S "s" FONT_SLANT_S FONT_WEIGHT_S, "\n"
-	    " void select_font (cairo_t cr, string family, slant_t slant, weight_t weight)\n"
+	{ do_Cairo_set_source_surface, "set_source_surface", "v", CAIRO_S SURFACE_S "nn", "\n"
+	    " void set_source_surface (cairo_t cr, surface_t surface, real x, real y)\n"
 	    "\n"
-	    " Set current font\n" },
+	    " Set the source to surface and offset by x,y\n" },
+	{ do_Cairo_mask_surface, "mask_surface", "v", CAIRO_S SURFACE_S "nn", "\n"
+	    " void mask_surface (cairo_t cr, surface_t surface, real x, real y)\n"
+	    "\n"
+	    " Fill cr with the source using surface, offset by x,y, as the mask\n" },
+	{ do_Cairo_select_font_face, "select_font_face", "v", CAIRO_S "s" FONT_SLANT_S FONT_WEIGHT_S, "\n"
+	    " void select_font_face (cairo_t cr, string family, font_slant_t slant, font_weight_t weight)\n"
+	    "\n"
+	    " Select a font face using the specified family, slant and weight\n" },
 	{ 0 }
     };
 
@@ -826,6 +816,10 @@ nickle_init (void)
     };
 
     static const struct fbuiltin_1 surfuncs_1[] = {
+	{ do_Cairo_Surface_finish, "finish", "v", SURFACE_S, "\n"
+	    " void finish (surface_t surface)\n"
+	    "\n"
+	    " Finish a surface. All output to the surface is finalized\n" },
 	{ do_Cairo_Surface_destroy, "destroy", "v", SURFACE_S, "\n"
 	    " void destroy (surface_t surface)\n"
 	    "\n"
@@ -846,14 +840,14 @@ nickle_init (void)
     };
 
     static const struct fbuiltin_2 surfuncs_2[] = {
-	{ do_Cairo_Surface_create_image, "create_image", SURFACE_S, "nn", "\n"
-	    " surface_t create_image (real width, real height)\n"
-	    "\n"
-	    " Create an image surface\n" },
 	{ do_Cairo_Surface_write_to_png, "write_to_png", "v", SURFACE_S "s", "\n"
-	    " surface_t write_to_png (surface_t surface, string filename)\n"
+	    " void write_to_png (surface_t surface, string filename)\n"
 	    "\n"
-	    " Write a surface to a file in png format\n" },
+	    " Write a surface to filename in png format\n" },
+	{ do_Cairo_Surface_write_to_png_file, "write_to_png_file", "v", SURFACE_S "f", "\n"
+	    " void write_to_png (surface_t surface, file f)\n"
+	    "\n"
+	    " Write a surface to f in png format\n" },
 	{ 0 }
     };
     
@@ -866,22 +860,14 @@ nickle_init (void)
 	    " surface_t create_similar (surface_t related, real width, real height)\n"
 	    "\n"
 	    " Create a similar surface related to another surface\n" },
-	{ 0 }
-    };
-
-    static const struct fbuiltin_5 surfuncs_5[] = {
-	{ do_Cairo_Surface_create_ps, "create_ps", SURFACE_S, "snnnn", "\n"
-	    " surface_t create_ps (string filename, real width_inches, real height_inches, real xppi, real yppi)\n"
+	{ do_Cairo_Surface_set_device_offset, "set_device_offset", "v", SURFACE_S "nn", "\n"
+	    " void set_device_offset (surface_t surface, real x, real y)\n"
 	    "\n"
-	    " Create a PostScript file and return a surface pointer for it\n" },
+	    " Sets the device offset for surface to x,y\n" },
 	{ 0 }
     };
 
     static const struct fbuiltin_1 patfuncs_1[] = {
-	{ do_Cairo_Pattern_create_png, "create_png", PATTERN_S, "s", "\n"
-	    " pattern_t create_png (string filename)\n"
-	    "\n"
-	    " Returns a pattern containing the specified png image\n" },
 	{ do_Cairo_Pattern_create_for_surface, "create_for_surface", PATTERN_S, CAIRO_S, "\n"
 	    " pattern_t create_for_surface (cairo_t cr)\n"
 	    "\n"
@@ -930,16 +916,47 @@ nickle_init (void)
 	    " pattern_t create_radial (real cx0, real cy0, real radius0, real cx1, real cy1, real radius1)\n"
 	    "\n"
 	    " Create a radial gradient pattern\n" },
-	{ do_Cairo_Pattern_add_color_stop, "add_color_stop", STATUS_S, PATTERN_S "nnnnn", "\n"
-	    " status_t add_color_stop (pattern_t cr, real offset, real red, real green, real blue, real alpha)\n"
+	{ do_Cairo_Pattern_add_color_stop_rgba, "add_color_stop", STATUS_S, PATTERN_S "nnnnn", "\n"
+	    " status_t add_color_stop_rgba (pattern_t cr, real offset, real red, real green, real blue, real alpha)\n"
 	    "\n"
 	    " Add a color stop in a gradient pattern.\n" },
 	{ 0 }
     };
 
+    static const struct fbuiltin_1 imgfuncs_1[] = {
+	{ do_Cairo_Image_surface_create_from_png, "surface_create_from_png", SURFACE_S, "s", "\n"
+	    " surface_t surface_create_from_png (string filename)\n"
+	    "\n"
+	    " Create an image surface from the png image in filename\n" },
+	{ do_Cairo_Image_surface_create_from_png_file, "surface_create_from_png_file", SURFACE_S, "f", "\n"
+	    " surface_t surface_create_from_png_file (file f)\n"
+	    "\n"
+	    " Create an image surface from the png image in f\n" },
+	{ 0 }
+    };
+					 
+    static const struct fbuiltin_3 imgfuncs_3[] = {
+	{ do_Cairo_Image_surface_create, "surface_create", SURFACE_S, "nnn", "\n"
+	    " surface_t surface_create (int format, int width, int height)\n"
+	    "\n"
+	    " Create an image surface of the specified size in pixels\n" },
+	{ 0 }
+    };
+					 
+    static const struct fbuiltin_3 pdffuncs_3[] = {
+	{ do_Cairo_Pdf_surface_create, "surface_create", SURFACE_S, "snn", "\n"
+	    " surface_t surface_create (string filename, real width, real height)\n"
+	    "\n"
+	    " Create a PDF surface of the specified size in points, written to filename\n" },
+	{ do_Cairo_Pdf_surface_create, "surface_create_for_file", SURFACE_S, "snn", "\n"
+	    " surface_t surface_create (file f, real width, real height)\n"
+	    "\n"
+	    " Create a PDF surface of the specified size in points, written to f\n" },
+	{ 0 }
+    };
+					 
     init_types ();
     
-    BuiltinFuncs0 (&CairoNamespace, funcs_0);
     BuiltinFuncs1 (&CairoNamespace, funcs_1);
     BuiltinFuncs2 (&CairoNamespace, funcs_2);
     BuiltinFuncs3 (&CairoNamespace, funcs_3);
@@ -951,12 +968,16 @@ nickle_init (void)
     BuiltinFuncs1 (&CairoSurfaceNamespace, surfuncs_1);
     BuiltinFuncs2 (&CairoSurfaceNamespace, surfuncs_2);
     BuiltinFuncs3 (&CairoSurfaceNamespace, surfuncs_3);
-    BuiltinFuncs5 (&CairoSurfaceNamespace, surfuncs_5);
     
     BuiltinFuncs1 (&CairoPatternNamespace, patfuncs_1);
     BuiltinFuncs2 (&CairoPatternNamespace, patfuncs_2);
     BuiltinFuncs4 (&CairoPatternNamespace, patfuncs_4);
     BuiltinFuncs6 (&CairoPatternNamespace, patfuncs_6);
+
+    BuiltinFuncs1 (&CairoImageNamespace, imgfuncs_1);
+    BuiltinFuncs3 (&CairoImageNamespace, imgfuncs_3);
+    
+    BuiltinFuncs3 (&CairoPdfNamespace, pdffuncs_3);
 
     RETURN(TrueVal);
 }

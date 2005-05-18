@@ -1,3 +1,47 @@
+2005-05-17  Keith Packard  <keithp@keithp.com>
+
+	* cairo-5c.h:
+	* cairo.5c:
+	* cairo.c: (cairo_5c_get), (do_Cairo_create), (cairo_5c_dirty),
+	(cairo_5c_enable), (cairo_5c_disable), (do_Cairo_get_target):
+	* draw.c: (do_Cairo_paint), (do_Cairo_paint_with_alpha),
+	(do_Cairo_mask), (do_Cairo_mask_surface), (do_Cairo_fill_preserve),
+	(do_Cairo_stroke_preserve), (path_elt_new), (path_array),
+	(do_Cairo_copy_path), (do_Cairo_copy_path_flat),
+	(do_Cairo_append_path):
+	* event.c: (do_Cairo_Surface_open_event):
+	* examples/animate.5c:
+	* examples/draw.5c:
+	* examples/fob.5c:
+	* examples/metrics.5c:
+	* examples/sin.5c:
+	* examples/spin.5c:
+	* examples/spinman.5c:
+	* examples/test.5c:
+	* gstate.c: (do_Cairo_set_source_surface),
+	(do_Cairo_identity_matrix), (do_Cairo_transform),
+	(do_Cairo_user_to_device), (do_Cairo_user_to_device_distance),
+	(do_Cairo_device_to_user), (do_Cairo_device_to_user_distance),
+	(do_Cairo_reset_clip), (do_Cairo_clip_preserve):
+	* gtk.c: (create_gtk_global):
+	* init.c: (init_types), (nickle_init):
+	* pattern.c: (do_Cairo_Pattern_create_for_surface),
+	(do_Cairo_Pattern_add_color_stop_rgba),
+	(do_Cairo_Pattern_add_color_stop_rgb):
+	* surface.c: (cairo_5c_surface_get), (cairo_5c_surface_mark),
+	(cairo_5c_surface_destroy), (do_Cairo_Surface_write_to_png),
+	(do_Cairo_Surface_write_to_png_file),
+	(do_Cairo_Surface_set_device_offset),
+	(do_Cairo_Surface_create_similar), (do_Cairo_Surface_finish),
+	(do_Cairo_Surface_destroy), (do_Cairo_Surface_width),
+	(do_Cairo_Surface_height), (do_Cairo_Image_surface_create),
+	(do_Cairo_Image_surface_create_from_png),
+	(do_Cairo_Image_surface_create_from_png_file),
+	(do_Cairo_Pdf_surface_create):
+	* text.c: (do_Cairo_select_font_face), (do_Cairo_get_font_matrix):
+	Another round of API changes for cairo 0.5, the putative
+	final API structure.
+
 2005-05-02  Keith Packard  <keithp@keithp.com>
 
 	* cairo-5c.h:

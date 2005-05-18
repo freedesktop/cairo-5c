@@ -92,6 +92,20 @@ do_Cairo_set_source_rgba (Value cv, Value rv, Value gv, Value bv, Value av)
 }
 
 Value
+do_Cairo_set_source_surface (Value cv, Value sv, Value xv, Value yv)
+{
+    ENTER ();
+    cairo_5c_t		*c5c = cairo_5c_get (cv);
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
+    double		x = DoublePart (xv, "invalid X value");
+    double		y = DoublePart (yv, "invalid Y value");
+
+    if (!aborting)
+	cairo_set_source_surface (c5c->cr, c5s->surface, x, y);
+    RETURN (Void);
+}
+
+Value
 do_Cairo_set_tolerance (Value cv, Value tv)
 {
     cairo_5c_t	*c5c = cairo_5c_get (cv);
@@ -187,17 +201,6 @@ do_Cairo_identity_matrix (Value cv)
 	cairo_identity_matrix (c5c->cr);
     return Void;
 }
-
-Value
-do_Cairo_default_matrix (Value cv)
-{
-    cairo_5c_t	    *c5c = cairo_5c_get (cv);
-
-    if (aborting)
-	return Void;
-    cairo_default_matrix (c5c->cr);
-    return Void;
-}
     
 Value
 do_Cairo_translate (Value cv, Value xv, Value yv)
@@ -251,7 +254,7 @@ do_Cairo_get_matrix (Value cv)
 }
 
 Value
-do_Cairo_concat_matrix (Value cv, Value mv)
+do_Cairo_transform (Value cv, Value mv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
@@ -262,7 +265,7 @@ do_Cairo_concat_matrix (Value cv, Value mv)
     cairo_matrix_part (mv, &matrix, "invalid matrix");
     if (aborting)
 	RETURN(Void);
-    cairo_concat_matrix (c5c->cr, &matrix);
+    cairo_transform (c5c->cr, &matrix);
     RETURN (Void);
 }
 
@@ -283,7 +286,7 @@ do_Cairo_set_matrix (Value cv, Value mv)
 }
 
 Value
-do_Cairo_transform_point (Value cv, Value pv)
+do_Cairo_user_to_device (Value cv, Value pv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
@@ -296,7 +299,7 @@ do_Cairo_transform_point (Value cv, Value pv)
     
     x = DoublePart (StructMemValue (pv, AtomId("x")), "invalid x coordinate");
     y = DoublePart (StructMemValue (pv, AtomId("y")), "invalid y coordinate");
-    cairo_transform_point (c5c->cr, &x, &y);
+    cairo_user_to_device (c5c->cr, &x, &y);
     ret = NewStruct (TypeCanon (typeCairoPoint)->structs.structs, False);
     box = ret->structs.values;
     BoxValueSet (box, 0, NewDoubleFloat (x));
@@ -305,7 +308,7 @@ do_Cairo_transform_point (Value cv, Value pv)
 }
 
 Value
-do_Cairo_transform_distance (Value cv, Value pv)
+do_Cairo_user_to_device_distance (Value cv, Value pv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
@@ -318,7 +321,7 @@ do_Cairo_transform_distance (Value cv, Value pv)
     
     x = DoublePart (StructMemValue (pv, AtomId("x")), "invalid x coordinate");
     y = DoublePart (StructMemValue (pv, AtomId("y")), "invalid y coordinate");
-    cairo_transform_distance (c5c->cr, &x, &y);
+    cairo_user_to_device_distance (c5c->cr, &x, &y);
     ret = NewStruct (TypeCanon (typeCairoPoint)->structs.structs, False);
     box = ret->structs.values;
     BoxValueSet (box, 0, NewDoubleFloat (x));
@@ -327,7 +330,7 @@ do_Cairo_transform_distance (Value cv, Value pv)
 }
 
 Value
-do_Cairo_inverse_transform_point (Value cv, Value pv)
+do_Cairo_device_to_user (Value cv, Value pv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
@@ -340,7 +343,7 @@ do_Cairo_inverse_transform_point (Value cv, Value pv)
     
     x = DoublePart (StructMemValue (pv, AtomId("x")), "invalid x coordinate");
     y = DoublePart (StructMemValue (pv, AtomId("y")), "invalid y coordinate");
-    cairo_inverse_transform_point (c5c->cr, &x, &y);
+    cairo_device_to_user (c5c->cr, &x, &y);
     ret = NewStruct (TypeCanon (typeCairoPoint)->structs.structs, False);
     box = ret->structs.values;
     BoxValueSet (box, 0, NewDoubleFloat (x));
@@ -349,7 +352,7 @@ do_Cairo_inverse_transform_point (Value cv, Value pv)
 }
 
 Value
-do_Cairo_inverse_transform_distance (Value cv, Value pv)
+do_Cairo_device_to_user_distance (Value cv, Value pv)
 {
     ENTER ();
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
@@ -362,7 +365,7 @@ do_Cairo_inverse_transform_distance (Value cv, Value pv)
     
     x = DoublePart (StructMemValue (pv, AtomId("x")), "invalid x coordinate");
     y = DoublePart (StructMemValue (pv, AtomId("y")), "invalid y coordinate");
-    cairo_inverse_transform_distance (c5c->cr, &x, &y);
+    cairo_device_to_user_distance (c5c->cr, &x, &y);
     ret = NewStruct (TypeCanon (typeCairoPoint)->structs.structs, False);
     box = ret->structs.values;
     BoxValueSet (box, 0, NewDoubleFloat (x));
@@ -371,11 +374,11 @@ do_Cairo_inverse_transform_distance (Value cv, Value pv)
 }
 
 Value
-do_Cairo_init_clip (Value cv)
+do_Cairo_reset_clip (Value cv)
 {
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
     if (!aborting)
-	cairo_init_clip (c5c->cr);
+	cairo_reset_clip (c5c->cr);
     return Void;
 }
 
@@ -385,6 +388,15 @@ do_Cairo_clip (Value cv)
     cairo_5c_t	    *c5c = cairo_5c_get (cv);
     if (!aborting)
 	cairo_clip (c5c->cr);
+    return Void;
+}
+
+Value
+do_Cairo_clip_preserve (Value cv)
+{
+    cairo_5c_t	    *c5c = cairo_5c_get (cv);
+    if (!aborting)
+	cairo_clip_preserve (c5c->cr);
     return Void;
 }
 

@@ -36,7 +36,7 @@
 #include "cairo-5c.h"
 
 Value
-do_Cairo_select_font (Value cv, Value fv, Value sv, Value wv)
+do_Cairo_select_font_face (Value cv, Value fv, Value sv, Value wv)
 {
     cairo_5c_t		*c5c = cairo_5c_get (cv);
     char		*family = StrzPart (fv, "invalid family");
@@ -44,7 +44,7 @@ do_Cairo_select_font (Value cv, Value fv, Value sv, Value wv)
     cairo_font_weight_t	weight = EnumIntPart (wv, "invalid weight");
 
     if (!aborting)
-	cairo_select_font (c5c->cr, family, slant, weight);
+	cairo_select_font_face (c5c->cr, family, slant, weight);
     return Void;
 }
 
@@ -117,6 +117,21 @@ do_Cairo_set_font_matrix (Value cv, Value mv)
 	RETURN(Void);
     cairo_set_font_matrix (c5c->cr, &matrix);
     RETURN(Void);
+}
+
+Value
+do_Cairo_get_font_matrix (Value cv)
+{
+    ENTER ();
+    cairo_5c_t		*c5c = cairo_5c_get (cv);
+    cairo_matrix_t	matrix;
+    Value		ret;
+    
+    if (aborting)
+	RETURN(Void);
+    cairo_get_font_matrix (c5c->cr, &matrix);
+    ret = new_cairo_matrix (&matrix);
+    RETURN(ret);
 }
 
 Value

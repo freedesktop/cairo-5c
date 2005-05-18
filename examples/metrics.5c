@@ -36,7 +36,7 @@
 autoimport Cairo;
 
 cairo_t cr = new ();
-scale_font (cr, 12);
+set_font_size (cr, 12);
 for (t = 0; t <= 2 * pi; t += .1)
 #t = -45 * pi / 180;
 #t = 0;

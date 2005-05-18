@@ -47,7 +47,7 @@ void draw (cairo_t cr)
 
     void transform_inplace (&real x, &real y)
     {
-	point_t a = inverse_transform_point (cr, (point_t) { x = x, y = y });
+	point_t a = device_to_user (cr, (point_t) { x = x, y = y });
 	x = a.x;
 	y = a.y;
     }

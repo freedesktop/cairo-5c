@@ -39,7 +39,7 @@ autoimport Cairo;
 void clear (cairo_t cr) {
     save (cr);
     identity_matrix (cr);
-    set_rgb_color (cr, 1, 1, 1);
+    set_source_rgb (cr, 1, 1, 1);
     int w = width (cr);
     int h = height (cr);
     move_to (cr, 0, 0);
@@ -62,11 +62,10 @@ void rectangle (cairo_t cr, real x, real y, real w, real h)
 void picture (cairo_t cr)
 {
     save (cr);
-    set_rgb_color (cr, 0.6, .6, 1);
+    set_source_rgb (cr, 0.6, .6, 1);
     move_to (cr, -10, 18);
     show_text (cr, "nickle");
-    set_rgb_color (cr, 0, 0, 0);
-    set_alpha (cr, 0.5);
+    set_source_rgba (cr, 0, 0, 0, 0.5);
     rotate (cr, pi/2);
     move_to (cr, -10, -5);
     show_text (cr, "cairo");
@@ -88,7 +87,7 @@ void animate (cairo_t cr, int n, int m)
 	disable (cr);
 	save (cr);
 	translate (cr, n * 100, m * 100);
-	set_rgb_color (cr, 1, 1, 1);
+	set_source_rgb (cr, 1, 1, 1);
 	rectangle (cr, 0, 0, 100, 100);
 	fill (cr);
 	transform (cr, t);

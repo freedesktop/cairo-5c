@@ -68,7 +68,7 @@ do_Cairo_Surface_open_event (Value sv)
 	    c5s->u.window.send_events = write;
 	    break;
 	case CAIRO_5C_IMAGE:
-	case CAIRO_5C_PS:
+	case CAIRO_5C_PDF:
 	case CAIRO_5C_SCRATCH:
 	    read = FileFopen ("/dev/null", "r", &err);
 	    if (!c5s->recv_events)

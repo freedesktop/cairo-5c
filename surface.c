@@ -93,8 +93,8 @@ cairo_5c_surface_get (Value av)
 		return 0;
 	break;
     case CAIRO_5C_IMAGE:
-    case CAIRO_5C_PS:
     case CAIRO_5C_SCRATCH:
+    case CAIRO_5C_PDF:
 	break;
     }
     return c5s;
@@ -116,8 +116,10 @@ cairo_5c_surface_mark (void *object)
 	cairo_5c_tool_mark (c5s);
 	break;
     case CAIRO_5C_IMAGE:
-    case CAIRO_5C_PS:
     case CAIRO_5C_SCRATCH:
+	break;
+    case CAIRO_5C_PDF:
+	MemReference (c5s->u.pdf.file);
 	break;
     }
 }
@@ -130,14 +132,12 @@ cairo_5c_surface_destroy (cairo_5c_surface_t *c5s)
 	return;
     
     switch (c5s->kind) {
-    case CAIRO_5C_PS:
-	FilePrintf (FileStdout, "Copied %d\n", c5s->copied);
+    case CAIRO_5C_PDF:
 	if (!c5s->copied)
 	{
-	    cairo_t *cr = cairo_create ();
+	    cairo_t *cr = cairo_create (c5s->surface);
 	    if (cr)
 	    {
-		cairo_set_target_surface (cr, c5s->surface);
 		cairo_copy_page (cr);
 		cairo_destroy (cr);
 	    }
@@ -156,9 +156,8 @@ cairo_5c_surface_destroy (cairo_5c_surface_t *c5s)
 	break;
     case CAIRO_5C_IMAGE:
 	break;
-    case CAIRO_5C_PS:
-	fclose (c5s->u.ps.file);
-	c5s->u.ps.file = NULL;
+    case CAIRO_5C_PDF:
+	c5s->u.pdf.file = Void;
 	break;
     case CAIRO_5C_SCRATCH:
 	break;
@@ -236,36 +235,6 @@ do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
     RETURN (ret);
 }
 
-Value
-do_Cairo_Surface_create_image (Value wv, Value hv)
-{
-    ENTER ();
-    cairo_5c_surface_t	*c5s;
-    int			width = IntPart (wv, "invalid width");
-    int			height = IntPart (hv, "invalid height");
-    Value		ret;
-
-    if (aborting)
-	RETURN (Void);
-    
-    c5s = ALLOCATE (&Cairo5cSurfaceType, sizeof (cairo_5c_surface_t));
-    c5s->kind = CAIRO_5C_IMAGE;
-    c5s->surface = 0;
-    c5s->width = width;
-    c5s->height = height;
-    c5s->dirty = False;
-    c5s->recv_events = Void;
-    c5s->copied = False;
-    
-    c5s->surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32,
-					       width,
-					       height);
-    
-    ret = NewForeign (CairoSurfaceId, c5s, 
-		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
-
-    RETURN (ret);
-}
 
 Value
 do_Cairo_Surface_write_to_png (Value sv, Value fv)
@@ -282,45 +251,22 @@ do_Cairo_Surface_write_to_png (Value sv, Value fv)
 }
 
 Value
-do_Cairo_Surface_create_ps (Value fv, Value wv, Value hv, Value xppiv, Value yppiv)
+do_Cairo_Surface_write_to_png_file (Value sv, Value fv)
 {
     ENTER ();
-    cairo_5c_surface_t	*c5s;
-    char		*filename = StrzPart (fv, "invalid filename");
-    double		width = DoublePart (wv, "invalid width");
-    double    		height = DoublePart (hv, "invalid height");
-    double		xppi = DoublePart (xppiv, "invalid x pixels per inch");
-    double		yppi = DoublePart (yppiv, "invalid y pixels per inch");
-    Value		ret;
+    RETURN (Void);
+}
 
-    if (aborting)
-	RETURN (Void);
-    
-    c5s = ALLOCATE (&Cairo5cSurfaceType, sizeof (cairo_5c_surface_t));
-    c5s->kind = CAIRO_5C_PS;
-    c5s->surface = 0;
-    c5s->width = width * xppi;
-    c5s->height = height * yppi;
-    c5s->dirty = False;
-    c5s->copied = False;
-    c5s->recv_events = Void;
-    
-    c5s->u.ps.file = fopen (filename, "w");
-    
-    if (!c5s->u.ps.file)
-    {
-	RaiseStandardException (exception_open_error,
-				"can't open file",
-				0, fv);
-	RETURN (Void);
-    }
-
-    c5s->surface = cairo_ps_surface_create (c5s->u.ps.file, width, height, xppi, yppi);
-    
-    ret = NewForeign (CairoSurfaceId, c5s, 
-		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
-
-    RETURN (ret);
+Value
+do_Cairo_Surface_set_device_offset (Value sv, Value xv, Value yv)
+{
+    ENTER ();
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
+    double	x = DoublePart (xv, "invalid X value");
+    double	y = DoublePart (yv, "invalid Y value");
+    if (!aborting)
+	cairo_surface_set_device_offset (c5s->surface, x, y);
+    RETURN (Void);
 }
 
 Value
@@ -356,6 +302,17 @@ do_Cairo_Surface_create_similar (Value sv, Value wv, Value hv)
 }
 
 Value
+do_Cairo_Surface_finish (Value sv)
+{
+    ENTER ();
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
+
+    if (!aborting)
+	cairo_surface_finish (c5s->surface);
+    RETURN (Void);
+}
+
+Value
 do_Cairo_Surface_destroy (Value sv)
 {
     ENTER ();
@@ -375,7 +332,7 @@ do_Cairo_Surface_width (Value sv)
 
     if (aborting)
 	RETURN (Void);
-    RETURN(NewInt (c5s->width));
+    RETURN(Reduce (NewDoubleFloat (c5s->width)));
 }
 
 Value
@@ -386,5 +343,115 @@ do_Cairo_Surface_height (Value sv)
 
     if (aborting)
 	RETURN (Void);
-    RETURN(NewInt (c5s->height));
+    RETURN(Reduce (NewDoubleFloat (c5s->height)));
 }
+
+
+Value
+do_Cairo_Image_surface_create (Value fv, Value wv, Value hv)
+{
+    ENTER ();
+    cairo_5c_surface_t	*c5s;
+    int			width = IntPart (wv, "invalid width");
+    int			height = IntPart (hv, "invalid height");
+    Value		ret;
+
+    if (aborting)
+	RETURN (Void);
+    
+    c5s = ALLOCATE (&Cairo5cSurfaceType, sizeof (cairo_5c_surface_t));
+    c5s->kind = CAIRO_5C_IMAGE;
+    c5s->surface = 0;
+    c5s->width = width;
+    c5s->height = height;
+    c5s->dirty = False;
+    c5s->recv_events = Void;
+    c5s->copied = False;
+    
+    c5s->surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32,
+					       width,
+					       height);
+    
+    ret = NewForeign (CairoSurfaceId, c5s, 
+		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
+
+    RETURN (ret);
+}
+
+Value
+do_Cairo_Image_surface_create_from_png (Value filenamev)
+{
+    ENTER ();
+    char		*filename = StrzPart (filenamev, "invalid filename");
+    cairo_surface_t	*image;
+    cairo_5c_surface_t	*c5s;
+    Value		ret;
+
+    if (aborting)
+	RETURN(Void);
+    image = cairo_image_surface_create_from_png (filename);
+    if (!image)
+    {
+	RaiseStandardException (exception_open_error,
+				"cannot read png file",
+				1, filenamev);
+	RETURN (Void);
+    }
+
+    if (aborting)
+	RETURN (Void);
+    
+    c5s = ALLOCATE (&Cairo5cSurfaceType, sizeof (cairo_5c_surface_t));
+    c5s->kind = CAIRO_5C_IMAGE;
+    c5s->surface = 0;
+    c5s->width = cairo_image_surface_get_width (image);
+    c5s->height = cairo_image_surface_get_height (image);
+    c5s->dirty = False;
+    c5s->recv_events = Void;
+    c5s->copied = False;
+    ret = NewForeign (CairoSurfaceId, c5s, 
+		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
+
+    RETURN (ret);
+}
+
+Value
+do_Cairo_Image_surface_create_from_png_file (Value filev)
+{
+    ENTER ();
+    /* XXX */
+    RETURN (Void);
+}
+
+Value
+do_Cairo_Pdf_surface_create (Value fnv, Value wv, Value hv)
+{
+    ENTER ();
+    cairo_5c_surface_t	*c5s;
+    char		*filename = StrzPart (fnv, "invalid filename");
+    double		width = DoublePart (wv, "invalid width_in_points");
+    double    		height = DoublePart (hv, "invalid height_in_points");
+    Value		ret;
+
+    if (aborting)
+	RETURN (Void);
+    
+    c5s = ALLOCATE (&Cairo5cSurfaceType, sizeof (cairo_5c_surface_t));
+    c5s->kind = CAIRO_5C_PDF;
+    c5s->surface = 0;
+    c5s->width = width;
+    c5s->height = height;
+    c5s->dirty = False;
+    c5s->copied = False;
+    c5s->recv_events = Void;
+    
+    c5s->u.pdf.file = Void;
+    
+    c5s->surface = cairo_pdf_surface_create (filename, width, height);
+    
+    ret = NewForeign (CairoSurfaceId, c5s, 
+		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
+
+    RETURN (ret);
+}
+

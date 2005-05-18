@@ -95,7 +95,7 @@ read_event (file f, cairo_t cr)
     
     void transform_inplace (&real x, &real y)
     {
-	point_t a = inverse_transform_point (cr, (point_t) { x = x, y = y });
+	point_t a = device_to_user (cr, (point_t) { x = x, y = y });
 	x = a.x;
 	y = a.y;
     }
@@ -125,10 +125,6 @@ read_event (file f, cairo_t cr)
 
 void animate (cairo_t cr)
 {
-    cairo_t crl = create ();
-    set_target_surface (crl, get_target_surface (cr));
-    set_font (crl, "sans-12");
-    set_source_rgb (crl, 0, 0, 0);
     translate (cr, 150, 150);
     real t = 0;
     bool down = false;
@@ -155,8 +151,12 @@ void animate (cairo_t cr)
 	    disable (cr);
 	    save (cr);
 	    clear (cr);
-	    move_to (crl, 3, 20);
-	    show_text (crl, sprintf ("%5.2f", t));
+	    save (cr);
+	    set_font (cr, "sans-12");
+	    set_source_rgb (cr, 0, 0, 0);
+	    move_to (cr, 3, 20);
+	    show_text (cr, sprintf ("%5.2f", t));
+	    restore (cr);
 	    rotate (cr, t);
 	    picture (cr);
 	    restore (cr);
