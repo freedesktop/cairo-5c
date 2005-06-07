@@ -187,7 +187,7 @@ fob_to_png (cairo_t cr, string filename)
     fob (cr); write_to_png (cr, filename);
 }
 
-if (false)
+if (true)
 {
     cairo_t cr = new_image (80, 90);
     fob_to_png (cr, "fob.png");

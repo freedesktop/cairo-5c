@@ -163,7 +163,7 @@ init_types (void)
 				    publish_public,
 				    STATUS_I,
 				    NULL,
-				    BuildEnumType (8,
+				    BuildEnumType (14,
 						   "SUCCESS",
 						   "NO_MEMORY",
 						   "INVALID_RESTORE",
@@ -171,7 +171,13 @@ init_types (void)
 						   "NO_CURRENT_POINT",
 						   "INVALID_MATRIX",
 						   "NO_TARGET_SURFACE",
-						   "NULL_POINTER"));
+						   "NULL_POINTER",
+						   "INVALID_STRING",
+						   "INVALID_PATH_DATA",
+						   "READ_ERROR",
+						   "WRITE_ERROR",
+						   "SURFACE_FINISHED",
+						   "SURFACE_TYPE_MISMATCH"));
     typeCairoOperator = make_typedef ("operator_t",
 				      CairoNamespace,
 				      publish_public,
@@ -179,16 +185,19 @@ init_types (void)
 				      NULL,
 				      BuildEnumType (14,
 						     "CLEAR",
-						     "SRC",
-						     "DST",
+						     
+						     "SOURCE",
 						     "OVER",
-						     "OVER_REVERSE",
 						     "IN",
-						     "IN_REVERSE",
 						     "OUT",
-						     "OUT_REVERSE",
 						     "ATOP",
-						     "ATOP_REVERSE",
+						     
+						     "DEST",
+						     "DEST_OVER",
+						     "DEST_IN",
+						     "DEST_OUT",
+						     "DEST_ATOP",
+						     
 						     "XOR",
 						     "ADD",
 						     "SATURATE"));
@@ -936,7 +945,7 @@ nickle_init (void)
     };
 					 
     static const struct fbuiltin_3 imgfuncs_3[] = {
-	{ do_Cairo_Image_surface_create, "surface_create", SURFACE_S, "nnn", "\n"
+	{ do_Cairo_Image_surface_create, "surface_create", SURFACE_S, "iii", "\n"
 	    " surface_t surface_create (int format, int width, int height)\n"
 	    "\n"
 	    " Create an image surface of the specified size in pixels\n" },

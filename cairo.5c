@@ -85,7 +85,7 @@ extend namespace Cairo {
 	cairo_t	    cr = create (surface);
 	
 	set_source_rgba (cr, 0, 0, 0, 0);
-	set_operator (cr, operator_t.SRC);
+	set_operator (cr, operator_t.SOURCE);
 	paint (cr);
 	set_operator (cr, operator_t.OVER);
 	set_source_rgba (cr, 0, 0, 0, 1);

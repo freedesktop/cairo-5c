@@ -1,6 +1,15 @@
 2005-06-06  Keith Packard  <keithp@keithp.com>
 
 	* cairo.5c:
+	* init.c: (init_types), (nickle_init):
+	Enum order and names changed in API shuffle.
+	
+	* examples/fob.5c:
+	Create .png files by default
+
+2005-06-06  Keith Packard  <keithp@keithp.com>
+
+	* cairo.5c:
 	* examples/animate.5c:
 	* gtk.c: (gtk_repaint_timeout), (gtk_thread_main),
 	(cairo_5c_tool_dirty):
