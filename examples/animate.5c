@@ -72,7 +72,7 @@ void picture (cairo_t cr)
     restore (cr);
 }
 
-void transform (cairo_t cr, real t)
+void my_transform (cairo_t cr, real t)
 {
     translate (cr, 50, 50);
     rotate (cr, t * pi / 60);
@@ -81,6 +81,7 @@ void transform (cairo_t cr, real t)
 void animate (cairo_t cr, int n, int m)
 {
     cr = dup (cr);
+    set_font (cr, "Gadget-50");
     real t = 0;
     for (;;)
     {
@@ -89,8 +90,10 @@ void animate (cairo_t cr, int n, int m)
 	translate (cr, n * 100, m * 100);
 	set_source_rgb (cr, 1, 1, 1);
 	rectangle (cr, 0, 0, 100, 100);
+	clip (cr);
+	rectangle (cr, 0, 0, 100, 100);
 	fill (cr);
-	transform (cr, t);
+	my_transform (cr, t);
 	picture (cr);
 	restore (cr);
 	enable (cr);
@@ -103,7 +106,6 @@ void main ()
 {
     cairo_t cr = new ();
     
-    set_font (cr, "Gadget-20");
     fork animate (cr, 0, 0);
     fork animate (cr, 1, 0);
     fork animate (cr, 2, 0);

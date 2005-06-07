@@ -112,7 +112,7 @@ extend namespace Cairo {
     
     public cairo_t dup (cairo_t cr)
     {
-	return cr;
+	return create (get_target (cr));
     }
 
     real[3] to_hsv(real r, real g, real b)

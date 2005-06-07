@@ -1,3 +1,11 @@
+2005-06-06  Keith Packard  <keithp@keithp.com>
+
+	* cairo.5c:
+	* examples/animate.5c:
+	* gtk.c: (gtk_repaint_timeout), (gtk_thread_main),
+	(cairo_5c_tool_dirty):
+	Some locking changes.  Still locks up from time to time.
+
 2005-05-17  Keith Packard  <keithp@keithp.com>
 
 	* cairo-5c.h:
