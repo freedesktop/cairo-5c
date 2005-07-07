@@ -1,3 +1,18 @@
+2005-07-07  Keith Packard  <keithp@keithp.com>
+
+	* cairo-5c.h:
+	* cairo.c: (do_Cairo_status_to_string):
+	* examples/fob.5c:
+	* gtk.c: (create_gtk_global):
+	* init.c: (nickle_init):
+	* pattern.c: (do_Cairo_Pattern_add_color_stop_rgba),
+	(do_Cairo_Pattern_add_color_stop_rgb),
+	(do_Cairo_Pattern_set_matrix), (do_Cairo_Pattern_set_extend),
+	(do_Cairo_Pattern_set_filter):
+	Match current cairo API.
+	Use XInitThreads, as it's necessary for stable operation.
+	Requires at least one bug fix not yet in Xlib CVS to work
+
 2005-06-06  Bart Massey  <bart@cs.pdx.edu>
 	* examples/Makefile.am:
 	Add accumulated examples to the install list.

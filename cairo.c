@@ -254,14 +254,14 @@ do_Cairo_status (Value cv)
 }
 
 Value
-do_Cairo_status_string (Value cv)
+do_Cairo_status_to_string (Value sv)
 {
     ENTER ();
-    cairo_5c_t	*c5c = cairo_5c_get (cv);
+    cairo_status_t	status = EnumIntPart (sv, "invalid status_t");
 
     if (aborting)
 	return Void;
-    RETURN(NewStrString (cairo_status_string (c5c->cr)));
+    RETURN(NewStrString (cairo_status_to_string (status)));
 }
 
 Value

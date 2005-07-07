@@ -50,8 +50,8 @@ void fob (cairo_t cr)
 	arc (cr, 9, 9, 7, 0, 2*pi);
 	save (cr);
 	pattern_t pat = Pattern::create_radial (12, 12, 0, 9, 9, 7);
-	Pattern::add_color_stop (pat, 0, 1, 1, 1, 1);
-	Pattern::add_color_stop (pat, 1, 1, .8, .6, 1);
+	Pattern::add_color_stop_rgba (pat, 0, 1, 1, 1, 1);
+	Pattern::add_color_stop_rgba (pat, 1, 1, .8, .6, 1);
 	set_source (cr, pat);
 	fill_preserve (cr);
 	restore (cr);
@@ -95,9 +95,9 @@ void fob (cairo_t cr)
 	save (cr);
 	translate (cr, x, y);
 	pattern_t pat = Pattern::create_radial (.5, .5, 0, 0, 0, 3);
-	Pattern::add_color_stop (pat, 0, 1, 1, 1, .5);
-	Pattern::add_color_stop (pat, .5, 0, 0, 0, 0);
-	Pattern::add_color_stop (pat, 1, 0, 0, 0, 0);
+	Pattern::add_color_stop_rgba (pat, 0, 1, 1, 1, .5);
+	Pattern::add_color_stop_rgba (pat, .5, 0, 0, 0, 0);
+	Pattern::add_color_stop_rgba (pat, 1, 0, 0, 0, 0);
 	set_source (cr, pat);
 	arc (cr, 0, 0, 4, 0, 2*pi);
 	fill (cr);
@@ -127,16 +127,16 @@ void fob (cairo_t cr)
 	    if (true)
 	    {
 		pattern_t pat = Pattern::create_linear (0, 0, 11, 11);
-		Pattern::add_color_stop (pat, 0, .4, .4, .4, 1);
-		Pattern::add_color_stop (pat, 1, 1, 1, 1, 1);
+		Pattern::add_color_stop_rgba (pat, 0, .4, .4, .4, 1);
+		Pattern::add_color_stop_rgba (pat, 1, 1, 1, 1, 1);
 		set_source (cr, pat);
 	    }
 	    else
 	    {
 		pattern_t pat = Pattern::create_radial (8, 10, 0,
 							6.5, 6.5, 8);
-		Pattern::add_color_stop (pat, 0, 1, 1, 1, 1);
-		Pattern::add_color_stop (pat, 1, .3, .3, .3, 1);
+		Pattern::add_color_stop_rgba (pat, 0, 1, 1, 1, 1);
+		Pattern::add_color_stop_rgba (pat, 1, .3, .3, .3, 1);
 		set_source (cr, pat);
 	    }
 	    fill (cr); 

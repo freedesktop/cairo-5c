@@ -42,7 +42,6 @@
 #undef False
 #include <cairo.h>
 #include <cairo-xlib.h>
-#include <cairo-png.h>
 #include <cairo-pdf.h>
 #include <cairo-ft.h>
 #include <stdio.h>
@@ -154,7 +153,7 @@ Value
 do_Cairo_status (Value cv);
 
 Value
-do_Cairo_status_string (Value cv);
+do_Cairo_status_to_string (Value sv);
 
 Value
 do_Cairo_enable (Value cv);

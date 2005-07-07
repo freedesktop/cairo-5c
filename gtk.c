@@ -300,7 +300,6 @@ create_gtk_global (void)
 
     if (!been_here)
     {
-	/* trust to gdk to lock the display; Xlib is horribly broken */
 	XInitThreads ();
 	g_thread_init (NULL);
 	gdk_threads_init ();

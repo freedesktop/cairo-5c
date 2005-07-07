@@ -154,9 +154,8 @@ do_Cairo_Pattern_add_color_stop_rgba (Value patv, Value offsetv,
 
     if (aborting)
 	RETURN(Void);
-    RETURN (IntToEnum (typeCairoStatus,
-		       cairo_pattern_add_color_stop_rgba (pat, offset, red,
-							  green, blue, alpha)));
+    cairo_pattern_add_color_stop_rgba (pat, offset, red, green, blue, alpha);
+    RETURN (Void);
 }
 
 Value
@@ -172,9 +171,8 @@ do_Cairo_Pattern_add_color_stop_rgb (Value patv, Value offsetv,
 
     if (aborting)
 	RETURN(Void);
-    RETURN (IntToEnum (typeCairoStatus,
-		       cairo_pattern_add_color_stop_rgb (pat, offset, red,
-							 green, blue)));
+    cairo_pattern_add_color_stop_rgb (pat, offset, red, green, blue);
+    RETURN (Void);
 }
 
 Value
@@ -183,13 +181,12 @@ do_Cairo_Pattern_set_matrix (Value patv, Value mv)
     ENTER ();
     cairo_pattern_t *pat = get_cairo_pattern (patv);
     cairo_matrix_t  matrix;
-    cairo_status_t  status;
 
     if (aborting)
 	RETURN(Void);
     cairo_matrix_part (mv, &matrix, "invalid pattern matrix");
-    status = cairo_pattern_set_matrix (pat, &matrix);
-    RETURN (IntToEnum (typeCairoStatus, status));
+    cairo_pattern_set_matrix (pat, &matrix);
+    RETURN (Void);
 }
 
 Value
@@ -213,12 +210,11 @@ do_Cairo_Pattern_set_extend (Value patv, Value extendv)
     ENTER ();
     cairo_pattern_t *pat = get_cairo_pattern (patv);
     cairo_extend_t  extend = EnumIntPart (extendv, "invalid extend");
-    cairo_status_t  status;
 
     if (aborting)
 	RETURN(Void);
-    status = cairo_pattern_set_extend (pat, extend);
-    RETURN (IntToEnum (typeCairoStatus, status));
+    cairo_pattern_set_extend (pat, extend);
+    RETURN (Void);
 }
 
 Value
@@ -239,12 +235,11 @@ do_Cairo_Pattern_set_filter (Value patv, Value filterv)
     ENTER ();
     cairo_pattern_t *pat = get_cairo_pattern (patv);
     cairo_filter_t  filter = EnumIntPart (filterv, "invalid filter");
-    cairo_status_t  status;
 
     if (aborting)
 	RETURN(Void);
-    status = cairo_pattern_set_filter (pat, filter);
-    RETURN (IntToEnum (typeCairoStatus, status));
+    cairo_pattern_set_filter (pat, filter);
+    RETURN (Void);
 }
 
 Value

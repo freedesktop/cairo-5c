@@ -471,10 +471,10 @@ nickle_init (void)
 	    " status_t status (cairo_t cr)\n"
 	    "\n"
 	    " Return the status of a cairo surface\n" },
-	{ do_Cairo_status_string, "status_string", "s", CAIRO_S, "\n"
-	    " string status_string (cairo_t cr)\n"
+	{ do_Cairo_status_to_string, "status_string", "s", STATUS_S, "\n"
+	    " string status_to_string (status_t status)\n"
 	    "\n"
-	    " Return the status string of a cairo surface\n" },
+	    " Return a string describing the status\n" },
 	{ do_Cairo_enable, "enable", "v", CAIRO_S, "\n"
 	    " void enable (cairo_t cr)\n"
 	    "\n"
@@ -897,16 +897,16 @@ nickle_init (void)
     };
     
     static const struct fbuiltin_2 patfuncs_2[] = {
-	{ do_Cairo_Pattern_set_matrix, "set_matrix", STATUS_S, PATTERN_S MATRIX_S, "\n"
-	    " status_t set_matrix (pattern_t pattern, matrix_t matrix)\n"
+	{ do_Cairo_Pattern_set_matrix, "set_matrix", "v", PATTERN_S MATRIX_S, "\n"
+	    " void set_matrix (pattern_t pattern, matrix_t matrix)\n"
 	    "\n"
 	    " Set a transformation matrix for a pattern\n" },
-	{ do_Cairo_Pattern_set_extend, "set_extend", STATUS_S, PATTERN_S EXTEND_S, "\n"
-	    " status_t set_extend (pattern_t pattern, extend_t extend)\n"
+	{ do_Cairo_Pattern_set_extend, "set_extend", "v", PATTERN_S EXTEND_S, "\n"
+	    " void set_extend (pattern_t pattern, extend_t extend)\n"
 	    "\n"
 	    " Set a extend method for a pattern\n" },
-	{ do_Cairo_Pattern_set_filter, "set_filter", STATUS_S, PATTERN_S FILTER_S, "\n"
-	    " status_t set_filter (pattern_t pattern, filter_t filter)\n"
+	{ do_Cairo_Pattern_set_filter, "set_filter", "v", PATTERN_S FILTER_S, "\n"
+	    " void set_filter (pattern_t pattern, filter_t filter)\n"
 	    "\n"
 	    " Set a filter method for a pattern\n" },
 	{ 0 }
@@ -920,15 +920,23 @@ nickle_init (void)
 	{ 0 }
     };
 
+    static const struct fbuiltin_5 patfuncs_5[] = {
+	{ do_Cairo_Pattern_add_color_stop_rgb, "add_color_stop_rgb", "v", PATTERN_S "nnnn", "\n"
+	    " void add_color_stop_rgba (pattern_t cr, real offset, real red, real green, real blue)\n"
+	    "\n"
+	    " Add a color stop in a gradient pattern.\n" },
+	{ 0 }
+    };
+    
     static const struct fbuiltin_6 patfuncs_6[] = {
 	{ do_Cairo_Pattern_create_radial, "create_radial", PATTERN_S, "nnnnnn", "\n"
 	    " pattern_t create_radial (real cx0, real cy0, real radius0, real cx1, real cy1, real radius1)\n"
 	    "\n"
 	    " Create a radial gradient pattern\n" },
-	{ do_Cairo_Pattern_add_color_stop_rgba, "add_color_stop", STATUS_S, PATTERN_S "nnnnn", "\n"
-	    " status_t add_color_stop_rgba (pattern_t cr, real offset, real red, real green, real blue, real alpha)\n"
+	{ do_Cairo_Pattern_add_color_stop_rgba, "add_color_stop_rgba", "v", PATTERN_S "nnnnn", "\n"
+	    " void add_color_stop_rgba (pattern_t cr, real offset, real red, real green, real blue, real alpha)\n"
 	    "\n"
-	    " Add a color stop in a gradient pattern.\n" },
+	    " Add a color and opacity stop in a gradient pattern.\n" },
 	{ 0 }
     };
 
@@ -981,6 +989,7 @@ nickle_init (void)
     BuiltinFuncs1 (&CairoPatternNamespace, patfuncs_1);
     BuiltinFuncs2 (&CairoPatternNamespace, patfuncs_2);
     BuiltinFuncs4 (&CairoPatternNamespace, patfuncs_4);
+    BuiltinFuncs5 (&CairoPatternNamespace, patfuncs_5);
     BuiltinFuncs6 (&CairoPatternNamespace, patfuncs_6);
 
     BuiltinFuncs1 (&CairoImageNamespace, imgfuncs_1);
