@@ -41,9 +41,8 @@ static Bool
 create_cairo_window (cairo_5c_surface_t *c5s)
 {
     Display	*dpy = cairo_5c_tool_display (c5s);
+    Pixmap	pixmap;
     
-    if (c5s->surface)
-	cairo_surface_destroy (c5s->surface);
     if (!c5s->u.window.pixmap)
     {
 	RaiseStandardException (exception_invalid_argument,
@@ -51,12 +50,25 @@ create_cairo_window (cairo_5c_surface_t *c5s)
 				2, NewInt (0), NewInt (0));
 	return False;
     }
-    c5s->surface = cairo_xlib_surface_create (dpy,
-					      c5s->u.window.pixmap,
-					      DefaultVisual (dpy, DefaultScreen (dpy)),
-					      0,
-					      DefaultColormap (dpy, DefaultScreen (dpy)));
+
+    gdk_threads_enter ();
+    gdk_drawable_ref (c5s->u.window.pixmap);
+    if (c5s->u.window.curpix)
+	gdk_drawable_unref (c5s->u.window.curpix);
     c5s->u.window.curpix = c5s->u.window.pixmap;
+    pixmap = GDK_PIXMAP_XID (GDK_DRAWABLE(c5s->u.window.curpix));
+    gdk_threads_leave ();
+    
+    if (c5s->surface)
+	cairo_xlib_surface_set_drawable (c5s->surface, pixmap,
+					 c5s->width,
+					 c5s->height);
+    else
+	c5s->surface = cairo_xlib_surface_create (dpy,
+						  pixmap,
+						  DefaultVisual (dpy, DefaultScreen (dpy)),
+						  c5s->width,
+						  c5s->height);
     return True;
 }
 

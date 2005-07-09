@@ -63,10 +63,6 @@ cairo_5c_get (Value av)
 	c5s = cairo_5c_surface_get (c5c->surface);
 	if (!c5s)
 	    return 0;
-#if 0
-	if (c5s->surface != cairo_current_target_surface (c5c->cr))
-	    cairo_set_target_surface (c5c->cr, c5s->surface);
-#endif
     }
     return c5c;
 }

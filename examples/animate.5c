@@ -36,29 +36,6 @@
 
 autoimport Cairo;
 
-void clear (cairo_t cr) {
-    save (cr);
-    identity_matrix (cr);
-    set_source_rgb (cr, 1, 1, 1);
-    int w = width (cr);
-    int h = height (cr);
-    move_to (cr, 0, 0);
-    line_to (cr, w, 0);
-    line_to (cr, w, h);
-    line_to (cr, 0, h);
-    fill (cr);
-    restore (cr);
-}
-
-void rectangle (cairo_t cr, real x, real y, real w, real h)
-{
-    move_to (cr, x, y);
-    rel_line_to (cr, w, 0);
-    rel_line_to (cr, 0, h);
-    rel_line_to (cr, -w, 0);
-    close_path (cr);
-}
-
 void picture (cairo_t cr)
 {
     save (cr);
@@ -81,7 +58,7 @@ void my_transform (cairo_t cr, real t)
 void animate (cairo_t cr, int n, int m)
 {
     cr = dup (cr);
-    set_font (cr, "Gadget-50");
+    set_font (cr, "Gadget-24");
     real t = 0;
     for (;;)
     {
@@ -105,13 +82,11 @@ void animate (cairo_t cr, int n, int m)
 void main ()
 {
     cairo_t cr = new ();
+    thread t;
     
-    fork animate (cr, 0, 0);
-    fork animate (cr, 1, 0);
-    fork animate (cr, 2, 0);
-    fork animate (cr, 0, 1);
-    fork animate (cr, 1, 1);
-    thread t = fork animate (cr, 2, 1);
+    for (int y = 0; y < 10; y++)
+	for (int x = 0; x < 10; x++)
+	    t = fork animate (cr, x, y);
     Thread::join (t);
 }
 

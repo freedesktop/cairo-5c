@@ -47,14 +47,17 @@
 #include <stdio.h>
 #include <unistd.h>
 #undef Atom
+#define GTK_DISABLE_DEPRECATED
+#include <gtk/gtk.h>
+#include <gdk/gdkx.h>
 
 typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_IMAGE, CAIRO_5C_PDF, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
 
 typedef struct _cairo_5c_tool	cairo_5c_tool_t;
 
 typedef struct _cairo_5c_window_t {
-    Pixmap	    pixmap;
-    Pixmap	    curpix;
+    GdkPixmap	    *pixmap;
+    GdkPixmap	    *curpix;
     cairo_5c_tool_t *tool;
     FILE	    *send_events;
 } cairo_5c_window_t;

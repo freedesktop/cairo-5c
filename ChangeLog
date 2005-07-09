@@ -1,3 +1,16 @@
+2005-07-09  Keith Packard  <keithp@keithp.com>
+
+	* cairo-5c.h:
+	* cairo.c: (cairo_5c_get):
+	* examples/animate.5c:
+	* gtk.c: (configure_event), (expose_event), (delete_drawing_area),
+	(gtk_repaint), (gtk_tool_free), (cairo_5c_tool_create),
+	(cairo_5c_tool_destroy):
+	* surface.c: (create_cairo_window):
+	Pass GtkPixmap objects around as they're reference counted.
+	Use proposed new cairo_xlib_surface_set_drawable API to
+	deal with window back-buffer resize issue.
+
 2005-07-07  Keith Packard  <keithp@keithp.com>
 
 	* cairo-5c.h:

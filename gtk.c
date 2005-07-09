@@ -33,10 +33,7 @@
  *      Keith Packard <keithp@keithp.com>
  */
 
-#define GTK_DISABLE_DEPRECATED
 #include "cairo-5c.h"
-#include <gtk/gtk.h>
-#include <gdk/gdkx.h>
 #include <pthread.h>
 
 typedef struct _gtk_global {
@@ -52,7 +49,6 @@ struct _cairo_5c_tool {
     int			disable;
     GtkWidget		*window;
     GtkWidget		*drawing_area;
-    GdkPixmap		*pixmap;
 };
 
 static gtk_global_t *gtk_global;
@@ -67,7 +63,6 @@ configure_event (GtkWidget *widget, GdkEventConfigure *event)
 {
     GdkPixmap		*pixmap;
     cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
-    cairo_5c_tool_t	*tool = c5s->u.window.tool;
 
     c5s->width = widget->allocation.width;
     c5s->height = widget->allocation.height;
@@ -81,16 +76,15 @@ configure_event (GtkWidget *widget, GdkEventConfigure *event)
 			0, 0,
 			widget->allocation.width,
 			widget->allocation.height);
-    if (tool->pixmap)
+    if (c5s->u.window.pixmap)
     {
 	gdk_draw_drawable (pixmap, widget->style->white_gc,
-			   tool->pixmap, 0, 0, 0, 0, 
+			   c5s->u.window.pixmap, 0, 0, 0, 0, 
 			   widget->allocation.width,
 			   widget->allocation.height);
-	gdk_drawable_unref (tool->pixmap);
+	gdk_drawable_unref (c5s->u.window.pixmap);
     }
-    tool->pixmap = pixmap;
-    c5s->u.window.pixmap = GDK_PIXMAP_XID (GDK_DRAWABLE(tool->pixmap));
+    c5s->u.window.pixmap = pixmap;
     return TRUE;
 }
 
@@ -101,11 +95,11 @@ static gboolean
 expose_event( GtkWidget *widget, GdkEventExpose *event )
 {
     cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
-    cairo_5c_tool_t	*tool = c5s->u.window.tool;
+
     
     gdk_draw_pixmap(widget->window,
 		    widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-		    tool->pixmap,
+		    c5s->u.window.pixmap,
 		    event->area.x, event->area.y,
 		    event->area.x, event->area.y,
 		    event->area.width, event->area.height);
@@ -130,10 +124,10 @@ delete_drawing_area (GtkWidget *widget, gpointer data)
     }
     tool->drawing_area = NULL;
     tool->window = NULL;
-    if (tool->pixmap)
+    if (c5s->u.window.pixmap)
     {
-	gdk_drawable_unref (tool->pixmap);
-	tool->pixmap = NULL;
+	gdk_drawable_unref (c5s->u.window.pixmap);
+	c5s->u.window.pixmap = NULL;
     }
     c5s->u.window.pixmap = None;
 }
@@ -214,7 +208,7 @@ gtk_repaint (cairo_5c_surface_t *c5s, int x, int y, int w, int h)
 {
     cairo_5c_tool_t *tool = c5s->u.window.tool;
     GtkWidget	    *widget = tool->drawing_area;
-    GdkPixmap	    *pixmap = tool->pixmap;
+    GdkPixmap	    *pixmap = c5s->u.window.pixmap;
     
     if (widget && pixmap)
     {
@@ -353,11 +347,6 @@ gtk_tool_free (void *object)
 	tool->window = NULL;
 	tool->drawing_area = NULL;
     }
-    if (tool->pixmap)
-    {
-	gdk_drawable_unref (tool->pixmap);
-	tool->pixmap = NULL;
-    }
     gdk_threads_leave ();
     return 1;
 }
@@ -389,10 +378,12 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height
     tool->global = gg;
     tool->dirty = 0;
     tool->disable = 0;
-    tool->pixmap = 0;
     
     c5s->dirty = False;
     c5s->recv_events = Void;
+
+    c5s->u.window.curpix = 0;
+    c5s->u.window.pixmap = 0;
     c5s->u.window.send_events = 0;
     c5s->u.window.tool = tool;
     
@@ -439,9 +430,6 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height
     /* create the pixmap */
     configure_event (tool->drawing_area, 0);
     
-    /* fill in the c5s window structure */
-     
-    c5s->u.window.pixmap = GDK_PIXMAP_XID (GDK_DRAWABLE(tool->pixmap));
     gdk_threads_leave ();
     EXIT ();
     return True;
@@ -457,6 +445,11 @@ cairo_5c_tool_destroy (cairo_5c_surface_t *c5s)
     
     gdk_threads_enter ();
     gtk_widget_hide (tool->window);
+    if (c5s->u.window.pixmap)
+    {
+	gdk_drawable_unref (c5s->u.window.pixmap);
+	c5s->u.window.pixmap = NULL;
+    }
     gdk_threads_leave ();
     /* let nickle allocator free it */
     return True;
