@@ -1,3 +1,9 @@
+2005-09-15  Keith Packard  <keithp@keithp.com>
+
+	* configure.in:
+	Cairo now no longer implicitly adds fontconfig and freetype
+	to include paths, so cairo-5c must explictly depend on them
+
 2005-07-09  Keith Packard  <keithp@keithp.com>
 
 	* cairo-5c.h:
