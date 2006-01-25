@@ -1,3 +1,13 @@
+2006-01-26  Keith Packard  <keithp@keithp.com>
+
+	* Makefile.am:
+	* cairo-5c.h:
+	Ick! Date format changes. Sigh.
+	
+	* init.c: (init_types):
+	Oops -- wrong argument count for typeCairoRgbaColor
+	constructor.
+
 2005-09-15  Keith Packard  <keithp@keithp.com>
 
 	* configure.in:

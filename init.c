@@ -357,7 +357,7 @@ init_types (void)
 				  publish_public,
 				  PATH_I,
 				  &path,
-				  BuildUnionType(5,
+				  BuildUnionType(4,
 						 NewTypeRef (typeCairoPoint, True), "move_to",
 						 NewTypeRef (typeCairoPoint, True), "line_to",
 						 NewTypeRef (typeCairoCurveTo, True), "curve_to",
