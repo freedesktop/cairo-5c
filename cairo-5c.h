@@ -43,6 +43,7 @@
 #include <cairo.h>
 #include <cairo-xlib.h>
 #include <cairo-pdf.h>
+#include <cairo-ps.h>
 #include <cairo-ft.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -51,7 +52,7 @@
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
 
-typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_IMAGE, CAIRO_5C_PDF, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
+typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_IMAGE, CAIRO_5C_PDF, CAIRO_5C_PS, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
 
 typedef struct _cairo_5c_tool	cairo_5c_tool_t;
 
@@ -65,6 +66,10 @@ typedef struct _cairo_5c_window_t {
 typedef struct _cairo_5c_pdf_t {
     Value	    file;
 } cairo_5c_pdf_t;
+
+typedef struct _cairo_5c_ps_t {
+    Value	    file;
+} cairo_5c_ps_t;
 
 typedef struct _cairo_5c_image_t {
     int		    unused;
@@ -88,6 +93,7 @@ typedef struct _cairo_5c_surface_t {
     union {
 	cairo_5c_window_t   window;
 	cairo_5c_pdf_t	    pdf;
+	cairo_5c_ps_t	    ps;
 	cairo_5c_image_t    image;
     } u;
 } cairo_5c_surface_t;
@@ -186,6 +192,12 @@ do_Cairo_Pdf_surface_create (Value fnv, Value wv, Value hv);
 
 Value
 do_Cairo_Pdf_surface_create_for_file (Value fv, Value wv, Value hv);
+
+Value
+do_Cairo_Ps_surface_create (Value fnv, Value wv, Value hv);
+
+Value
+do_Cairo_Ps_surface_create_for_file (Value fv, Value wv, Value hv);
 
 Value
 do_Cairo_Surface_write_to_png (Value sv, Value fnv);

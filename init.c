@@ -40,6 +40,7 @@ NamespacePtr	CairoSurfaceNamespace;
 NamespacePtr	CairoPatternNamespace;
 NamespacePtr	CairoImageNamespace;
 NamespacePtr	CairoPdfNamespace;
+NamespacePtr	CairoPsNamespace;
 Type		*typeCairo;
 Type		*typeCairoSurface;
 Type		*typeCairoStatus;
@@ -369,6 +370,7 @@ init_types (void)
     CairoImageNamespace = BuiltinNamespace (&CairoNamespace, "Image")->namespace.namespace;
     
     CairoPdfNamespace = BuiltinNamespace (&CairoNamespace, "Pdf")->namespace.namespace;
+    CairoPsNamespace = BuiltinNamespace (&CairoNamespace, "Ps")->namespace.namespace;
 
     CairoPatternNamespace = BuiltinNamespace (&CairoNamespace, "Pattern")->namespace.namespace;
 
@@ -972,6 +974,18 @@ nickle_init (void)
 	{ 0 }
     };
 					 
+    static const struct fbuiltin_3 psfuncs_3[] = {
+	{ do_Cairo_Ps_surface_create, "surface_create", SURFACE_S, "snn", "\n"
+	    " surface_t surface_create (string filename, real width, real height)\n"
+	    "\n"
+	    " Create a PS surface of the specified size in points, written to filename\n" },
+	{ do_Cairo_Ps_surface_create, "surface_create_for_file", SURFACE_S, "snn", "\n"
+	    " surface_t surface_create (file f, real width, real height)\n"
+	    "\n"
+	    " Create a PS surface of the specified size in points, written to f\n" },
+	{ 0 }
+    };
+					 
     init_types ();
     
     BuiltinFuncs1 (&CairoNamespace, funcs_1);
@@ -996,6 +1010,7 @@ nickle_init (void)
     BuiltinFuncs3 (&CairoImageNamespace, imgfuncs_3);
     
     BuiltinFuncs3 (&CairoPdfNamespace, pdffuncs_3);
+    BuiltinFuncs3 (&CairoPsNamespace, psfuncs_3);
 
     RETURN(TrueVal);
 }

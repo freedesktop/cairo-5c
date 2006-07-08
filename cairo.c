@@ -159,6 +159,7 @@ cairo_5c_dirty (cairo_5c_t *c5c)
 		break;
 	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PDF:
+	    case CAIRO_5C_PS:
 	    case CAIRO_5C_SCRATCH:
 		break;
 	    }
@@ -181,6 +182,7 @@ cairo_5c_enable (cairo_5c_t *c5c)
 		break;
 	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PDF:
+	    case CAIRO_5C_PS:
 	    case CAIRO_5C_SCRATCH:
 		break;
 	    }
@@ -204,6 +206,7 @@ cairo_5c_disable (cairo_5c_t *c5c)
 		break;
 	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PDF:
+	    case CAIRO_5C_PS:
 	    case CAIRO_5C_SCRATCH:
 		break;
 	    }
