@@ -61,7 +61,7 @@ do_Cairo_set_font (Value cv, Value fv)
 
     if (aborting)
 	RETURN (Void);
-    pat = FcNameParse (name);
+    pat = FcNameParse ((FcChar8 *) name);
 
     FcConfigSubstitute (0, pat, FcMatchPattern);
     FcDefaultSubstitute (pat);
