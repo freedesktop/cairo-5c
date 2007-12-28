@@ -476,7 +476,7 @@ path_array (Value cv, cairo_path_t* (*copy_path) (cairo_t *cr))
 	    break;
 	}
 	pev = path_new (tag, e);
-	ArrayResize (pev, 0, n+1);
+	ArrayResize (pv, 0, n+1);
 	ArrayValueSet (&pv->array, n, pev);
 	n++;
     }
