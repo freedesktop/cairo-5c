@@ -124,6 +124,33 @@ test_t[] tests = {
 	    fill (cr);
 	}
     },
+    {
+	name = "fill-extents",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    arc (cr, 50, 50, 30, 0, 2*pi);
+	    rect_t r = fill_extents (cr);
+	    set_source_rgba (cr, 0, 0, 1, 1);
+	    fill (cr);
+	    rectangle (cr, r.x, r.y, r.width, r.height);
+	    set_source_rgba (cr, 1, 1, 0, 0.5);
+	    fill (cr);
+	}
+    },
+    {
+	name = "stroke-extents",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    arc (cr, 50, 50, 30, 0, 2*pi);
+	    set_line_width (cr, 20);
+	    rect_t r = stroke_extents (cr);
+	    set_source_rgba (cr, 0, 0, 1, 1);
+	    stroke (cr);
+	    rectangle (cr, r.x, r.y, r.width, r.height);
+	    set_source_rgba (cr, 1, 1, 0, 0.5);
+	    fill (cr);
+	}
+    },
 };
 
 bool
