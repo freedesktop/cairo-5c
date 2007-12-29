@@ -73,13 +73,28 @@ test_t[] tests = {
 	    arc (cr, 50, 50, 30, 0, 2 * pi);
 	    stroke (cr);
 	}
+    },
+    {
+	name = "append-path",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    path_t[*] path = {
+		{move_to = {x = 25, y = 75}},
+		{line_to = {x = 50, y = 25}},
+		{line_to = {x = 75, y = 75}},
+		{close_path = <>}
+	    };
+	    append_path (cr, path);
+	    set_source_rgba (cr, 1, 0, 1, .8);
+	    fill (cr);
+	}
     }
 };
 
 bool
 run_test (test_t t, string srcdir)
 {
-    printf ("%-10.10s ", t.name);
+    printf ("%-20.20s ", t.name);
     twixt (surface_t out = surface_create (t.format, test_width, test_height);
 	   Surface::destroy (out))
     {
