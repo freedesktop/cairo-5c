@@ -34,6 +34,9 @@
  */
 
 #include "cairo-5c.h"
+
+#if HAVE_CAIRO_XLIB_H
+
 #include <pthread.h>
 
 typedef struct _gtk_global {
@@ -510,3 +513,5 @@ cairo_5c_tool_display (cairo_5c_surface_t *c5s)
     
     return tool->global->dpy;
 }
+
+#endif /* HAVE_CAIRO_XLIB_H */

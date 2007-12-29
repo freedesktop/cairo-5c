@@ -155,7 +155,9 @@ cairo_5c_dirty (cairo_5c_t *c5c)
 	{
 	    switch (c5s->kind) {
 	    case CAIRO_5C_WINDOW:
+#if HAVE_CAIRO_5C_WINDOW
 		cairo_5c_tool_dirty (c5s);
+#endif
 		break;
 	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PDF:
@@ -179,7 +181,9 @@ cairo_5c_enable (cairo_5c_t *c5c)
 	{
 	    switch (c5s->kind) {
 	    case CAIRO_5C_WINDOW:
+#if HAVE_CAIRO_5C_WINDOW
 		cairo_5c_tool_enable (c5s);
+#endif
 		break;
 	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PDF:
@@ -204,7 +208,9 @@ cairo_5c_disable (cairo_5c_t *c5c)
 	{
 	    switch (c5s->kind) {
 	    case CAIRO_5C_WINDOW:
+#if HAVE_CAIRO_5C_WINDOW
 		cairo_5c_tool_disable (c5s);
+#endif
 		break;
 	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PDF:

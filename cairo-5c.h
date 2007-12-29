@@ -36,31 +36,50 @@
 #ifndef _CAIRO_5C_H_
 #define _CAIRO_5C_H_
 
-#include <nickle/builtin.h>
-#define Atom XAtom
-#undef True
-#undef False
-#include <cairo.h>
-#include <cairo-xlib.h>
-#include <cairo-pdf.h>
-#include <cairo-svg.h>
-#include <cairo-ps.h>
-#include <cairo-ft.h>
+#include "config.h"
 #include <stdio.h>
 #include <unistd.h>
 #include <errno.h>
-#undef Atom
+
+#include <cairo.h>
+#include <cairo-ft.h>
+
+#if HAVE_CAIRO_PDF_H
+#include <cairo-pdf.h>
+#endif
+
+#if HAVE_CAIRO_SVG_H
+#include <cairo-svg.h>
+#endif
+
+#if HAVE_CAIRO_PS_H
+#include <cairo-ps.h>
+#endif
+
+#if HAVE_CAIRO_XLIB_H
+#define Atom XAtom
+#define HAVE_CAIRO_5C_WINDOW 1
+#include <cairo-xlib.h>
 #define GTK_DISABLE_DEPRECATED
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
+#undef Atom
+#undef True
+#undef False
+#undef Bool
+#endif
+
+#include <nickle/builtin.h>
 
 typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_IMAGE, CAIRO_5C_PDF, CAIRO_5C_SVG, CAIRO_5C_PS, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
 
 typedef struct _cairo_5c_tool	cairo_5c_tool_t;
 
 typedef struct _cairo_5c_window_t {
+#if HAVE_CAIRO_XLIB_H
     GdkPixmap	    *pixmap;
     GdkPixmap	    *curpix;
+#endif
     cairo_5c_tool_t *tool;
     FILE	    *send_events;
 } cairo_5c_window_t;
@@ -184,8 +203,10 @@ do_Cairo_disable (Value cv);
 cairo_5c_surface_t *
 cairo_5c_surface_get (Value av);
 
+#if HAVE_CAIRO_XLIB_H
 Value
 do_Cairo_Surface_create_window (Value namev, Value wv, Value hv);
+#endif
 
 Value
 do_Cairo_Image_surface_create (Value fv, Value wv, Value hv);
@@ -202,23 +223,29 @@ do_Cairo_Image_get_pixel (Value sv, Value xv, Value yv);
 Value
 do_Cairo_Image_put_pixel (Value sv, Value xv, Value yv, Value pv);
 
+#if HAVE_CAIRO_PDF_H
 Value
 do_Cairo_Pdf_surface_create (Value fnv, Value wv, Value hv);
 
 Value
 do_Cairo_Pdf_surface_create_for_file (Value fv, Value wv, Value hv);
+#endif
 
+#if HAVE_CAIRO_SVG_H
 Value
 do_Cairo_Svg_surface_create (Value fnv, Value wv, Value hv);
 
 Value
 do_Cairo_Svg_surface_create_for_file (Value fv, Value wv, Value hv);
+#endif
 
+#if HAVE_CAIRO_PS_H
 Value
 do_Cairo_Ps_surface_create (Value fnv, Value wv, Value hv);
 
 Value
 do_Cairo_Ps_surface_create_for_file (Value fv, Value wv, Value hv);
+#endif
 
 Value
 do_Cairo_Surface_write_to_png (Value sv, Value fnv);
@@ -580,6 +607,7 @@ do_Cairo_scaled_text_extents (Value sfv, Value uv);
 
 /* gtk.c */
 
+#if HAVE_CAIRO_XLIB_H
 Bool
 cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height);
 
@@ -600,5 +628,6 @@ cairo_5c_tool_display (cairo_5c_surface_t *c5s);
 
 void
 cairo_5c_tool_mark (cairo_5c_surface_t *c5s);
+#endif
 
 #endif /* _CAIRO_5C_H_ */

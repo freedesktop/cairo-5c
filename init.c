@@ -880,10 +880,12 @@ nickle_init (void)
     };
     
     static const struct fbuiltin_3 surfuncs_3[] = {
+#if HAVE_CAIRO_XLIB_H
 	{ do_Cairo_Surface_create_window, "create_window", SURFACE_S, "snn", "\n"
 	    " surface_t create_window (real width, real height)\n"
 	    "\n"
 	    " Create a window and return a surface pointer for it\n" },
+#endif
 	{ do_Cairo_Surface_create_similar, "create_similar", SURFACE_S, SURFACE_S "nn", "\n"
 	    " surface_t create_similar (surface_t related, real width, real height)\n"
 	    "\n"
@@ -991,6 +993,7 @@ nickle_init (void)
 	{ 0 }
     };
 					 
+#if HAVE_CAIRO_PDF_H
     static const struct fbuiltin_3 pdffuncs_3[] = {
 	{ do_Cairo_Pdf_surface_create, "surface_create", SURFACE_S, "snn", "\n"
 	    " surface_t surface_create (string filename, real width, real height)\n"
@@ -1002,7 +1005,9 @@ nickle_init (void)
 	    " Create a PDF surface of the specified size in points, written to f\n" },
 	{ 0 }
     };
+#endif
 					 
+#if HAVE_CAIRO_SVG_H
     static const struct fbuiltin_3 svgfuncs_3[] = {
 	{ do_Cairo_Svg_surface_create, "surface_create", SURFACE_S, "snn", "\n"
 	    " surface_t surface_create (string filename, real width, real height)\n"
@@ -1014,7 +1019,9 @@ nickle_init (void)
 	    " Create an SVG surface of the specified size in points, written to f\n" },
 	{ 0 }
     };
+#endif
 					 
+#if HAVE_CAIRO_PS_H
     static const struct fbuiltin_3 psfuncs_3[] = {
 	{ do_Cairo_Ps_surface_create, "surface_create", SURFACE_S, "snn", "\n"
 	    " surface_t surface_create (string filename, real width, real height)\n"
@@ -1026,6 +1033,7 @@ nickle_init (void)
 	    " Create a PS surface of the specified size in points, written to f\n" },
 	{ 0 }
     };
+#endif
 					 
     init_types ();
     
@@ -1051,9 +1059,15 @@ nickle_init (void)
     BuiltinFuncs3 (&CairoImageNamespace, imgfuncs_3);
     BuiltinFuncs4 (&CairoImageNamespace, imgfuncs_4);
     
+#if HAVE_CAIRO_PDF_H
     BuiltinFuncs3 (&CairoPdfNamespace, pdffuncs_3);
+#endif
+#if HAVE_CAIRO_SVG_H
     BuiltinFuncs3 (&CairoSvgNamespace, svgfuncs_3);
+#endif
+#if HAVE_CAIRO_PS_H
     BuiltinFuncs3 (&CairoPsNamespace, psfuncs_3);
+#endif
 
     RETURN(TrueVal);
 }

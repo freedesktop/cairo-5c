@@ -41,6 +41,7 @@ AC_PROG_MAKE_SET
 NICKLE_LIBDIR=`nickle -e 'printf ("%s\n", Command::nickle_libdir);'`
 NICKLE_PATH=`nickle -e 'printf ("%s\n", Command::nickle_path);'`
 
+
 AC_SUBST(NICKLE_LIBDIR)
 AC_SUBST(NICKLE_PATH)
 
@@ -58,6 +59,11 @@ AC_SUBST(WARN_CFLAGS)
 CAIRO_5C_PC_MODULES="cairo fontconfig freetype2 gtk+-2.0 gthread-2.0"
 
 PKG_CHECK_MODULES(CAIRO_5C, $CAIRO_5C_PC_MODULES)
+
+save_CPPFLAGS="$CPPFLAGS"
+CPPFLAGS="${CAIRO_5C_CFLAGS} ${CPPFLAGS}"
+AC_CHECK_HEADERS([cairo-xlib.h cairo-pdf.h cairo-svg.h cairo-ps.h])
+CPPFLAGS="${save_CPPFLAGS}"
 
 AC_CONFIG_FILES([Makefile
 		 examples/Makefile

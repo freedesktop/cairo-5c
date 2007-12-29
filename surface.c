@@ -37,6 +37,7 @@
 
 static char	CairoSurfaceId[] = "CairoSurface";
 
+#if HAVE_CAIRO_XLIB_H
 static Bool
 create_cairo_window (cairo_5c_surface_t *c5s)
 {
@@ -71,6 +72,7 @@ create_cairo_window (cairo_5c_surface_t *c5s)
 						  c5s->height);
     return True;
 }
+#endif
 
 cairo_5c_surface_t *
 cairo_5c_surface_get (Value av)
@@ -101,9 +103,11 @@ cairo_5c_surface_get (Value av)
     }
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
+#if HAVE_CAIRO_5C_WINDOW
 	if (c5s->u.window.curpix != c5s->u.window.pixmap)
 	    if (!create_cairo_window (c5s))
 		return 0;
+#endif
 	break;
     case CAIRO_5C_IMAGE:
     case CAIRO_5C_SCRATCH:
@@ -128,7 +132,9 @@ cairo_5c_surface_mark (void *object)
     MemReference (c5s->recv_events);
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
+#if HAVE_CAIRO_5C_WINDOW
 	cairo_5c_tool_mark (c5s);
+#endif
 	break;
     case CAIRO_5C_IMAGE:
     case CAIRO_5C_SCRATCH:
@@ -174,7 +180,9 @@ cairo_5c_surface_destroy (cairo_5c_surface_t *c5s)
     
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
+#if HAVE_CAIRO_5C_WINDOW
 	cairo_5c_tool_destroy (c5s);
+#endif
 	break;
     case CAIRO_5C_IMAGE:
 	break;
@@ -225,6 +233,7 @@ cairo_surface_foreign_free (void *object)
     ;
 }
 
+#if HAVE_CAIRO_XLIB_H
 Value
 do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
 {
@@ -263,7 +272,7 @@ do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
 
     RETURN (ret);
 }
-
+#endif
 
 Value
 do_Cairo_Surface_write_to_png (Value sv, Value fv)
@@ -598,6 +607,7 @@ do_Cairo_Image_put_pixel (Value sv, Value xv, Value yv, Value pv)
     RETURN (Void);
 }
 
+#if HAVE_CAIRO_PDF_H
 Value
 do_Cairo_Pdf_surface_create (Value fnv, Value wv, Value hv)
 {
@@ -629,7 +639,9 @@ do_Cairo_Pdf_surface_create (Value fnv, Value wv, Value hv)
 
     RETURN (ret);
 }
+#endif
 
+#if HAVE_CAIRO_SVG_H
 Value
 do_Cairo_Svg_surface_create (Value fnv, Value wv, Value hv)
 {
@@ -661,7 +673,9 @@ do_Cairo_Svg_surface_create (Value fnv, Value wv, Value hv)
 
     RETURN (ret);
 }
+#endif
 
+#if HAVE_CAIRO_PS_H
 Value
 do_Cairo_Ps_surface_create (Value fnv, Value wv, Value hv)
 {
@@ -693,4 +707,4 @@ do_Cairo_Ps_surface_create (Value fnv, Value wv, Value hv)
 
     RETURN (ret);
 }
-
+#endif
