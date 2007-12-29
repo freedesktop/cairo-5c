@@ -101,6 +101,18 @@ test_t[] tests = {
 	    stroke (cr);
 	}
     },
+    {
+	name = "stroke-preserve",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    rectangle (cr, 10, 10, 80, 80);
+	    set_source_rgba (cr, 0, 1, 0, 1);
+	    set_line_width (cr, 10);
+	    stroke_preserve (cr);
+	    set_source_rgba (cr, 1, 0, 1, .5);
+	    fill (cr);
+	}
+    },
 };
 
 bool
