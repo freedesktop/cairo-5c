@@ -357,44 +357,39 @@ do_Cairo_in_fill (Value cv, Value xv, Value yv)
     return cairo_in_fill (c5c->cr, x, y) ? TrueVal : FalseVal;
 }
 
-Value
-do_Cairo_stroke_extents (Value cv)
+static Value
+do_extents (Value cv, void (*extents) (cairo_t *,
+				       double *, double *,
+				       double *, double *))
 {
     ENTER ();
     cairo_5c_t	*c5c = cairo_5c_get (cv);
-    double	x, y, w, h;
+    double	x1, y1, x2, y2;
     Value	ret;
-    static int	dims[2] = { 2, 2 };
+    BoxPtr	box;
     
     if (aborting)
 	RETURN(Void);
-    cairo_stroke_extents (c5c->cr, &x, &y, &w, &h);
-    ret = NewArray (False, False, typePrim[rep_float], 2, dims);
-    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
-    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
-    ArrayValueSet(&ret->array, 2, NewDoubleFloat (w));
-    ArrayValueSet(&ret->array, 3, NewDoubleFloat (h));
+    (*extents) (c5c->cr, &x1, &y1, &x2, &y2);
+    ret = NewStruct (TypeCanon (typeCairoRect)->structs.structs, False);
+    box = ret->structs.values;
+    BoxValueSet (box, 0, NewDoubleFloat (x1));
+    BoxValueSet (box, 1, NewDoubleFloat (y1));
+    BoxValueSet (box, 2, NewDoubleFloat (x2 - x1));
+    BoxValueSet (box, 3, NewDoubleFloat (y2 - y1));
     RETURN (ret);
+}
+
+Value
+do_Cairo_stroke_extents (Value cv)
+{
+    return do_extents (cv, cairo_stroke_extents);
 }
 
 Value
 do_Cairo_fill_extents (Value cv)
 {
-    ENTER ();
-    cairo_5c_t	*c5c = cairo_5c_get (cv);
-    double	x, y, w, h;
-    Value	ret;
-    static int	dims[2] = { 2, 2 };
-    
-    if (aborting)
-	RETURN(Void);
-    cairo_fill_extents (c5c->cr, &x, &y, &w, &h);
-    ret = NewArray (False, False, typePrim[rep_float], 2, dims);
-    ArrayValueSet(&ret->array, 0, NewDoubleFloat (x));
-    ArrayValueSet(&ret->array, 1, NewDoubleFloat (y));
-    ArrayValueSet(&ret->array, 2, NewDoubleFloat (w));
-    ArrayValueSet(&ret->array, 3, NewDoubleFloat (h));
-    RETURN (ret);
+    return do_extents (cv, cairo_fill_extents);
 }
 
 static Value
