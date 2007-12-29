@@ -40,6 +40,7 @@ NamespacePtr	CairoSurfaceNamespace;
 NamespacePtr	CairoPatternNamespace;
 NamespacePtr	CairoImageNamespace;
 NamespacePtr	CairoPdfNamespace;
+NamespacePtr	CairoSvgNamespace;
 NamespacePtr	CairoPsNamespace;
 Type		*typeCairo;
 Type		*typeCairoSurface;
@@ -65,6 +66,7 @@ Type		*typeCairoFontFace;
 
 Type		*typeCairoPatternExtend;
 Type		*typeCairoPatternFilter;
+Type		*typeCairoImageFormat;
 
 #define CAIRO_I		0
 #define CAIRO_S		"00"
@@ -113,6 +115,9 @@ Type		*typeCairoPatternFilter;
 #define EXTEND_S	"30"
 #define FILTER_I	31
 #define FILTER_S	"31"
+
+#define FORMAT_I	32
+#define FORMAT_S	"32"
 
 static Type *
 make_typedef (char	*name_str,
@@ -369,8 +374,20 @@ init_types (void)
 
     CairoImageNamespace = BuiltinNamespace (&CairoNamespace, "Image")->namespace.namespace;
     
+    typeCairoImageFormat = make_typedef ("format_t",
+					 CairoImageNamespace,
+					 publish_public,
+					 FORMAT_I,
+					 NULL,
+					 BuildEnumType (3,
+							"ARGB",
+							"RGB",
+							"A"));
+					 
     CairoPdfNamespace = BuiltinNamespace (&CairoNamespace, "Pdf")->namespace.namespace;
+    CairoSvgNamespace = BuiltinNamespace (&CairoNamespace, "Svg")->namespace.namespace;
     CairoPsNamespace = BuiltinNamespace (&CairoNamespace, "Ps")->namespace.namespace;
+
 
     CairoPatternNamespace = BuiltinNamespace (&CairoNamespace, "Pattern")->namespace.namespace;
 
@@ -425,7 +442,7 @@ EnumIntPart (Value ev, char *err)
 	    return i;
     RaiseStandardException (exception_invalid_argument,
 			    err,
-			    2, ev);
+			    2, 0, ev);
     return -1;
 }
 
@@ -955,10 +972,22 @@ nickle_init (void)
     };
 					 
     static const struct fbuiltin_3 imgfuncs_3[] = {
-	{ do_Cairo_Image_surface_create, "surface_create", SURFACE_S, "iii", "\n"
+	{ do_Cairo_Image_surface_create, "surface_create", SURFACE_S, FORMAT_S "ii", "\n"
 	    " surface_t surface_create (int format, int width, int height)\n"
 	    "\n"
 	    " Create an image surface of the specified size in pixels\n" },
+	{ do_Cairo_Image_get_pixel, "get_pixel", "i", SURFACE_S "ii", "\n"
+	    " int get_pixel (surface_t surface, int x, int y)\n"
+	    "\n"
+	    " Fetch a single pixel from an image surface\n" },
+	{ 0 }
+    };
+					 
+    static const struct fbuiltin_4 imgfuncs_4[] = {
+	{ do_Cairo_Image_put_pixel, "put_pixel", "v", SURFACE_S "iii", "\n"
+	    " void put_pixel (surface_t surface, int x, int y, int pixel)\n"
+	    "\n"
+	    " Store a single pixel in an image surface\n" },
 	{ 0 }
     };
 					 
@@ -971,6 +1000,18 @@ nickle_init (void)
 	    " surface_t surface_create (file f, real width, real height)\n"
 	    "\n"
 	    " Create a PDF surface of the specified size in points, written to f\n" },
+	{ 0 }
+    };
+					 
+    static const struct fbuiltin_3 svgfuncs_3[] = {
+	{ do_Cairo_Svg_surface_create, "surface_create", SURFACE_S, "snn", "\n"
+	    " surface_t surface_create (string filename, real width, real height)\n"
+	    "\n"
+	    " Create an SVG surface of the specified size in points, written to filename\n" },
+	{ do_Cairo_Svg_surface_create, "surface_create_for_file", SURFACE_S, "snn", "\n"
+	    " surface_t surface_create (file f, real width, real height)\n"
+	    "\n"
+	    " Create an SVG surface of the specified size in points, written to f\n" },
 	{ 0 }
     };
 					 
@@ -1008,8 +1049,10 @@ nickle_init (void)
 
     BuiltinFuncs1 (&CairoImageNamespace, imgfuncs_1);
     BuiltinFuncs3 (&CairoImageNamespace, imgfuncs_3);
+    BuiltinFuncs4 (&CairoImageNamespace, imgfuncs_4);
     
     BuiltinFuncs3 (&CairoPdfNamespace, pdffuncs_3);
+    BuiltinFuncs3 (&CairoSvgNamespace, svgfuncs_3);
     BuiltinFuncs3 (&CairoPsNamespace, psfuncs_3);
 
     RETURN(TrueVal);

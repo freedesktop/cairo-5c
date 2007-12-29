@@ -1,0 +1,16 @@
+.TH CAIRO-5C 3 "@BUILD_DATE@"
+.SH NAME
+cairo-5c \- cairo bindings for nickle programs
+.SH SYNOPSIS
+autoload Cairo;
+.SH DESCRIPTION
+.PP
+These are simple bindings designed to be used in simple programs. No access
+to the underlying window system is exposed, and the display interface
+consists of a single window. All surface types are supported, giving
+applications the ability to create PDF, PS, PNG and SVG output files easily.
+.SH AUTHOR
+\fICairo-5c\fP is the work of Keith Packard <keithp@keithp.com>
+.PP
+\fICairo-5c\fP is distributed under either the LGPL (version 2) or Mozilla
+Public License.

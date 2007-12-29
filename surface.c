@@ -82,6 +82,7 @@ cairo_5c_surface_get (Value av)
 	RaiseStandardException (exception_invalid_argument,
 				"context not bound to surface",
 				2, NewInt(0), av);
+	return 0;
     }
     if (av->foreign.id != CairoSurfaceId)
     {
@@ -248,9 +249,10 @@ do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
     
     if (!cairo_5c_tool_create (c5s, name, width, height))
     {
+	int err = errno;
 	RaiseStandardException (exception_open_error,
 				"Can't create window",
-				0, wv);
+				2, FileGetError (err), name);
 	RETURN (Void);
     }
     
@@ -379,6 +381,7 @@ do_Cairo_Image_surface_create (Value fv, Value wv, Value hv)
 {
     ENTER ();
     cairo_5c_surface_t	*c5s;
+    cairo_format_t	format = EnumIntPart (fv, "invalid format_t");
     int			width = IntPart (wv, "invalid width");
     int			height = IntPart (hv, "invalid height");
     Value		ret;
@@ -395,7 +398,7 @@ do_Cairo_Image_surface_create (Value fv, Value wv, Value hv)
     c5s->recv_events = Void;
     c5s->copied = False;
     
-    c5s->surface = cairo_image_surface_create (CAIRO_FORMAT_ARGB32,
+    c5s->surface = cairo_image_surface_create (format,
 					       width,
 					       height);
     
@@ -417,11 +420,15 @@ do_Cairo_Image_surface_create_from_png (Value filenamev)
     if (aborting)
 	RETURN(Void);
     image = cairo_image_surface_create_from_png (filename);
-    if (!image)
+    if (cairo_surface_status (image) != CAIRO_STATUS_SUCCESS)
     {
+	int err = errno;
+	
+	if (image)
+	    cairo_surface_destroy (image);
 	RaiseStandardException (exception_open_error,
-				"cannot read png file",
-				1, filenamev);
+				FileGetErrorMessage (err),
+				2, FileGetError (err), filenamev);
 	RETURN (Void);
     }
 
@@ -430,7 +437,7 @@ do_Cairo_Image_surface_create_from_png (Value filenamev)
     
     c5s = ALLOCATE (&Cairo5cSurfaceType, sizeof (cairo_5c_surface_t));
     c5s->kind = CAIRO_5C_IMAGE;
-    c5s->surface = 0;
+    c5s->surface = image;
     c5s->width = cairo_image_surface_get_width (image);
     c5s->height = cairo_image_surface_get_height (image);
     c5s->dirty = False;
@@ -447,6 +454,147 @@ do_Cairo_Image_surface_create_from_png_file (Value filev)
 {
     ENTER ();
     /* XXX */
+    RETURN (Void);
+}
+
+Value
+do_Cairo_Image_get_pixel (Value sv, Value xv, Value yv)
+{
+    ENTER ();
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
+    int			x = IntPart (xv, "invalid X");
+    int			y = IntPart (yv, "invalid Y");
+    int			width;
+    int			height;
+    unsigned char    	*data;
+    uint32_t		pixel;
+
+    if (c5s->kind != CAIRO_5C_IMAGE)
+	RaiseStandardException (exception_invalid_argument,
+				"not an image surface_t",
+				2, NewInt(0), sv);
+    width = cairo_image_surface_get_width (c5s->surface);
+    height = cairo_image_surface_get_height (c5s->surface);
+    if (x < 0 || width <= x)
+	RaiseStandardException (exception_invalid_argument,
+				"x out of range",
+				2, NewInt(width), xv);
+    if (y < 0 || height <= y)
+	RaiseStandardException (exception_invalid_argument,
+				"y out of range",
+				2, NewInt(height), yv);
+    if (aborting)
+	RETURN (Void);
+
+    data = (cairo_image_surface_get_data (c5s->surface) + 
+	    y * cairo_image_surface_get_stride (c5s->surface));
+    
+    switch (cairo_image_surface_get_format (c5s->surface)) {
+    case CAIRO_FORMAT_ARGB32:
+    case CAIRO_FORMAT_RGB24:
+	pixel = ((uint32_t *) data)[x];
+	break;
+    case CAIRO_FORMAT_A8:
+	pixel = data[x];
+	break;
+    default:
+	pixel = 0;  /* XXX handle FORMAT_A1 */
+	break;
+    }
+    RETURN (Reduce (NewInteger (Positive, NewDoubleDigitNatural (pixel))));
+}
+
+Value
+do_Cairo_Image_put_pixel (Value sv, Value xv, Value yv, Value pv)
+{
+    ENTER ();
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
+    int			x = IntPart (xv, "invalid X");
+    int			y = IntPart (yv, "invalid Y");
+    int			width;
+    int			height;
+    unsigned char    	*data;
+    uint32_t		pixel, max;
+    Natural		*n;
+
+    if (aborting)
+	RETURN (Void);
+    if (c5s->kind != CAIRO_5C_IMAGE)
+	RaiseStandardException (exception_invalid_argument,
+				"not an image surface_t",
+				2, NewInt(0), sv);
+    if (aborting)
+	RETURN (Void);
+    width = cairo_image_surface_get_width (c5s->surface);
+    height = cairo_image_surface_get_height (c5s->surface);
+    if (x < 0 || width <= x)
+	RaiseStandardException (exception_invalid_argument,
+				"x out of range",
+				2, NewInt(width), xv);
+    if (y < 0 || height <= y)
+	RaiseStandardException (exception_invalid_argument,
+				"y out of range",
+				2, NewInt(height), yv);
+
+    switch (cairo_image_surface_get_format (c5s->surface)) {
+    case CAIRO_FORMAT_ARGB32:
+	max = 0xffffffff;
+	break;
+    case CAIRO_FORMAT_RGB24:
+	max = 0xffffff;
+	break;
+    case CAIRO_FORMAT_A8:
+	max = 0xff;
+	break;
+    default:
+	max = 0;    /* XXX other formats */
+	break;
+    }
+
+    if (Negativep (pv) || 
+	TrueVal == Greater (pv, NewInteger (Positive,
+					    NewDoubleDigitNatural (max))))
+	RaiseStandardException (exception_invalid_argument,
+				"pixel out of range",
+				2, NewInt(3), pv);
+    if (aborting)
+	RETURN (Void);
+
+    switch (ValueTag (pv)) {
+    case rep_int:
+	pixel = ValueInt (pv);
+	break;
+    case rep_integer:
+	n = IntegerMag(pv);
+	pixel = 0;
+	if (n->length > 0)
+	    pixel = NaturalDigits(n)[0];
+	break;
+    default:
+	RaiseStandardException (exception_invalid_argument,
+				"Invalid pixel",
+				2, NewInt(3), pv);
+	pixel = 0;
+	break;
+    }
+    if (aborting)
+	RETURN (Void);
+
+    data = (cairo_image_surface_get_data (c5s->surface) + 
+	    y * cairo_image_surface_get_stride (c5s->surface));
+    
+    switch (cairo_image_surface_get_format (c5s->surface)) {
+    case CAIRO_FORMAT_ARGB32:
+    case CAIRO_FORMAT_RGB24:
+	((uint32_t *) data)[x] = pixel;
+	break;
+    case CAIRO_FORMAT_A8:
+	data[x] = pixel;
+	break;
+    default:
+	break;
+    }
+
     RETURN (Void);
 }
 

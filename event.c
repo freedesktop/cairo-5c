@@ -69,6 +69,7 @@ do_Cairo_Surface_open_event (Value sv)
 	    break;
 	case CAIRO_5C_IMAGE:
 	case CAIRO_5C_PDF:
+	case CAIRO_5C_SVG:
 	case CAIRO_5C_PS:
 	case CAIRO_5C_SCRATCH:
 	    read = FileFopen ("/dev/null", "r", &err);

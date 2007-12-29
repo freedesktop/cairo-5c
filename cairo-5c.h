@@ -146,6 +146,8 @@ extern Type		*typeCairoFontFace;
 extern Type		*typeCairoPatternExtend;
 extern Type		*typeCairoPatternFilter;
 
+extern Type		*typeCairoImageFormat;
+
 /* cairo.c */
     
 cairo_5c_t *

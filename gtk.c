@@ -302,10 +302,11 @@ create_gtk_global (void)
     gdk_threads_enter ();
     if (!gtk_init_check (&argc, &argv))
     {
+	int err = errno;
 	const char *display_name_arg = gdk_get_display_arg_name ();
 	RaiseStandardException (exception_open_error,
 				"cannot open X display",
-				0, NewStrString (display_name_arg));
+				2, FileGetError (err), NewStrString (display_name_arg));
 	RETURN (Void);
     }
 	

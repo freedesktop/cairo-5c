@@ -72,7 +72,7 @@ do_Cairo_set_font (Value cv, Value fv)
     {
 	RaiseStandardException (exception_open_error,
 				"can't open font",
-				1, fv);
+				2, FileGetError (ENOENT), fv);
 	RETURN (Void);
     }
 
@@ -83,7 +83,7 @@ do_Cairo_set_font (Value cv, Value fv)
     {
 	RaiseStandardException (exception_open_error,
 				"can't open font",
-				1, fv);
+				2, FileGetError (ENOENT), fv);
 	RETURN (Void);
     }
     cairo_set_font_face (c5c->cr, font_face);

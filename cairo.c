@@ -133,7 +133,7 @@ do_Cairo_create (Value sv)
     {
 	RaiseStandardException (exception_invalid_argument,
 				"can't create cairo object",
-				1, Void);
+				2, Void, sv);
 	RETURN (Void);
     }
     c5c = ALLOCATE (&Cairo5cType, sizeof (cairo_5c_t));
@@ -159,6 +159,7 @@ cairo_5c_dirty (cairo_5c_t *c5c)
 		break;
 	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PDF:
+	    case CAIRO_5C_SVG:
 	    case CAIRO_5C_PS:
 	    case CAIRO_5C_SCRATCH:
 		break;
@@ -182,6 +183,7 @@ cairo_5c_enable (cairo_5c_t *c5c)
 		break;
 	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PDF:
+	    case CAIRO_5C_SVG:
 	    case CAIRO_5C_PS:
 	    case CAIRO_5C_SCRATCH:
 		break;
@@ -206,6 +208,7 @@ cairo_5c_disable (cairo_5c_t *c5c)
 		break;
 	    case CAIRO_5C_IMAGE:
 	    case CAIRO_5C_PDF:
+	    case CAIRO_5C_SVG:
 	    case CAIRO_5C_PS:
 	    case CAIRO_5C_SCRATCH:
 		break;

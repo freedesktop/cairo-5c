@@ -34,7 +34,7 @@
  */
 
 if (!Command::valid_name ((string[]) { "Cairo" }))
-    Foreign::load ("libcairo-5c.so");
+    Foreign::load ("libcairo5c.so");
 
 extend namespace Cairo {
     
@@ -81,7 +81,7 @@ extend namespace Cairo {
 
     public cairo_t new_image (int width, int height)
     {
-	surface_t   surface = Image::surface_create (0, width, height);
+	surface_t   surface = Image::surface_create (Image::format_t.ARGB, width, height);
 	cairo_t	    cr = create (surface);
 	
 	set_source_rgba (cr, 0, 0, 0, 0);
@@ -107,6 +107,14 @@ extend namespace Cairo {
 	set_source_rgba (cr, 1, 1, 1, 1);
 	paint (cr);
 	set_source_rgba (cr, 0, 0, 0, 1);
+	return cr;
+    }
+    
+    public cairo_t new_svg (string filename, 
+			   real width, real height)
+    {
+	surface_t   surface = Svg::surface_create (filename, width, height);
+	cairo_t	    cr = create (surface);
 	return cr;
     }
     

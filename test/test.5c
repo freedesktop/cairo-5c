@@ -1,0 +1,154 @@
+/*
+ * Copyright © 2004 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
+    
+autoimport Cairo;
+
+import Image;
+
+typedef struct {
+    string		name;
+    format_t		format;
+    void(cairo_t)    	paint;
+} test_t;
+
+int test_width = 100;
+int test_height = 100;
+
+test_t[] tests = {
+    { 
+	name = "line",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_source_rgb (cr, 1, 0, 0);
+	    move_to (cr, 10, 10);
+	    line_to (cr, 90, 90);
+	    stroke (cr);
+	}
+    },
+    {
+	name = "box",
+	format = format_t.RGB,
+	paint = void func (cairo_t cr) {
+	    set_source_rgb (cr, 0, 1, 0);
+	    rectangle (cr, 5, 5, 60, 60);
+	    fill (cr);
+	}
+    },
+    {
+	name = "circle",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_source_rgba (cr, 1, 1, 0, .5);
+	    arc (cr, 50, 50, 30, 0, 2 * pi);
+	    stroke (cr);
+	}
+    }
+};
+
+bool
+run_test (test_t t, string srcdir)
+{
+    printf ("%-10.10s ", t.name);
+    twixt (surface_t out = surface_create (t.format, test_width, test_height);
+	   Surface::destroy (out))
+    {
+	twixt (cairo_t cr = create (out); destroy (cr))
+	    t.paint (cr);
+
+	exception test_fail (string reason);
+
+	void test_check (bool ok, string reason, poly args ...) {
+	    if (!ok)
+		raise test_fail (File::sprintf (reason, args ...));
+	}
+
+	try {
+	    try {
+		twixt (surface_t ref = surface_create_from_png (srcdir + "/" +
+						      t.name + "-ref.png");
+		       Surface::destroy (ref)) 
+		{
+		    int	mask = t.format == format_t.RGB ? 0xffffff : ~0;
+
+		    test_check (Surface::width (out) == Surface::width (ref),
+				"width mismatch %d != %d", Surface::width(out),
+				Surface::width (ref));
+		    test_check (Surface::height (out) == Surface::height (ref),
+				"height mismatch %d != %d", Surface::height(out),
+				Surface::height (ref));
+		    for (int y = 0; y < Surface::height (ref); y++)
+			for (int x = 0; x < Surface::width (ref); x++) {
+			    int out_p = Image::get_pixel (out, x, y) & mask;
+			    int ref_p = Image::get_pixel (ref, x, y) & mask;
+			    test_check (out_p == ref_p,
+					"pixel mismatch 0x%x != 0x%x at %d %d",
+					out_p, ref_p, x, y);
+			}
+		}
+	    } catch File::open_error (string message, File::error_type error, 
+				      string name) {
+		raise test_fail (message + ": " + name);
+	    } catch File::io_error (string message, File::error_type error,
+				    file f) {
+		raise test_fail (message);
+	    }
+	} catch test_fail (string reason) {
+	    Surface::write_to_png (out, t.name + "-out.png");
+	    printf (" failed: %s\n", reason);
+	    return false;
+	}
+    }
+    printf (" passed.\n");
+    return true;
+}
+
+
+string srcdir = ".";
+
+if (Environ::check ("SRCDIR")) srcdir = Environ::get ("SRCDIR");
+if (dim (argv) > 1) srcdir = argv[1];
+
+int
+run_tests (string srcdir)
+{
+    int	failures = 0;
+    
+    for (int i = 0; i < dim (tests); i++)
+	if (!run_test (tests[i], srcdir))
+	    ++failures;
+    return failures;
+}
+
+int i = run_tests (srcdir);
+exit (i);
