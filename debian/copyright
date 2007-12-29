@@ -1,0 +1,7 @@
+This package was debianized by Keith Packard on 28 Dec, 2007
+
+Original source can be found at: git://people.freedesktop.org/~keithp/cairo-5c
+
+Upstream Authors: Keith Packard <keithp@keithp.com>
+
+The cairo bindings for nickle are distributed under the LGPL2 or MPL licenses
