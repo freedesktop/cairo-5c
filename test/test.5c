@@ -113,6 +113,17 @@ test_t[] tests = {
 	    fill (cr);
 	}
     },
+    {
+	name = "clip",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    arc (cr, 50, 50, 30, 0, 2*pi);
+	    clip (cr);
+	    rectangle (cr, 10, 30, 80, 40);
+	    set_source_rgba (cr, 1, 0, 0, 1);
+	    fill (cr);
+	}
+    },
 };
 
 bool
