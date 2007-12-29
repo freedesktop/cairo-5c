@@ -11,7 +11,7 @@ AC_INIT([cairo-5c],
 	[http://cairographics.org],
 	cairo-5c)
 
-AC_CONFIG_SRCDIR([cairo-5c.h])
+AC_CONFIG_SRCDIR([cairo.5c])
 AM_INIT_AUTOMAKE([foreign])
 AM_MAINTAINER_MODE
 
@@ -66,6 +66,7 @@ AC_CHECK_HEADERS([cairo-xlib.h cairo-pdf.h cairo-svg.h cairo-ps.h])
 CPPFLAGS="${save_CPPFLAGS}"
 
 AC_CONFIG_FILES([Makefile
+		 src/Makefile
 		 examples/Makefile
 		 test/Makefile
 		])

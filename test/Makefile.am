@@ -6,8 +6,7 @@ REFPNG=\
 	circle-ref.png \
 	line-ref.png
 
-TESTS_ENVIRONMENT=SRCDIR="$(srcdir)" NICKLEPATH="$(top_srcdir):@NICKLE_PATH@" LD_LIBRARY_PATH=../.libs nickle
--l$(srcdir):
+TESTS_ENVIRONMENT=SRCDIR="$(srcdir)" NICKLEPATH="$(top_srcdir):@NICKLE_PATH@" LD_LIBRARY_PATH=../src/.libs nickle
 
 TESTS=test.5c
 
