@@ -364,9 +364,9 @@ init_types (void)
 				  PATH_I,
 				  &path,
 				  BuildUnionType(4,
-						 NewTypeRef (typeCairoPoint, True), "move_to",
-						 NewTypeRef (typeCairoPoint, True), "line_to",
-						 NewTypeRef (typeCairoCurveTo, True), "curve_to",
+						 typeCairoPoint, "move_to",
+						 typeCairoPoint, "line_to",
+						 typeCairoCurveTo, "curve_to",
 						 typePrim[rep_void], "close_path"));
 
 
