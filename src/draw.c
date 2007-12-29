@@ -481,6 +481,7 @@ path_array (Value cv, cairo_path_t* (*copy_path) (cairo_t *cr))
 	n++;
     }
     
+    cairo_path_destroy (path);
     RETURN(pv);
 }
 
@@ -502,6 +503,82 @@ Value
 do_Cairo_append_path (Value cv, Value pv)
 {
     ENTER ();
-    /* XXX */
+    cairo_5c_t		*c5c = cairo_5c_get (cv);
+    Array		*a = &pv->array;
+    int			nelement = ArrayLimits(a)[0];
+    int			element;
+    Atom		move_to_atom = AtomId("move_to");
+    Atom		line_to_atom = AtomId("line_to");
+    Atom		curve_to_atom = AtomId("curve_to");
+    Atom		close_path_atom = AtomId("close_path");
+    cairo_path_data_t	*pd;
+    cairo_path_t	*path;
+
+    if (aborting)
+	RETURN (Void);
+
+    path = malloc(sizeof(*path));
+    if (!path)
+	panic("Out of memory");
+    
+    /*
+     * Make sure there's plenty of space
+     */
+    pd = malloc(4 * nelement * sizeof(*pd));
+    if (!pd)
+	panic("Out of memory");
+
+    path->status = 0;
+    path->data = pd;
+    for (element = 0; element < nelement; element++) 
+    {
+	Value	pev = ArrayValueGet(a, element);
+	Union	*u = &pev->unions;
+	Value	v = BoxValue(u->value, 0);
+	BoxPtr	w = v->structs.values;
+	int	ncoord = 1, coord;
+
+	if (u->tag == move_to_atom)
+	    pd->header.type = CAIRO_PATH_MOVE_TO;
+	else if (u->tag == line_to_atom)
+	    pd->header.type = CAIRO_PATH_LINE_TO;
+	else if (u->tag == curve_to_atom) 
+	{
+	    pd->header.type = CAIRO_PATH_CURVE_TO;
+	    ncoord = 3;
+	}
+	else if (u->tag == close_path_atom)
+	{
+	    pd->header.type = CAIRO_PATH_CLOSE_PATH;
+	    ncoord = 0;
+	}
+	else
+	{
+	    RaiseStandardException (exception_invalid_argument,
+				    "Bad path component", 1, pv);
+	    break;
+	}
+	pd->header.length = ncoord + 1;
+	pd++;
+	for (coord = 0; coord < ncoord; coord++)
+	{
+	    pd->point.x = DoublePart (BoxValueGet (w, coord * 2 + 0),
+				      "Bogus X coordinate in path");
+	    pd->point.y = DoublePart (BoxValueGet (w, coord * 2 + 1),
+				      "Bogus Y coordinate in path");
+	    if (aborting)
+		break;
+	    pd++;
+	}
+	if (aborting)
+	    break;
+    }
+    if (!aborting)
+    {
+	path->num_data = pd - path->data;
+	cairo_append_path(c5c->cr, path);
+    }
+    free(path->data);
+    free(path);
     RETURN (Void);
 }

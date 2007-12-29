@@ -552,13 +552,13 @@ nickle_init (void)
 	    "\n"
 	    " Write out the current page, and erase it.\n" },
 	
-	{ do_Cairo_copy_path, "copy_path", PATH_S, CAIRO_S, "\n"
-	    " void copy_path (cairo_t cr)\n"
+	{ do_Cairo_copy_path, "copy_path", "A*" PATH_S, CAIRO_S, "\n"
+	    " path_t[*] copy_path (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current path\n" },
 
 	{ do_Cairo_copy_path_flat, "copy_path_flat", PATH_S, CAIRO_S, "\n"
-	    " void copy_path (cairo_t cr)\n"
+	    " path_t[*] copy_path (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current path with curves tesselated to lines\n" },
 	
@@ -692,8 +692,8 @@ nickle_init (void)
 	    " void mask (cairo_t cr, pattern_t pattern)\n"
 	    "\n"
 	    " Fill cr with the source with the specified mask\n" },
-	{ do_Cairo_append_path, "append_path", "v", CAIRO_S PATH_S, "\n"
-	    " void append_path (cairo_t cr, path_t path)\n"
+	{ do_Cairo_append_path, "append_path", "v", CAIRO_S "A*" PATH_S, "\n"
+	    " void append_path (cairo_t cr, path_t[*] path)\n"
 	    "\n"
 	    " Append path to cr\n" },
 	{ do_Cairo_set_font, "set_font", "v", CAIRO_S "s", "\n"
