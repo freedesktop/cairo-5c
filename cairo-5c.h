@@ -43,16 +43,18 @@
 #include <cairo.h>
 #include <cairo-xlib.h>
 #include <cairo-pdf.h>
+#include <cairo-svg.h>
 #include <cairo-ps.h>
 #include <cairo-ft.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <errno.h>
 #undef Atom
 #define GTK_DISABLE_DEPRECATED
 #include <gtk/gtk.h>
 #include <gdk/gdkx.h>
 
-typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_IMAGE, CAIRO_5C_PDF, CAIRO_5C_PS, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
+typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_IMAGE, CAIRO_5C_PDF, CAIRO_5C_SVG, CAIRO_5C_PS, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
 
 typedef struct _cairo_5c_tool	cairo_5c_tool_t;
 
@@ -70,6 +72,10 @@ typedef struct _cairo_5c_pdf_t {
 typedef struct _cairo_5c_ps_t {
     Value	    file;
 } cairo_5c_ps_t;
+
+typedef struct _cairo_5c_svg_t {
+    Value	    file;
+} cairo_5c_svg_t;
 
 typedef struct _cairo_5c_image_t {
     int		    unused;
@@ -94,6 +100,7 @@ typedef struct _cairo_5c_surface_t {
 	cairo_5c_window_t   window;
 	cairo_5c_pdf_t	    pdf;
 	cairo_5c_ps_t	    ps;
+	cairo_5c_svg_t	    svg;
 	cairo_5c_image_t    image;
     } u;
 } cairo_5c_surface_t;
@@ -188,10 +195,22 @@ Value
 do_Cairo_Image_surface_create_from_png_file (Value fv);
 
 Value
+do_Cairo_Image_get_pixel (Value sv, Value xv, Value yv);
+
+Value
+do_Cairo_Image_put_pixel (Value sv, Value xv, Value yv, Value pv);
+
+Value
 do_Cairo_Pdf_surface_create (Value fnv, Value wv, Value hv);
 
 Value
 do_Cairo_Pdf_surface_create_for_file (Value fv, Value wv, Value hv);
+
+Value
+do_Cairo_Svg_surface_create (Value fnv, Value wv, Value hv);
+
+Value
+do_Cairo_Svg_surface_create_for_file (Value fv, Value wv, Value hv);
 
 Value
 do_Cairo_Ps_surface_create (Value fnv, Value wv, Value hv);

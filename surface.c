@@ -107,6 +107,7 @@ cairo_5c_surface_get (Value av)
     case CAIRO_5C_IMAGE:
     case CAIRO_5C_SCRATCH:
     case CAIRO_5C_PDF:
+    case CAIRO_5C_SVG:
     case CAIRO_5C_PS:
 	break;
     }
@@ -133,6 +134,9 @@ cairo_5c_surface_mark (void *object)
 	break;
     case CAIRO_5C_PDF:
 	MemReference (c5s->u.pdf.file);
+	break;
+    case CAIRO_5C_SVG:
+	MemReference (c5s->u.svg.file);
 	break;
     case CAIRO_5C_PS:
 	MemReference (c5s->u.ps.file);
@@ -175,6 +179,9 @@ cairo_5c_surface_destroy (cairo_5c_surface_t *c5s)
 	break;
     case CAIRO_5C_PDF:
 	c5s->u.pdf.file = Void;
+	break;
+    case CAIRO_5C_SVG:
+	c5s->u.svg.file = Void;
 	break;
     case CAIRO_5C_PS:
 	c5s->u.ps.file = Void;
@@ -468,6 +475,38 @@ do_Cairo_Pdf_surface_create (Value fnv, Value wv, Value hv)
     c5s->u.pdf.file = Void;
     
     c5s->surface = cairo_pdf_surface_create (filename, width, height);
+    
+    ret = NewForeign (CairoSurfaceId, c5s, 
+		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
+
+    RETURN (ret);
+}
+
+Value
+do_Cairo_Svg_surface_create (Value fnv, Value wv, Value hv)
+{
+    ENTER ();
+    cairo_5c_surface_t	*c5s;
+    char		*filename = StrzPart (fnv, "invalid filename");
+    double		width = DoublePart (wv, "invalid width_in_points");
+    double    		height = DoublePart (hv, "invalid height_in_points");
+    Value		ret;
+
+    if (aborting)
+	RETURN (Void);
+    
+    c5s = ALLOCATE (&Cairo5cSurfaceType, sizeof (cairo_5c_surface_t));
+    c5s->kind = CAIRO_5C_SVG;
+    c5s->surface = 0;
+    c5s->width = width;
+    c5s->height = height;
+    c5s->dirty = False;
+    c5s->copied = False;
+    c5s->recv_events = Void;
+    
+    c5s->u.svg.file = Void;
+    
+    c5s->surface = cairo_svg_surface_create (filename, width, height);
     
     ret = NewForeign (CairoSurfaceId, c5s, 
 		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
