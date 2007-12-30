@@ -258,6 +258,27 @@ quiet_test_t[] quiet_tests = {
 			    "get_fill_rule returned wrong fill_rule");
 	    }
 	}
+    },
+    {
+	name = "get-line-width",
+	test = void func (cairo_t cr) {
+	    for (real l = 1; l < 20; l++) {
+		set_line_width (cr, l);
+		test_check (get_line_width (cr) == l,
+			    "get_line_width returned wrong width");
+	    }
+	}
+    },
+    {
+	name = "get-matrix",
+	test = void func (cairo_t cr) {
+	    scale (cr, 2, 2);
+	    matrix_t m = get_matrix (cr);
+	    test_check (m.xx == 2 && m.yx == 0 &&
+			m.xy == 0 && m.yy == 2 &&
+			m.x0 == 0 && m.y0 == 0,
+			"get_matrix returned wrong matrix");
+	}
     }
 };
 
