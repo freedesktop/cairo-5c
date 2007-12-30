@@ -149,6 +149,19 @@ make_radial_gradient_pattern ()
 }
 
 void
+star (cairo_t cr, real w, real h)
+{
+    save (cr);
+    translate (cr, w/2, h/2);
+    for (int p = 0; p < 5; p++) {
+	rotate (cr, pi * 4 / 5);
+	line_to (cr, 0, h/3);
+    }
+    fill (cr);
+    restore (cr);    
+}
+
+void
 many_paint (cairo_t cr, int n, void(cairo_t cr, real w, real h) sub_paint)
 {
     int	nx = floor (sqrt (n));
@@ -344,12 +357,7 @@ image_test_t[] image_tests = {
 	    void sub_paint (cairo_t cr, real w, real h) {
 		static int r = 0;
 		set_fill_rule (cr, fill_rules[r++]);
-		translate (cr, w/2, h/2);
-		for (int p = 0; p < 5; p++) {
-		    rotate (cr, pi * 4 / 5);
-		    line_to (cr, 0, h/3);
-		}
-		fill (cr);
+		star (cr, w, h);
 	    }
 	    many_paint (cr, dim (fill_rules), sub_paint);
 	}
@@ -450,6 +458,34 @@ image_test_t[] image_tests = {
 		stroke (cr);
 	    }
 	    many_paint (cr, dim(rotations), sub_paint);
+	}
+    },
+    {
+	name = "paint-with-alpha",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_source (cr, make_a_pattern ());
+	    paint (cr);
+	    set_source_rgb (cr, 0, 0, 1);
+	    paint_with_alpha (cr, 0.5);
+	}
+    },
+    {
+	name = "mask",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    surface_t	mask_surf = Image::surface_create (format_t.A,
+							   test_width,
+							   test_height);
+	    pattern_t	mask_pattern = Pattern::create_for_surface (mask_surf);
+	    cairo_t	mask_cr = create (mask_surf);
+	    set_operator (mask_cr, operator_t.CLEAR);
+	    paint (mask_cr);
+	    set_operator (mask_cr, operator_t.OVER);
+	    set_source_rgba (mask_cr, 0, 0, 0, 1);
+	    star (mask_cr, test_width, test_height);
+	    set_source (cr, make_a_pattern());
+	    mask (cr, mask_pattern);
 	}
     },
     {
