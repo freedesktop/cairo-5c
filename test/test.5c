@@ -391,6 +391,24 @@ image_test_t[] image_tests = {
 	}
     },
     {
+	name = "set-line-join",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_source_rgba (cr, 1, 0, 1, 1);
+	    
+	    set_line_width (cr, 10);
+	    void sub_paint (cairo_t cr) {
+		static int j = 0;
+		set_line_join (cr, line_joins[j++]);
+		move_to (cr, 10, 10);
+		line_to (cr, 20, 20);
+		line_to (cr, 10, 20);
+		stroke (cr);
+	    }
+	    many_paint (cr, dim (line_joins), sub_paint);
+	}
+    },
+    {
 	name = "create-rgba",
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
