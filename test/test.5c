@@ -588,6 +588,29 @@ image_test_t[] image_tests = {
 	}
     },
     {
+	name = "text-extents",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_font (cr, font_name);
+	    real x = 10;
+	    real y = 40;
+	    string text = "Hello, world.";
+	    text_extents_t e = text_extents (cr, text);
+	    set_source_rgba (cr, 1, 1, 1, 1);
+	    rectangle (cr, x + e.x_bearing, y + e.y_bearing,
+		       e.width, e.height);
+	    fill (cr);
+	    move_to (cr, x, y);
+	    set_source_rgba (cr, 0, 0, 0, 1);
+	    show_text (cr, text);
+	    move_to (cr, x, y);
+	    line_to (cr, x + e.x_advance, y + e.y_advance);
+	    set_line_width (cr, 1);
+	    set_source_rgba (cr, 1, 0, 0, 0.5);
+	    stroke (cr);
+	}
+    },
+    {
 	name = "create-rgba",
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
