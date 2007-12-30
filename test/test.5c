@@ -530,6 +530,43 @@ image_test_t[] image_tests = {
 	}
     },
     {
+	name = "set-font-matrix",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_source_rgba (cr, 0, 0, 0, 1);
+	    set_font (cr, font_name);
+	    matrix_t[*] font_matrices = {
+		{ 
+		    xx = 10, yx = 0,
+		    xy = 0, yy = 10,
+		    x0 = 0, y0 = 0
+		},
+		{ 
+		    xx = 10, yx = 2,
+		    xy = 0, yy = 10,
+		    x0 = 0, y0 = 0
+		},
+		{ 
+		    xx = 8, yx = 4,
+		    xy = 4, yy = 8,
+		    x0 = 0, y0 = 0
+		},
+		{ 
+		    xx = 10, yx = 0,
+		    xy = 0, yy = -10,
+		    x0 = 0, y0 = 0
+		},
+	    };
+	    void sub_paint (cairo_t cr, real w, real h) {
+		static int m = 0;
+		set_font_matrix (cr, font_matrices[m++]);
+		move_to (cr, 5, 30);
+		show_text (cr, "Hello");
+	    }
+	    many_paint (cr, dim (font_names), sub_paint);
+	}
+    },
+    {
 	name = "create-rgba",
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {

@@ -17,6 +17,7 @@ REFPNG=\
 	rotate-ref.png \
 	set-fill-rule-ref.png \
 	set-font-ref.png \
+	set-font-matrix-ref.png \
 	set-font-size-ref.png \
 	set-line-cap-ref.png \
 	set-line-join-ref.png \
