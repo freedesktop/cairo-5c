@@ -6,10 +6,22 @@ REFPNG=\
 	box-ref.png \
 	circle-ref.png \
 	clip-ref.png \
+	create-rgba-ref.png \
+	create-rgb-ref.png \
 	fill-extents-ref.png \
 	fill-preserve-ref.png \
 	line-ref.png \
+	mask-ref.png \
 	paint-ref.png \
+	paint-with-alpha-ref.png \
+	rotate-ref.png \
+	set-fill-rule-ref.png \
+	set-font-ref.png \
+	set-font-size-ref.png \
+	set-line-cap-ref.png \
+	set-line-join-ref.png \
+	set-line-width-ref.png \
+	set-miter-limit-ref.png \
 	set-operator-ref.png \
 	set-source-ref.png \
 	set-tolerance-ref.png \
