@@ -567,6 +567,15 @@ image_test_t[] image_tests = {
 	}
     },
     {
+	name = "show-text",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    move_to (cr, 10, 20);
+	    set_font (cr, font_name);
+	    show_text (cr, "Hello, world.");
+	}
+    },
+    {
 	name = "create-rgba",
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {

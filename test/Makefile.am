@@ -26,6 +26,7 @@ REFPNG=\
 	set-operator-ref.png \
 	set-source-ref.png \
 	set-tolerance-ref.png \
+	show-text-ref.png \
 	stroke-extents-ref.png \
 	stroke-preserve-ref.png
 
