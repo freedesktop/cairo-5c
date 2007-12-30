@@ -149,7 +149,7 @@ make_radial_gradient_pattern ()
 }
 
 void
-many_paint (cairo_t cr, int n, void(cairo_t) sub_paint)
+many_paint (cairo_t cr, int n, void(cairo_t cr, real w, real h) sub_paint)
 {
     int	nx = floor (sqrt (n));
     int ny = (n + (nx - 1)) // nx;
@@ -165,7 +165,7 @@ many_paint (cairo_t cr, int n, void(cairo_t) sub_paint)
 	rectangle (cr, x, y, xinc, yinc);
 	clip (cr);
 	translate (cr, x, y);
-	sub_paint (cr);
+	sub_paint (cr, xinc, yinc);
 	restore (cr);
     }
 }
@@ -295,7 +295,7 @@ image_test_t[] image_tests = {
 	    
 	    set_source (cr, make_another_pattern ());
 
-	    void sub_paint (cairo_t cr)
+	    void sub_paint (cairo_t cr, real w, real h)
 	    {
 		static int o = 0;
 		set_operator (cr, operators[o++]);
@@ -317,7 +317,7 @@ image_test_t[] image_tests = {
 		Pattern::create_rgba (1, 1, 0, 1),
 	    };
 	    
-	    void sub_paint (cairo_t cr) {
+	    void sub_paint (cairo_t cr, real w, real h) {
 		static int p = 0;
 		set_source (cr, pats[p++]);
 		paint (cr);
@@ -341,13 +341,13 @@ image_test_t[] image_tests = {
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgba (cr, 1, 1, 1, 1);
-	    void sub_paint (cairo_t cr) {
+	    void sub_paint (cairo_t cr, real w, real h) {
 		static int r = 0;
 		set_fill_rule (cr, fill_rules[r++]);
-		translate (cr, test_width / 4, test_height / 4);
+		translate (cr, w/2, h/2);
 		for (int p = 0; p < 5; p++) {
 		    rotate (cr, pi * 4 / 5);
-		    line_to (cr, 0, test_height / 5);
+		    line_to (cr, 0, h/3);
 		}
 		fill (cr);
 	    }
@@ -360,13 +360,13 @@ image_test_t[] image_tests = {
 	paint = void func (cairo_t cr) {
 	    set_source_rgba (cr, 1, 0, 1, 1);
 	    
-	    real[*] widths = { 0.5, 1, 2, 5, 10, 20 };
+	    real[*] widths = { .5, 1, 2, 3, 5, 10 };
 
-	    void sub_paint (cairo_t cr) {
-		static int w = 0;
-		set_line_width (cr, widths[w++]);
-		move_to (cr, 0, 0);
-		line_to (cr, 30, 30);
+	    void sub_paint (cairo_t cr, real w, real h) {
+		static int wi = 0;
+		set_line_width (cr, widths[wi++]);
+		move_to (cr, w * .1, h * .1);
+		line_to (cr, w * .9, h * .9);
 		stroke (cr);
 	    }
 
@@ -380,11 +380,11 @@ image_test_t[] image_tests = {
 	    set_source_rgba (cr, 1, 0, 1, 1);
 	    
 	    set_line_width (cr, 10);
-	    void sub_paint (cairo_t cr) {
+	    void sub_paint (cairo_t cr, real w, real h) {
 		static int c = 0;
 		set_line_cap (cr, line_caps[c++]);
-		move_to (cr, 10, 10);
-		line_to (cr, 20, 20);
+		move_to (cr, w * .2, h * .2);
+		line_to (cr, w * .8, h * .8);
 		stroke (cr);
 	    }
 	    many_paint (cr, dim (line_caps), sub_paint);
@@ -397,12 +397,12 @@ image_test_t[] image_tests = {
 	    set_source_rgba (cr, 1, 0, 1, 1);
 	    
 	    set_line_width (cr, 10);
-	    void sub_paint (cairo_t cr) {
+	    void sub_paint (cairo_t cr, real w, real h) {
 		static int j = 0;
 		set_line_join (cr, line_joins[j++]);
-		move_to (cr, 10, 10);
-		line_to (cr, 20, 20);
-		line_to (cr, 10, 20);
+		move_to (cr, w * .2, h * .2);
+		line_to (cr, w * .8, h * .8);
+		line_to (cr, w * .2, h * .8);
 		stroke (cr);
 	    }
 	    many_paint (cr, dim (line_joins), sub_paint);
@@ -417,18 +417,39 @@ image_test_t[] image_tests = {
 	    };
 	    set_source_rgba (cr, 1, 0, 1, 1);
 	    
-	    set_line_width (cr, 10);
+	    set_line_width (cr, 6);
 	    set_line_join (cr, line_join_t.MITER);
 	    
-	    void sub_paint (cairo_t cr) {
+	    void sub_paint (cairo_t cr, real w, real h) {
 		static int l = 0;
 		set_miter_limit (cr, miter_limits[l++]);
-		move_to (cr, 10, 10);
-		line_to (cr, 20, 20);
-		line_to (cr, 10, 14);
+		move_to (cr, w * .2, h * .2);
+		line_to (cr, w * .8, h * .8);
+		line_to (cr, w * .2, h * .5);
 		stroke (cr);
 	    }
 	    many_paint (cr, dim (miter_limits), sub_paint);
+	}
+    },
+    {
+	name = "rotate",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    real[*] rotations = {
+		0, pi * 1 / 8, pi * 3/4, pi * 7/5,
+	    };
+	    set_source_rgba (cr, 1, 0, 1, 1);
+	    set_line_width (cr, 4);
+	    void sub_paint (cairo_t cr, real w, real h) {
+		static int r = 0;
+		translate (cr, w/2, h/2);
+		rotate (cr, rotations[r++]);
+		translate (cr, -w/2, -h/2);
+		move_to (cr, 0, h/2);
+		line_to (cr, w, h/2);
+		stroke (cr);
+	    }
+	    many_paint (cr, dim(rotations), sub_paint);
 	}
     },
     {
@@ -443,7 +464,7 @@ image_test_t[] image_tests = {
 		{ red = 0, green = 0.5, blue = 0, alpha = 0.75 },
 		{ red = 0, green = 0, blue = 0.5, alpha = 0.75 },
 	    };
-	    void sub_paint (cairo_t cr) {
+	    void sub_paint (cairo_t cr, real w, real h) {
 		static int c = 0;
 		set_source (cr, Pattern::create_rgba (colors[c].red,
 						      colors[c].green,
@@ -467,7 +488,7 @@ image_test_t[] image_tests = {
 		{ red = 0, green = 0.5, blue = 0 },
 		{ red = 0, green = 0, blue = 0.5 },
 	    };
-	    void sub_paint (cairo_t cr) {
+	    void sub_paint (cairo_t cr, real w, real h) {
 		static int c = 0;
 		set_source (cr, Pattern::create_rgb (colors[c].red,
 						      colors[c].green,
