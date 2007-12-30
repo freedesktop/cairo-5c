@@ -40,12 +40,44 @@ typedef struct {
     string		name;
     format_t		format;
     void(cairo_t)    	paint;
-} test_t;
+} image_test_t;
+
+typedef struct {
+    string		name;
+    void(cairo_t)	test;
+} quiet_test_t;
 
 int test_width = 100;
 int test_height = 100;
 
-test_t[] tests = {
+exception test_fail (string reason);
+
+void test_check (bool ok, string reason, poly args ...) {
+    if (!ok)
+	raise test_fail (File::sprintf (reason, args ...));
+}
+
+pattern_t
+make_a_pattern ()
+{
+    surface_t	surf = Image::surface_create (format_t.ARGB, 10, 10);
+    cairo_t	cs = create (surf);
+
+    set_source_rgba (cs, 1, 1, 1, 1);
+    paint (cs);
+    set_source_rgba (cs, 0, 0, 0, 1);
+    move_to (cs, 0, 0);
+    line_to (cs, 10, 10);
+    line_to (cs, 10, 0);
+    close_path (cs);
+    fill (cs);
+    destroy (cs);
+    pattern_t pat = Pattern::create_for_surface (surf);
+    Pattern::set_extend (pat, Pattern::extend_t.REPEAT);
+    return pat;
+}
+
+image_test_t[] image_tests = {
     { 
 	name = "line",
 	format = format_t.ARGB,
@@ -151,26 +183,55 @@ test_t[] tests = {
 	    fill (cr);
 	}
     },
+    {
+	name = "set-source",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    pattern_t	pat = make_a_pattern ();
+	    pattern_t	old = get_source (cr);
+	    
+	    set_source (cr, pat);
+	    paint (cr);
+	}
+    },
+};
+
+quiet_test_t[] quiet_tests = {
+    {
+	name = "get-operator",
+	test = void func (cairo_t cr) {
+	    set_operator (cr, operator_t.CLEAR);
+	    test_check (get_operator (cr) == operator_t.CLEAR,
+			"operator not CLEAR");
+	    set_operator (cr, operator_t.DEST_OVER);
+	    test_check (get_operator (cr) == operator_t.DEST_OVER,
+			"operator not DEST_OVER");
+	}
+    },
+    {
+	name = "get-source",
+	test = void func (cairo_t cr) {
+	    pattern_t	pat = make_a_pattern ();
+	    pattern_t	old = get_source (cr);
+	    
+	    set_source (cr, pat);
+	    test_check (get_source (cr) == pat,
+			"get_source returned wrong pattern");
+	}
+    },
 };
 
 bool
-run_test (test_t t, string srcdir)
+run_image_test (image_test_t t, string srcdir)
 {
     printf ("%-20.20s ", t.name);
     twixt (surface_t out = surface_create (t.format, test_width, test_height);
 	   Surface::destroy (out))
     {
-	twixt (cairo_t cr = create (out); destroy (cr))
-	    t.paint (cr);
-
-	exception test_fail (string reason);
-
-	void test_check (bool ok, string reason, poly args ...) {
-	    if (!ok)
-		raise test_fail (File::sprintf (reason, args ...));
-	}
-
 	try {
+	    twixt (cairo_t cr = create (out); destroy (cr))
+		t.paint (cr);
+
 	    try {
 		twixt (surface_t ref = surface_create_from_png (srcdir + "/" +
 						      t.name + "-ref.png");
@@ -210,6 +271,24 @@ run_test (test_t t, string srcdir)
     return true;
 }
 
+bool
+run_quiet_test (quiet_test_t t, string srcdir)
+{
+    printf ("%-20.20s ", t.name);
+    twixt (surface_t out = surface_create (format_t.ARGB, test_width, test_height);
+	   Surface::destroy (out))
+    {
+	try {
+	    twixt (cairo_t cr = create (out); destroy (cr))
+		t.test (cr);
+	} catch test_fail (string reason) {
+	    printf (" failed: %s\n", reason);
+	    return false;
+	}
+    }
+    printf (" passed.\n");
+    return true;
+}
 
 string srcdir = ".";
 
@@ -221,8 +300,11 @@ run_tests (string srcdir)
 {
     int	failures = 0;
     
-    for (int i = 0; i < dim (tests); i++)
-	if (!run_test (tests[i], srcdir))
+    for (int i = 0; i < dim (image_tests); i++)
+	if (!run_image_test (image_tests[i], srcdir))
+	    ++failures;
+    for (int i = 0; i < dim (quiet_tests); i++)
+	if (!run_quiet_test (quiet_tests[i], srcdir))
 	    ++failures;
     return failures;
 }
