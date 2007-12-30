@@ -73,11 +73,13 @@ line_cap_t[*] caps = {
     line_cap_t.BUTT, line_cap_t.ROUND, line_cap_t.SQUARE
 };
 
+fill_rule_t[*] fill_rules = { fill_rule_t.WINDING, fill_rule_t.EVEN_ODD };
+
 pattern_t
 make_a_pattern ()
 {
-    int		w = test_width / 10;
-    int		h = test_height / 10;
+    int		w = test_width // 10;
+    int		h = test_height // 10;
     surface_t	surf = Image::surface_create (format_t.ARGB, w, h);
     cairo_t	cs = create (surf);
 
@@ -119,6 +121,53 @@ make_another_pattern ()
     pattern_t pat = Pattern::create_for_surface (surf);
     Pattern::set_extend (pat, Pattern::extend_t.REPEAT);
     return pat;
+}
+
+pattern_t
+make_linear_gradient_pattern ()
+{
+    pattern_t	pat = Pattern::create_linear (0, 0,
+					      test_height / 4,
+					      test_width / 4);
+    Pattern::add_color_stop_rgba (pat, 0, 1, 0, 0, 1);
+    Pattern::add_color_stop_rgba (pat, 1, 0, 1, 0, 0.8);
+    Pattern::set_extend (pat, Pattern::extend_t.REPEAT);
+    return pat;
+}
+
+pattern_t
+make_radial_gradient_pattern ()
+{
+    pattern_t	pat = Pattern::create_radial (test_width / 2, test_height / 2,
+					      0, 
+					      test_width / 2, test_height / 2,
+					      test_width / 4);
+    Pattern::add_color_stop_rgba (pat, 1, 1, 0, 0, 1);
+    Pattern::add_color_stop_rgba (pat, 0, 1, 1, 0, 0.8);
+    Pattern::set_extend (pat, Pattern::extend_t.REFLECT);
+    return pat;
+}
+
+void
+many_paint (cairo_t cr, int n, void(cairo_t) sub_paint)
+{
+    int	nx = floor (sqrt (n));
+    int ny = (n + (nx - 1)) // nx;
+    int	    xinc = width (cr) // nx;
+    int	    yinc = height (cr) // ny;
+
+    for (int i = 0; i < n; i++) 
+    {
+	int x = (i % nx) * xinc;
+	int y = (i // nx) * yinc;
+	
+	save (cr);
+	rectangle (cr, x, y, xinc, yinc);
+	clip (cr);
+	translate (cr, x, y);
+	sub_paint (cr);
+	restore (cr);
+    }
 }
 
 image_test_t[] image_tests = {
@@ -241,33 +290,40 @@ image_test_t[] image_tests = {
 	name = "set-operator",
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
-	    real    xinc = test_width / dim(operators);
-
 	    set_source (cr, make_a_pattern ());
 	    paint (cr);
 	    
 	    set_source (cr, make_another_pattern ());
 
-	    for (int o = 0; o < dim (operators); o++)
+	    void sub_paint (cairo_t cr)
 	    {
-		save (cr);
-		set_operator (cr, operators[o]);
-		rectangle (cr, xinc * o, 0, xinc, test_height/2);
-		clip (cr);
+		static int o = 0;
+		set_operator (cr, operators[o++]);
 		paint (cr);
-		restore (cr);
 	    }
+
+	    many_paint (cr, dim (operators), sub_paint);
 	}
     },
     {
 	name = "set-source",
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
-	    pattern_t	pat = make_a_pattern ();
-	    pattern_t	old = get_source (cr);
+	    pattern_t[*]    pats = {
+		make_a_pattern (),
+		make_another_pattern (),
+		make_linear_gradient_pattern (),
+		make_radial_gradient_pattern (),
+		Pattern::create_rgba (1, 1, 0, 1),
+	    };
 	    
-	    set_source (cr, pat);
-	    paint (cr);
+	    void sub_paint (cairo_t cr) {
+		static int p = 0;
+		set_source (cr, pats[p++]);
+		paint (cr);
+	    }
+	    
+	    many_paint (cr, dim (pats), sub_paint);
 	}
     },
     {
@@ -279,7 +335,72 @@ image_test_t[] image_tests = {
 	    arc (cr, 50, 50, 30, 0, 2*pi);
 	    fill (cr);
 	}
-    }
+    },
+    {
+	name = "set-fill-rule",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_source_rgba (cr, 1, 1, 1, 1);
+	    void sub_paint (cairo_t cr) {
+		static int r = 0;
+		set_fill_rule (cr, fill_rules[r++]);
+		translate (cr, test_width / 4, test_height / 4);
+		for (int p = 0; p < 5; p++) {
+		    rotate (cr, pi * 4 / 5);
+		    line_to (cr, 0, test_height / 5);
+		}
+		fill (cr);
+	    }
+	    many_paint (cr, dim (fill_rules), sub_paint);
+	}
+    },
+    {
+	name = "create-rgba",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    rgba_color_t[*] colors = {
+		{ red = 1, green = 0, blue = 0, alpha = 1 },
+		{ red = 0, green = 1, blue = 0, alpha = 1 },
+		{ red = 0, green = 0, blue = 1, alpha = 1 },
+		{ red = 0.5, green = 0, blue = 0, alpha = 0.75 },
+		{ red = 0, green = 0.5, blue = 0, alpha = 0.75 },
+		{ red = 0, green = 0, blue = 0.5, alpha = 0.75 },
+	    };
+	    void sub_paint (cairo_t cr) {
+		static int c = 0;
+		set_source (cr, Pattern::create_rgba (colors[c].red,
+						      colors[c].green,
+						      colors[c].blue,
+						      colors[c].alpha));
+		c++;
+		paint (cr);
+	    }
+	    many_paint (cr, dim (colors), sub_paint);
+	}
+    },
+    {
+	name = "create-rgb",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    rgb_color_t[*] colors = {
+		{ red = 1, green = 0, blue = 0 },
+		{ red = 0, green = 1, blue = 0 },
+		{ red = 0, green = 0, blue = 1 },
+		{ red = 0.5, green = 0, blue = 0 },
+		{ red = 0, green = 0.5, blue = 0 },
+		{ red = 0, green = 0, blue = 0.5 },
+	    };
+	    void sub_paint (cairo_t cr) {
+		static int c = 0;
+		set_source (cr, Pattern::create_rgb (colors[c].red,
+						      colors[c].green,
+						      colors[c].blue));
+		c++;
+		paint (cr);
+	    }
+	    many_paint (cr, dim (colors), sub_paint);
+	}
+    },
 };
 
 quiet_test_t[] quiet_tests = {
@@ -330,10 +451,9 @@ quiet_test_t[] quiet_tests = {
     {
 	name = "get-fill-rule",
 	test = void func (cairo_t cr) {
-	    fill_rule_t[*] rules = { fill_rule_t.WINDING, fill_rule_t.EVEN_ODD };
-	    for (int i = 0; i < dim (rules); i++) {
-		set_fill_rule (cr, rules[i]);
-		test_check (get_fill_rule (cr) == rules[i],
+	    for (int i = 0; i < dim (fill_rules); i++) {
+		set_fill_rule (cr, fill_rules[i]);
+		test_check (get_fill_rule (cr) == fill_rules[i],
 			    "get_fill_rule returned wrong fill_rule");
 	    }
 	}
