@@ -898,8 +898,8 @@ nickle_init (void)
     };
 
     static const struct fbuiltin_1 patfuncs_1[] = {
-	{ do_Cairo_Pattern_create_for_surface, "create_for_surface", PATTERN_S, CAIRO_S, "\n"
-	    " pattern_t create_for_surface (cairo_t cr)\n"
+	{ do_Cairo_Pattern_create_for_surface, "create_for_surface", PATTERN_S, SURFACE_S, "\n"
+	    " pattern_t create_for_surface (surface_t surface)\n"
 	    "\n"
 	    " Returns a pattern referencing the specified surface\n" },
 	{ do_Cairo_Pattern_get_matrix, "get_matrix", MATRIX_S, PATTERN_S, "\n"
