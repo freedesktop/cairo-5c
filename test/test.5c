@@ -409,6 +409,29 @@ image_test_t[] image_tests = {
 	}
     },
     {
+	name = "set-miter-limit",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    real[*] miter_limits = {
+		1, 5, 10, 20
+	    };
+	    set_source_rgba (cr, 1, 0, 1, 1);
+	    
+	    set_line_width (cr, 10);
+	    set_line_join (cr, line_join_t.MITER);
+	    
+	    void sub_paint (cairo_t cr) {
+		static int l = 0;
+		set_miter_limit (cr, miter_limits[l++]);
+		move_to (cr, 10, 10);
+		line_to (cr, 20, 20);
+		line_to (cr, 10, 14);
+		stroke (cr);
+	    }
+	    many_paint (cr, dim (miter_limits), sub_paint);
+	}
+    },
+    {
 	name = "create-rgba",
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
