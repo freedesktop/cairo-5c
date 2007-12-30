@@ -97,6 +97,33 @@ do_Cairo_get_source (Value cv)
 }
 
 Value
+do_Cairo_Pattern_create_rgb (Value rv, Value gv, Value bv)
+{
+    ENTER ();
+    double	    r = DoublePart (rv, "red invalid");
+    double	    g = DoublePart (gv, "green invalid");
+    double	    b = DoublePart (bv, "blue invalid");
+    
+    if (aborting)
+	RETURN(Void);
+    RETURN (make_pattern_value (cairo_pattern_create_rgb (r, g, b)));
+}
+
+Value
+do_Cairo_Pattern_create_rgba (Value rv, Value gv, Value bv, Value av)
+{
+    ENTER ();
+    double	    r = DoublePart (rv, "red invalid");
+    double	    g = DoublePart (gv, "green invalid");
+    double	    b = DoublePart (bv, "blue invalid");
+    double	    a = DoublePart (av, "alpha invalid");
+    
+    if (aborting)
+	RETURN(Void);
+    RETURN (make_pattern_value (cairo_pattern_create_rgba (r, g, b, a)));
+}
+
+Value
 do_Cairo_Pattern_create_linear (Value x0v, Value y0v, Value x1v, Value y1v)
 {
     ENTER ();

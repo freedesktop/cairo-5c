@@ -525,6 +525,12 @@ Value
 do_Cairo_Pattern_create_for_surface (Value sv);
 
 Value
+do_Cairo_Pattern_create_rgb (Value rv, Value gv, Value bv);
+
+Value
+do_Cairo_Pattern_create_rgba (Value rv, Value gv, Value bv, Value av);
+
+Value
 do_Cairo_Pattern_create_linear (Value x0v, Value y0v, Value x1v, Value y1v);
 
 Value

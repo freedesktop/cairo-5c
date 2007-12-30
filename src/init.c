@@ -933,7 +933,19 @@ nickle_init (void)
 	{ 0 }
     };
 	
+    static const struct fbuiltin_3 patfuncs_3[] = {
+	{ do_Cairo_Pattern_create_rgb, "create_rgb", PATTERN_S, "nnn", "\n"
+	    " pattern_t create_rgb (real red, real green, real blue)\n"
+	    "\n"
+	    " Create a solid color pattern\n" },
+	{ 0 }
+    };
+
     static const struct fbuiltin_4 patfuncs_4[] = {
+	{ do_Cairo_Pattern_create_rgba, "create_rgba", PATTERN_S, "nnnn", "\n"
+	    " pattern_t create_rgb (real red, real green, real blue, real alpha)\n"
+	    "\n"
+	    " Create a solid color pattern with alpha\n" },
 	{ do_Cairo_Pattern_create_linear, "create_linear", PATTERN_S, "nnnn", "\n"
 	    " pattern_t create_linear (real x0, real y0, real x1, real y1)\n"
 	    "\n"
@@ -1051,6 +1063,7 @@ nickle_init (void)
     
     BuiltinFuncs1 (&CairoPatternNamespace, patfuncs_1);
     BuiltinFuncs2 (&CairoPatternNamespace, patfuncs_2);
+    BuiltinFuncs3 (&CairoPatternNamespace, patfuncs_3);
     BuiltinFuncs4 (&CairoPatternNamespace, patfuncs_4);
     BuiltinFuncs5 (&CairoPatternNamespace, patfuncs_5);
     BuiltinFuncs6 (&CairoPatternNamespace, patfuncs_6);
