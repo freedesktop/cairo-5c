@@ -355,6 +355,25 @@ image_test_t[] image_tests = {
 	}
     },
     {
+	name = "set-line-width",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_source_rgba (cr, 1, 0, 1, 1);
+	    
+	    real[*] widths = { 0.5, 1, 2, 5, 10, 20 };
+
+	    void sub_paint (cairo_t cr) {
+		static int w = 0;
+		set_line_width (cr, widths[w++]);
+		move_to (cr, 0, 0);
+		line_to (cr, 30, 30);
+		stroke (cr);
+	    }
+
+	    many_paint (cr, dim (widths), sub_paint);
+	}
+    },
+    {
 	name = "create-rgba",
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
