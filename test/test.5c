@@ -50,6 +50,14 @@ typedef struct {
 int test_width = 100;
 int test_height = 100;
 
+string font_name = "Bitstream Vera Sans-12";
+string[*] font_names = {
+    font_name,
+    "Bitstream Vera Sans-12:bold",
+    "Bitstream Vera Sans-12:italic",
+    "Bitstream Vera Sans-12:bold:italic"
+};
+
 exception test_fail (string reason);
 
 void test_check (bool ok, string reason, poly args ...) {
@@ -220,21 +228,6 @@ image_test_t[] image_tests = {
 	    set_source_rgba (cr, 1, 1, 0, .5);
 	    arc (cr, 50, 50, 30, 0, 2 * pi);
 	    stroke (cr);
-	}
-    },
-    {
-	name = "append-path",
-	format = format_t.ARGB,
-	paint = void func (cairo_t cr) {
-	    path_t[*] path = {
-		{move_to = {x = 25, y = 75}},
-		{line_to = {x = 50, y = 25}},
-		{line_to = {x = 75, y = 75}},
-		{close_path = <>}
-	    };
-	    append_path (cr, path);
-	    set_source_rgba (cr, 1, 0, 1, .8);
-	    fill (cr);
 	}
     },
     {
@@ -484,8 +477,38 @@ image_test_t[] image_tests = {
 	    set_operator (mask_cr, operator_t.OVER);
 	    set_source_rgba (mask_cr, 0, 0, 0, 1);
 	    star (mask_cr, test_width, test_height);
+	    
 	    set_source (cr, make_a_pattern());
 	    mask (cr, mask_pattern);
+	}
+    },
+    {
+	name = "append-path",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    path_t[*] path = {
+		{move_to = {x = 25, y = 75}},
+		{line_to = {x = 50, y = 25}},
+		{line_to = {x = 75, y = 75}},
+		{close_path = <>}
+	    };
+	    append_path (cr, path);
+	    set_source_rgba (cr, 1, 0, 1, .8);
+	    fill (cr);
+	}
+    },
+    {
+	name = "set-font",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_source_rgba (cr, 0, 0, 0, 1);
+	    void sub_paint (cairo_t cr, real w, real h) {
+		static int f = 0;
+		set_font (cr, font_names[f++]);
+		move_to (cr, 5, 20);
+		show_text (cr, "Hello");
+	    }
+	    many_paint (cr, dim (font_names), sub_paint);
 	}
     },
     {
@@ -675,7 +698,7 @@ quiet_test_t[] quiet_tests = {
 		ascent = 12, descent = 3, height = 14,
 		max_x_advance = 16, max_y_advance = 0
 	    };
-	    set_font (cr, "Bitstream Vera Sans-12");
+	    set_font (cr, font_name);
 	    test_check (font_extents(cr) == expect,
 			"font_extents returned wrong value");
 	}
