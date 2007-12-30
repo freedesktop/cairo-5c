@@ -200,12 +200,18 @@ quiet_test_t[] quiet_tests = {
     {
 	name = "get-operator",
 	test = void func (cairo_t cr) {
-	    set_operator (cr, operator_t.CLEAR);
-	    test_check (get_operator (cr) == operator_t.CLEAR,
-			"operator not CLEAR");
-	    set_operator (cr, operator_t.DEST_OVER);
-	    test_check (get_operator (cr) == operator_t.DEST_OVER,
-			"operator not DEST_OVER");
+	    operator_t[*] operators = {
+		operator_t.CLEAR, operator_t.SOURCE, operator_t.OVER,
+		operator_t.IN, operator_t.OUT, operator_t.ATOP,
+		operator_t.DEST, operator_t.DEST_OVER, operator_t.DEST_IN,
+		operator_t.DEST_OUT, operator_t.DEST_ATOP, operator_t.XOR,
+		operator_t.ADD, operator_t.SATURATE
+	    };
+	    for (int i = 0; i < dim (operators); i++) {
+		set_operator (cr, operators[i]);
+		test_check (get_operator (cr) == operators[i],
+			    "get_operator returned wrong operator");
+	    }
 	}
     },
     {
@@ -219,6 +225,40 @@ quiet_test_t[] quiet_tests = {
 			"get_source returned wrong pattern");
 	}
     },
+    {
+	name = "get-tolerance",
+	test = void func (cairo_t cr) {
+	    for (real t = 11; t <= 81; t += 10) {
+		set_tolerance (cr, t);
+		test_check (get_tolerance (cr) == t,
+			"get_tolerance returned wrong tolerance");
+	    }
+	}
+    },
+    {
+	name = "get-current-point",
+	test = void func (cairo_t cr) {
+	    for (real x = 12; x < 82; x += 10) {
+		for (real y = 13; y < 83; y += 10) {
+		    move_to (cr, x, y);
+		    point_t p = get_current_point (cr);
+		    test_check (p.x == x && p.y == y,
+			"get_current_point returned wrong point");
+		}
+	    }
+	}
+    },
+    {
+	name = "get-fill-rule",
+	test = void func (cairo_t cr) {
+	    fill_rule_t[*] rules = { fill_rule_t.WINDING, fill_rule_t.EVEN_ODD };
+	    for (int i = 0; i < dim (rules); i++) {
+		set_fill_rule (cr, rules[i]);
+		test_check (get_fill_rule (cr) == rules[i],
+			    "get_fill_rule returned wrong fill_rule");
+	    }
+	}
+    }
 };
 
 bool
