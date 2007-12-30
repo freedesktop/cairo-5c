@@ -512,6 +512,24 @@ image_test_t[] image_tests = {
 	}
     },
     {
+	name = "set-font-size",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_source_rgba (cr, 0, 0, 0, 1);
+	    set_font (cr, font_name);
+	    real[*] font_sizes = {
+		6, 10, 12, 18
+	    };
+	    void sub_paint (cairo_t cr, real w, real h) {
+		static int s = 0;
+		set_font_size (cr, font_sizes[s++]);
+		move_to (cr, 5, 20);
+		show_text (cr, "Hello");
+	    }
+	    many_paint (cr, dim (font_names), sub_paint);
+	}
+    },
+    {
 	name = "create-rgba",
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
