@@ -57,18 +57,36 @@ void test_check (bool ok, string reason, poly args ...) {
 	raise test_fail (File::sprintf (reason, args ...));
 }
 
+operator_t[*] operators = {
+    operator_t.CLEAR, operator_t.SOURCE, operator_t.OVER,
+    operator_t.IN, operator_t.OUT, operator_t.ATOP,
+    operator_t.DEST, operator_t.DEST_OVER, operator_t.DEST_IN,
+    operator_t.DEST_OUT, operator_t.DEST_ATOP, operator_t.XOR,
+    operator_t.ADD, operator_t.SATURATE
+};
+
+line_join_t[*] joins = {
+    line_join_t.MITER, line_join_t.ROUND, line_join_t.BEVEL
+};
+
+line_cap_t[*] caps = {
+    line_cap_t.BUTT, line_cap_t.ROUND, line_cap_t.SQUARE
+};
+
 pattern_t
 make_a_pattern ()
 {
-    surface_t	surf = Image::surface_create (format_t.ARGB, 10, 10);
+    int		w = test_width / 10;
+    int		h = test_height / 10;
+    surface_t	surf = Image::surface_create (format_t.ARGB, w, h);
     cairo_t	cs = create (surf);
 
     set_source_rgba (cs, 1, 1, 1, 1);
     paint (cs);
     set_source_rgba (cs, 0, 0, 0, 1);
     move_to (cs, 0, 0);
-    line_to (cs, 10, 10);
-    line_to (cs, 10, 0);
+    line_to (cs, w, h);
+    line_to (cs, w, 0);
     close_path (cs);
     fill (cs);
     destroy (cs);
@@ -77,7 +95,43 @@ make_a_pattern ()
     return pat;
 }
 
+pattern_t
+make_another_pattern ()
+{
+    int		w = test_width / 4;
+    int		h = test_height / 4;
+    surface_t	surf = Image::surface_create (format_t.ARGB, w, h);
+    cairo_t	cs = create (surf);
+
+    set_operator (cs, operator_t.CLEAR);
+    paint (cs);
+    set_operator (cs, operator_t.SOURCE);
+    set_source_rgba (cs, 0, 0, 0, 0.5);
+    rectangle (cs, 0, 0, w/2, h/2);
+    rectangle (cs, w/2, h/2, w/2, h/2);
+    fill (cs);
+    
+    set_source_rgba (cs, 1, 1, 1, 0.5);
+    rectangle (cs, 0, h/2, w/2, h/2);
+    rectangle (cs, w/2, 0, w/2, h/2);
+    fill (cs);
+    destroy (cs);
+    pattern_t pat = Pattern::create_for_surface (surf);
+    Pattern::set_extend (pat, Pattern::extend_t.REPEAT);
+    return pat;
+}
+
 image_test_t[] image_tests = {
+    {
+	name = "paint",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_source_rgba (cr, 1, 0, 0, 1);
+	    paint (cr);
+	    set_source_rgba (cr, 0, 1, 0, .5);
+	    paint (cr);
+	}
+    },
     { 
 	name = "line",
 	format = format_t.ARGB,
@@ -184,6 +238,28 @@ image_test_t[] image_tests = {
 	}
     },
     {
+	name = "set-operator",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    real    xinc = test_width / dim(operators);
+
+	    set_source (cr, make_a_pattern ());
+	    paint (cr);
+	    
+	    set_source (cr, make_another_pattern ());
+
+	    for (int o = 0; o < dim (operators); o++)
+	    {
+		save (cr);
+		set_operator (cr, operators[o]);
+		rectangle (cr, xinc * o, 0, xinc, test_height/2);
+		clip (cr);
+		paint (cr);
+		restore (cr);
+	    }
+	}
+    },
+    {
 	name = "set-source",
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
@@ -194,19 +270,22 @@ image_test_t[] image_tests = {
 	    paint (cr);
 	}
     },
+    {
+	name = "set-tolerance",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    set_tolerance (cr, 10);
+	    set_source_rgba (cr, 1, 1, 0, 1);
+	    arc (cr, 50, 50, 30, 0, 2*pi);
+	    fill (cr);
+	}
+    }
 };
 
 quiet_test_t[] quiet_tests = {
     {
 	name = "get-operator",
 	test = void func (cairo_t cr) {
-	    operator_t[*] operators = {
-		operator_t.CLEAR, operator_t.SOURCE, operator_t.OVER,
-		operator_t.IN, operator_t.OUT, operator_t.ATOP,
-		operator_t.DEST, operator_t.DEST_OVER, operator_t.DEST_IN,
-		operator_t.DEST_OUT, operator_t.DEST_ATOP, operator_t.XOR,
-		operator_t.ADD, operator_t.SATURATE
-	    };
 	    for (int i = 0; i < dim (operators); i++) {
 		set_operator (cr, operators[i]);
 		test_check (get_operator (cr) == operators[i],
@@ -270,16 +349,84 @@ quiet_test_t[] quiet_tests = {
 	}
     },
     {
+	name = "get-line-cap",
+	test = void func (cairo_t cr) {
+	    for (int i = 0; i < dim (caps); i++) {
+		set_line_cap (cr, caps[i]);
+		test_check (get_line_cap (cr) == caps[i],
+			    "get_line_cap returned wrong line_cap");
+	    }
+	}
+    },
+    {
+	name = "get-line-join",
+	test = void func (cairo_t cr) {
+	    for (int i = 0; i < dim (joins); i++) {
+		set_line_join (cr, joins[i]);
+		test_check (get_line_join (cr) == joins[i],
+			    "get_line_join returned wrong line_join");
+	    }
+	}
+    },
+    {
+	name = "get-miter-limit",
+	test = void func (cairo_t cr) {
+	    for (real l = 1; l < 20; l++) {
+		set_miter_limit (cr, l);
+		test_check (get_miter_limit (cr) == l,
+			    "get_miter_limit returned wrong limit");
+	    }
+	}
+    },
+    {
 	name = "get-matrix",
 	test = void func (cairo_t cr) {
-	    scale (cr, 2, 2);
-	    matrix_t m = get_matrix (cr);
-	    test_check (m.xx == 2 && m.yx == 0 &&
-			m.xy == 0 && m.yy == 2 &&
-			m.x0 == 0 && m.y0 == 0,
-			"get_matrix returned wrong matrix");
+	    for (real s = 1; s < 10; s++)
+	    {
+		matrix_t expect = {
+		    xx = s, yx = 0,
+		    xy = 0, yy = s,
+		    x0 = 0, y0 = 0
+		};
+		save (cr);
+		scale (cr, s, s);
+		matrix_t m = get_matrix (cr);
+		restore (cr);
+		test_check (m == expect,
+			    "get_matrix returned wrong matrix");
+	    }
 	}
-    }
+    },
+    {
+	name = "get-font-matrix",
+	test = void func (cairo_t cr) {
+	    for (real s = 1; s < 30; s++)
+	    {
+		matrix_t expect = {
+		    xx = s, yx = 0,
+		    xy = 0, yy = s,
+		    x0 = 0, y0 = 0
+		};
+		set_font_size (cr, s);
+		matrix_t m = get_font_matrix (cr);
+		test_check (m == expect,
+			    "get_font_matrix returned wrong matrix");
+	    }
+	}
+    },
+    {
+	name = "font-extents",
+	test = void func (cairo_t cr) {
+	    font_extents_t  expect = {
+		ascent = 12, descent = 3, height = 14,
+		max_x_advance = 16, max_y_advance = 0
+	    };
+	    set_font (cr, "Bitstream Vera Sans-12");
+	    test_check (font_extents(cr) == expect,
+			"font_extents returned wrong value");
+	}
+    },
+    
 };
 
 bool
@@ -301,10 +448,10 @@ run_image_test (image_test_t t, string srcdir)
 		    int	mask = t.format == format_t.RGB ? 0xffffff : ~0;
 
 		    test_check (Surface::width (out) == Surface::width (ref),
-				"width mismatch %d != %d", Surface::width(out),
+				"width mismatch %g != %g", Surface::width(out),
 				Surface::width (ref));
 		    test_check (Surface::height (out) == Surface::height (ref),
-				"height mismatch %d != %d", Surface::height(out),
+				"height mismatch %g != %g", Surface::height(out),
 				Surface::height (ref));
 		    for (int y = 0; y < Surface::height (ref); y++)
 			for (int x = 0; x < Surface::width (ref); x++) {
