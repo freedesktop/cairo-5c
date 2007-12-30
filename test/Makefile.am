@@ -28,7 +28,8 @@ REFPNG=\
 	set-tolerance-ref.png \
 	show-text-ref.png \
 	stroke-extents-ref.png \
-	stroke-preserve-ref.png
+	stroke-preserve-ref.png \
+	text-path-ref.png
 
 TESTS_ENVIRONMENT=SRCDIR="$(srcdir)" NICKLEPATH="$(top_srcdir):@NICKLE_PATH@" LD_LIBRARY_PATH=../src/.libs nickle
 

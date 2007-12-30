@@ -576,6 +576,18 @@ image_test_t[] image_tests = {
 	}
     },
     {
+	name = "text-path",
+	format = format_t.ARGB,
+	paint = void func (cairo_t cr) {
+	    move_to (cr, 10, 40);
+	    set_font (cr, font_name);
+	    set_font_size (cr, 30);
+	    text_path (cr, "Hello.");
+	    set_line_width (cr, 1);
+	    stroke (cr);
+	}
+    },
+    {
 	name = "create-rgba",
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
