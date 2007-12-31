@@ -88,6 +88,14 @@ configure_event (GtkWidget *widget, GdkEventConfigure *event)
 	gdk_drawable_unref (c5s->u.window.pixmap);
     }
     c5s->u.window.pixmap = pixmap;
+    if (c5s->u.window.send_events && event)
+    {
+	gdk_threads_leave ();
+	fprintf (c5s->u.window.send_events, "%d configure %d %d %d %d\n",
+		 0, event->x, event->y, event->width, event->height);
+	fflush (c5s->u.window.send_events);
+	gdk_threads_enter ();
+    }
     return TRUE;
 }
 
