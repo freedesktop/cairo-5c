@@ -1,0 +1,475 @@
+/*
+ * Copyright © 2007 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
+
+/*
+ * tic-tac-toe, three in a row.
+ */
+
+autoimport Cairo;
+autoimport PRNG;
+
+srandom (time());
+
+typedef int piece_t;
+
+piece_t piece__ = 0;
+piece_t piece_x = 1;
+piece_t piece_o = 2;
+
+int size = 3;
+
+typedef piece_t[size,size] board_t;
+
+typedef struct {
+    int x, y;
+} position_t;
+
+typedef union {
+    void    playing;
+    struct {
+	piece_t	    winner;
+	position_t  p1, p2;
+    } finished;
+} status_t;
+
+typedef struct {
+    cairo_t	cr;
+    board_t	board;
+    status_t	status;
+    piece_t	turn;
+    file	event;
+} game_t;
+
+void
+set_color (cairo_t cr, piece_t piece)
+{
+    switch (piece) {
+    case piece_x:
+	set_source_rgba (cr, 1, 0, 0, 1);
+	break;
+    case piece_o:
+	set_source_rgba (cr, 0, 0, 1, 1);
+	break;
+    case piece__:
+	break;
+    }
+}
+
+void
+start_draw (cairo_t cr)
+{
+    disable (cr);
+    save (cr);
+    scale (cr, width (cr), height (cr));
+    set_source_rgba (cr, 1, 1, 1, 1);
+    paint (cr);
+    set_line_width (cr, 0.05);
+    set_line_cap (cr, line_cap_t.ROUND);
+}
+
+void
+end_draw (cairo_t cr)
+{
+    restore (cr);
+    enable (cr);
+}
+
+void
+grid (cairo_t cr)
+{
+    set_source_rgba (cr, 0, 0, 0, 1);
+    for (real line = 0; line < size - 1; line++)
+    {
+	move_to (cr, (line + 1) / size, .05);
+	line_to (cr, (line + 1) / size, .95);
+	move_to (cr, .05, (line + 1) / size);
+	line_to (cr, .95, (line + 1) / size);
+    }
+    stroke (cr);
+}
+
+void
+pieces (cairo_t cr, &board_t board)
+{
+    for (int y = 0; y < size; y++)
+	 for (int x = 0; x < size; x++)
+	 {
+	    save (cr);
+	    translate (cr, (x + 1/2) / size, (y + 1/2) / size);
+	    scale (cr, 1/(size * 5/3), 1/(size * 5/3));
+	    switch (board[y,x]) {
+	    case piece__:
+		break;
+	    case piece_x:
+		move_to (cr, -.5, -.5);
+		line_to (cr, .5, .5);
+		move_to (cr, .5, -.5);
+		line_to (cr, -.5, .5);
+		break;
+	    case piece_o:
+		arc (cr, 0, 0, 0.5, 0, 2 * pi);
+		break;
+	    }
+	    restore (cr);
+	    set_color (cr, board[y,x]);
+	    stroke (cr);
+	 }
+}
+
+void
+win_line (cairo_t cr, &status_t status)
+{
+    union switch (status) {
+    case finished f:
+	if (f.winner == piece__)
+	    break;
+	set_color (cr, f.winner);
+	real x1, x2, y1, y2;
+	if (f.p1.x == f.p2.x)
+	    x2 = x1 = (f.p1.x + .5) / size;
+	else {
+	    if (f.p1.x < f.p2.x) {
+		x1 = f.p1.x / size + 0.05;
+		x2 = (f.p2.x + 1) / size - 0.05;
+	    } else {
+		x1 = (f.p1.x + 1) / size - 0.05;
+		x2 = f.p2.x / size + 0.05;
+	    }
+	}
+	if (f.p1.y == f.p2.y)
+	    y2 = y1 = (f.p1.y + .5) / size;
+	else {
+	    y1 = f.p1.y / size + 0.05;
+	    y2 = (f.p2.y + 1) / size - 0.05;
+	}
+	move_to (cr, x1, y1);
+	line_to (cr, x2, y2);
+	stroke (cr);
+	break;
+    case playing:
+	break;
+    }
+}
+
+void
+draw (&game_t game)
+{
+    cairo_t cr = game.cr;
+    
+    start_draw (cr);
+    grid (cr);
+    pieces (cr, &game.board);
+    win_line (cr, &game.status);
+    end_draw (cr);
+}
+
+void
+draw_board (cairo_t cr, &board_t board)
+{
+    start_draw (cr);
+    grid (cr);
+    pieces (cr, &board);
+    end_draw (cr);
+}
+
+status_t
+winner (&board_t board)
+{
+    position_t	p1, p2;
+    
+    bool three_in_a_row (piece_t piece, position_t p, position_t d) {
+	p1 = p;
+	for (int i = 0; i < size; i++) {
+	    if (board[p.y,p.x] != piece)
+		return false;
+	    p2 = p;
+	    p.x += d.x;
+	    p.y += d.y;
+	}
+	return true;
+    }
+    
+    static piece_t[*] pieces = { piece_x, piece_o };
+    
+    status_t make_winner (piece_t piece) {
+	return (status_t) { finished = { winner = piece, p1 = p1, p2 = p2 } };
+    }
+
+    position_t make_pos (x, y) = (position_t) { x = x, y = y };
+    
+    for (int p = 0; p < dim (pieces); p++) {
+	piece_t piece = pieces[p];
+	for (int l = 0; l < size; l++) {
+	    if (three_in_a_row (piece, make_pos (l, 0), make_pos (0, 1)))
+		return make_winner (piece);
+	    if (three_in_a_row (piece, make_pos (0, l), make_pos (1, 0)))
+		return make_winner (piece);
+	}
+	if (three_in_a_row (piece, make_pos (0, 0), make_pos (1, 1)))
+	    return make_winner (piece);
+	if (three_in_a_row (piece, make_pos (size - 1, 0), make_pos (-1, 1)))
+	    return make_winner (piece);
+    }
+    for (int y = 0; y < size; y++)
+	for (int x = 0; x < size; x++)
+	    if (board[y,x] == piece__)
+		return (status_t) { playing = ◊ };
+    return make_winner (piece__);
+}
+
+bool move (&board_t board, int x, int y, piece_t piece)
+{
+    if (board[y,x] != piece__)
+	return false;
+    board[y,x] = piece;
+    return true;
+}
+
+piece_t
+other_player (piece_t piece)
+{
+    if (piece == piece_x)
+	return piece_o;
+    return piece_x;
+}
+
+
+int
+score (&board_t board, piece_t turn)
+{
+    status_t	status = winner (&board);
+
+    union switch (status) {
+    case playing:
+	return 0;
+    case finished f:
+	if (f.winner == piece__)
+	    return -2;
+	else if (f.winner == turn)
+	    return 1;
+	else
+	    return -1;
+    }
+}
+
+typedef struct {
+    position_t	position;
+    int		score;
+} move_t;
+
+void indent (int level)
+{
+    while (level-- > 0)
+	putchar (' ');
+}
+
+void
+print_board (int level, &board_t board)
+{
+    for (int y = 0; y < size; y++) {
+	indent (level);
+	for (int x = 0; x < size; x++)
+	    switch (board[y,x]) {
+	    case piece_x: printf ("X "); break;
+	    case piece_o: printf ("O "); break;
+	    case piece__: printf (". "); break;
+	    }
+	printf ("\n");
+    }
+}
+
+int moves = 0;
+int memos = 0;
+int rands = 0;
+
+move_t[board_t] memo;
+
+void reset_stats () {
+    moves = 0;
+    memos = 0;
+    rands = 0;
+}
+
+void show_stats () {
+	printf ("%d moves %d memos %d rands\n", moves, memos, rands);
+}
+    
+bool
+pick_random () {
+    ++rands;
+    return randbits(1) != 0;
+}
+
+move_t
+best_move (&board_t board, piece_t turn)
+{
+    ++moves;
+
+    move_t  best = {
+	position = { x = -1, y = -1 },
+	score = score(&board, turn)
+    };
+    
+    if (best.score != 0) {
+	if (best.score == -2)
+	    best.score = 0;
+	return best;
+    }
+    
+    if (hash_test (memo, board))
+    {
+	++memos;
+	return memo[board];
+    }
+    
+    piece_t next_turn = other_player (turn);
+    
+    best.score = -2;
+    for (int y = 0; y < size; y++)
+	for (int x = 0; x < size; x++) {
+	    if (move (&board, x, y, turn)) {
+		move_t next = best_move (&board, next_turn);
+		if (-next.score > best.score || 
+		    -next.score == best.score && pick_random())
+		{
+		    best.position.x = x;
+		    best.position.y = y;
+		    best.score = -next.score;
+		}
+		board[y,x] = piece__;
+	    }
+	}
+    
+    board_t copy = board;
+    memo[copy] = best;
+    return best;
+}
+
+void reset_game (&game_t game)
+{
+    game.board = (board_t) { { piece__ ... } ... };
+    game.status.playing = ◊;
+    game.turn = piece_x;
+}
+
+void play (cairo_t cr)
+{
+    game_t  game = {
+	cr = cr,
+	board = { { piece__ ... } ... },
+	status = { playing = ◊ },
+	turn = piece_x,
+	event = open_event (cr)
+    };
+
+    void find_square (cairo_t cr, real x, real y, *int sxp, *int syp) {
+	save (cr);
+	scale (cr, width (cr), height (cr));
+	point_t a = device_to_user (cr, (point_t) {x = x, y = y});
+    	*sxp = floor (a.x * size);
+    	*syp = floor (a.y * size);
+	restore (cr);
+    }
+    
+    draw (&game);
+
+    for (;;) {
+	if (game.turn == piece_x || game.status != status_t.playing) {
+	    if (File::end (game.event))
+		break;
+	    string	line = File::fgets (game.event);
+	    file	l = File::string_read (line);
+	    int	down_x, down_y;
+	    int	up_x, up_y;
+
+	    File::fscanf (l, "%d %s", &(int time), &(string name));
+
+	    switch (name) {
+	    case "press":
+		File::fscanf (l, "%d %d %d",
+			      &(int button), &(real x), &(real y));
+		switch (button) {
+		case 1:
+		    find_square (cr, x, y, &down_x, &down_y);
+		    break;
+		}
+		break;
+	    case "release":
+		File::fscanf (l, "%d %d %d",
+			      &(int button), &(real x), &(real y));
+		if (game.status != status_t.playing) {
+		    reset_game (&game);
+		    draw (&game);
+		} else {
+		    find_square (cr, x, y, &up_x, &up_y);
+		    if (down_x == up_x && down_y == up_y)
+		    {
+			if (move (&game.board, up_x, up_y, game.turn)) {
+			    game.turn = other_player (game.turn);
+			    game.status = winner (&game.board);
+			    draw (&game);
+			}
+		    }
+		}
+		break;
+	    case "delete":
+		exit (0);
+		break;
+	    case "configure":
+		draw (&game);
+		break;
+	    default:
+		break;
+	    }
+	} else {
+	    printf ("thinking...\n");
+	    reset_stats ();
+	    move_t computer = best_move (&game.board, game.turn);
+	    assert (computer.position.x != -1, "no move");
+	    show_stats ();
+	    printf ("best move %d,%d score %d\n",
+		    computer.position.x, computer.position.y,
+		    computer.score);
+	    if (move (&game.board, computer.position.x, computer.position.y,
+		      game.turn)) 
+	    {
+		game.turn = other_player (game.turn);
+		game.status = winner (&game.board);
+		draw (&game);
+	    }
+	}
+    }
+}
+
+play (create (Surface::create_window ("Tic Tac Toe", 0, 0)));
