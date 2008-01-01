@@ -34,7 +34,7 @@
  */
 
 if (!Command::valid_name ((string[]) { "Cairo" }))
-    Foreign::load ("libcairo5c.so");
+    Foreign::load ("libcairo-5c.so.0");
 
 extend namespace Cairo {
     
