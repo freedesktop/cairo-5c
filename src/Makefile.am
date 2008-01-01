@@ -33,7 +33,7 @@
 #       Keith Packard <keithp@keithp.com>
 #
 
-libcairo5c_la_SOURCES = \
+libcairo_5c_la_SOURCES = \
 	cairo-5c.h \
 	init.c \
 	cairo.c \
@@ -46,9 +46,9 @@ libcairo5c_la_SOURCES = \
 	surface.c \
 	text.c
 
-lib_LTLIBRARIES = libcairo5c.la
+lib_LTLIBRARIES = libcairo-5c.la
 
-libcairo5c_la_LIBADD = $(CAIRO_5C_LIBS)
+libcairo_5c_la_LIBADD = $(CAIRO_5C_LIBS)
 
 AM_CFLAGS=$(WARN_CFLAGS) $(CAIRO_5C_CFLAGS)
 
