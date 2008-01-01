@@ -53,7 +53,7 @@ binary-arch: build install
 	dh_strip
 	dh_compress
 	dh_fixperms
-	dh_makeshlibs -p libcairo-5c0
+	dh_makeshlibs -p libcairo5c-0
 	dh_installdeb
 	dh_shlibdeps
 	dh_gencontrol

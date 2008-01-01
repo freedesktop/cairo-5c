@@ -8,11 +8,11 @@ Standards-Version: 3.7.3
 Package: cairo-5c
 Section: interpreters
 Architecture: any
-Depends: ${misc:Depends}, nickle, libcairo-5c0
+Depends: ${misc:Depends}, nickle, libcairo5c-0
 Description: nickle bindings for the cairo graphics library
  This package contains the nickle code to load and use the cairo-5c library
 
-Package: libcairo-5c0
+Package: libcairo5c-0
 Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
