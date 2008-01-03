@@ -183,9 +183,23 @@ button_press_event( GtkWidget *widget, GdkEventButton *event )
     
     if (c5s->u.window.send_events)
     {
+	char	*extended_type;
+
+	switch (event->type) {
+	case GDK_2BUTTON_PRESS:
+	    extended_type = "double-";
+	    break;
+	case GDK_3BUTTON_PRESS:
+	    extended_type = "triple-";
+	    break;
+	default:
+	    extended_type = "";
+	    break;
+	}
 	gdk_threads_leave ();
-	fprintf (c5s->u.window.send_events, "%d press %d %g %g\n",
-		 event->time, event->button, event->x, event->y);
+	fprintf (c5s->u.window.send_events, "%d %spress %d %g %g\n",
+		 event->time, extended_type,
+		 event->button, event->x, event->y);
 	fflush (c5s->u.window.send_events);
 	gdk_threads_enter ();
     }
