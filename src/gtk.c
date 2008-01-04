@@ -225,6 +225,80 @@ button_release_event( GtkWidget *widget, GdkEventButton *event )
     return FALSE;
 }
 
+static gboolean
+key_press_event( GtkWidget *widget, GdkEventKey *event )
+{
+    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
+    
+    if (c5s->u.window.send_events)
+    {
+	gchar	*string = event->string;
+	int	n = event->length;
+	gdk_threads_leave ();
+	fprintf (c5s->u.window.send_events, "%d key-down %s ",
+		 event->time, gdk_keyval_name (event->keyval));
+	while (n--)
+	    fprintf (c5s->u.window.send_events, "%02x", *string++);
+        fprintf (c5s->u.window.send_events, "\n");
+	fflush (c5s->u.window.send_events);
+	gdk_threads_enter ();
+    }
+    return FALSE;
+}
+
+static gboolean
+key_release_event( GtkWidget *widget, GdkEventKey *event )
+{
+    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
+    
+    if (c5s->u.window.send_events)
+    {
+	gchar	*string = event->string;
+	int	n = event->length;
+	gdk_threads_leave ();
+	fprintf (c5s->u.window.send_events, "%d key-up %s ",
+		 event->time, gdk_keyval_name (event->keyval));
+	while (n--)
+	    fprintf (c5s->u.window.send_events, "%02x", *string++);
+        fprintf (c5s->u.window.send_events, "\n");
+	fflush (c5s->u.window.send_events);
+	gdk_threads_enter ();
+    }
+    return FALSE;
+}
+
+static gboolean
+focus_in_event ( GtkWidget *widget, GdkEventFocus *event )
+{
+    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
+    
+    if (c5s->u.window.send_events)
+    {
+	gdk_threads_leave ();
+	fprintf (c5s->u.window.send_events, "%d focus-in\n",
+		 0);
+	fflush (c5s->u.window.send_events);
+	gdk_threads_enter ();
+    }
+    return FALSE;
+}
+
+static gboolean
+focus_out_event ( GtkWidget *widget, GdkEventFocus *event )
+{
+    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
+    
+    if (c5s->u.window.send_events)
+    {
+	gdk_threads_leave ();
+	fprintf (c5s->u.window.send_events, "%d focus-out\n",
+		 0);
+	fflush (c5s->u.window.send_events);
+	gdk_threads_enter ();
+    }
+    return FALSE;
+}
+
 /*
  * Called from signal handler with lock held
  */
@@ -425,6 +499,8 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height
     
     tool->drawing_area = gtk_drawing_area_new ();
     
+    GTK_WIDGET_SET_FLAGS (tool->drawing_area, GTK_CAN_FOCUS);
+    
     GTK_DRAWING_AREA (tool->drawing_area)->draw_data = c5s;
     
     gtk_container_add (GTK_CONTAINER(tool->window), tool->drawing_area);
@@ -441,18 +517,30 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height
 		      (GtkSignalFunc) button_press_event, NULL);
     g_signal_connect (GTK_OBJECT (tool->drawing_area), "button_release_event",
 		      (GtkSignalFunc) button_release_event, NULL);
+    g_signal_connect (GTK_OBJECT (tool->drawing_area), "key_press_event",
+		      (GtkSignalFunc) key_press_event, NULL);
+    g_signal_connect (GTK_OBJECT (tool->drawing_area), "key_release_event",
+		      (GtkSignalFunc) key_release_event, NULL);
+    g_signal_connect (GTK_OBJECT (tool->drawing_area), "focus_in_event",
+		      (GtkSignalFunc) focus_in_event, NULL);
+    g_signal_connect (GTK_OBJECT (tool->drawing_area), "focus_out_event",
+		      (GtkSignalFunc) focus_out_event, NULL);
 
     gtk_widget_set_events (tool->drawing_area, GDK_EXPOSURE_MASK
 			   | GDK_LEAVE_NOTIFY_MASK
 			   | GDK_BUTTON_PRESS_MASK
 			   | GDK_BUTTON_RELEASE_MASK
-			   | GDK_POINTER_MOTION_MASK);
+			   | GDK_POINTER_MOTION_MASK
+			   | GDK_KEY_PRESS_MASK
+			   | GDK_KEY_RELEASE_MASK 
+			   | GDK_FOCUS_CHANGE_MASK );
 
     gtk_widget_realize (tool->window);
     gtk_widget_realize (tool->drawing_area);
     gdk_window_set_back_pixmap (GTK_WIDGET(tool->drawing_area)->window, NULL, FALSE);
     gtk_widget_show (tool->drawing_area);
     gtk_widget_show (tool->window);
+    gtk_widget_grab_focus (tool->drawing_area);
     /* create the pixmap */
     configure_event (tool->drawing_area, 0);
     
