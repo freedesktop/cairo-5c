@@ -557,8 +557,8 @@ nickle_init (void)
 	    "\n"
 	    " Returns the current path\n" },
 
-	{ do_Cairo_copy_path_flat, "copy_path_flat", PATH_S, CAIRO_S, "\n"
-	    " path_t[*] copy_path (cairo_t cr)\n"
+	{ do_Cairo_copy_path_flat, "copy_path_flat", "A*" PATH_S, CAIRO_S, "\n"
+	    " path_t[*] copy_path_flat (cairo_t cr)\n"
 	    "\n"
 	    " Returns the current path with curves tesselated to lines\n" },
 	
