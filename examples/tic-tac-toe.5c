@@ -64,11 +64,20 @@ typedef union {
 } status_t;
 
 typedef struct {
-    cairo_t	cr;
-    board_t	board;
-    status_t	status;
-    piece_t	turn;
-    file	event;
+    string  label;
+    real    position;
+    real    width;
+    bool    pressed;
+    void()  activate;
+} widget_t;
+
+typedef struct {
+    cairo_t	    cr;
+    board_t	    board;
+    status_t	    status;
+    piece_t	    turn;
+    file	    event;
+    widget_t[...]   widgets;
 } game_t;
 
 void
@@ -86,23 +95,86 @@ set_color (cairo_t cr, piece_t piece)
     }
 }
 
+real game_part = .9;
+
+void
+scale_board (cairo_t cr)
+{
+    translate (cr, 0, (1 - game_part) * height (cr));
+    scale (cr, width (cr), height (cr) * game_part);
+}
+
 void
 start_draw (cairo_t cr)
 {
-    disable (cr);
-    save (cr);
-    scale (cr, width (cr), height (cr));
     set_source_rgba (cr, 1, 1, 1, 1);
     paint (cr);
+    
+    save (cr);
+    scale_board (cr);
     set_line_width (cr, 0.05);
     set_line_cap (cr, line_cap_t.ROUND);
+}
+
+string widget_font = "Frutiger-0.07:Bold";
+
+void
+start_widgets (cairo_t cr)
+{
+    save (cr);
+    scale (cr, width (cr), height (cr));
+    set_font (cr, widget_font);
+}
+
+void
+end_widgets (cairo_t cr)
+{
+    restore (cr);
 }
 
 void
 end_draw (cairo_t cr)
 {
     restore (cr);
-    enable (cr);
+}
+
+void
+draw_widget (cairo_t cr, &widget_t widget)
+{
+    save (cr);
+    translate (cr, widget.position, 0);
+    
+    text_extents_t text = text_extents (cr, widget.label);
+    font_extents_t font = font_extents (cr);
+    
+    real height = 1 - game_part;
+    real pad = (height - font.height) / 2;
+    
+    widget.width = pad + text.width + pad;
+    
+    if (widget.pressed) {
+	rectangle (cr, 0, 0, widget.width, height);
+	set_source_rgba (cr, 0, 0, .5, .25);
+	fill (cr);
+    }
+    move_to (cr, pad - text.x_bearing, pad + font.height);
+    set_source_rgba (cr, 0, 0, 0, 1);    
+    show_text (cr, widget.label);
+    restore (cr);
+}
+
+void
+draw_widgets (cairo_t cr, &game_t game)
+{
+    real    space = 0.02;
+    real    x = space;
+    
+    for (int i = 0; i < dim (game.widgets); i++)
+    {
+	game.widgets[i].position = x;
+	draw_widget (cr, &game.widgets[i]);
+	x += game.widgets[i].width + space * 2;
+    }
 }
 
 void
@@ -187,20 +259,30 @@ draw (&game_t game)
 {
     cairo_t cr = game.cr;
     
+    disable (cr);
+
     start_draw (cr);
     grid (cr);
     pieces (cr, &game.board);
     win_line (cr, &game.status);
     end_draw (cr);
+
+    start_widgets (cr);
+    draw_widgets (cr, &game);
+    end_widgets (cr);
+    
+    enable (cr);
 }
 
 void
 draw_board (cairo_t cr, &board_t board)
 {
+    disable (cr);
     start_draw (cr);
     grid (cr);
     pieces (cr, &board);
     end_draw (cr);
+    enable (cr);
 }
 
 status_t
@@ -383,6 +465,41 @@ void reset_game (&game_t game)
     game.turn = piece_x;
 }
 
+int
+find_widget (cairo_t cr, &game_t game, real x)
+{
+    save (cr);
+    scale (cr, width (cr), height (cr));
+    point_t a = device_to_user (cr, (point_t) { x = x, y = 0 });
+    restore (cr);
+    x = a.x;
+    for (int w = 0; w < dim (game.widgets); w++)
+	if (game.widgets[w].position <= x && x < game.widgets[w].position +
+	    game.widgets[w].width)
+	{
+	    return w;
+	}
+    return -1;
+}
+
+void
+press_widget (cairo_t cr, &game_t game, real x)
+{
+    int	w = find_widget (cr, &game, x);
+    if (w >= 0)
+	game.widgets[w].pressed = true;
+}
+
+void
+release_widget (cairo_t cr, &game_t game, real x)
+{
+    int	w = find_widget (cr, &game, x);
+    if (w >= 0 && game.widgets[w].pressed)
+	game.widgets[w].activate ();
+    for (w = 0; w < dim (game.widgets); w++)
+	game.widgets[w].pressed = false;
+}
+
 void play (cairo_t cr)
 {
     game_t  game = {
@@ -390,12 +507,29 @@ void play (cairo_t cr)
 	board = { { piece__ ... } ... },
 	status = { playing = ◊ },
 	turn = piece_x,
-	event = open_event (cr)
+	event = open_event (cr),
+	widgets = {
+	    {
+		label = "new",
+		pressed = false,
+		activate = void func () {
+		    reset_game (&game);
+		}
+	    },
+	    { 
+		label = "quit",
+		pressed = false,
+		activate = void func () {
+		    exit (0);
+		}
+	    }
+	}
+	    
     };
 
     void find_square (cairo_t cr, real x, real y, *int sxp, *int syp) {
 	save (cr);
-	scale (cr, width (cr), height (cr));
+	scale_board (cr);
 	point_t a = device_to_user (cr, (point_t) {x = x, y = y});
     	*sxp = floor (a.x * size);
     	*syp = floor (a.y * size);
@@ -424,24 +558,32 @@ void play (cairo_t cr)
 		    find_square (cr, x, y, &down_x, &down_y);
 		    break;
 		}
+		if (down_y < 0) {
+		    press_widget (cr, &game, x);
+		    draw (&game);
+		}
 		break;
 	    case "release":
 		File::fscanf (l, "%d %d %d",
 			      &(int button), &(real x), &(real y));
-		if (game.status != status_t.playing) {
-		    reset_game (&game);
-		    draw (&game);
-		} else {
-		    find_square (cr, x, y, &up_x, &up_y);
-		    if (down_x == up_x && down_y == up_y)
+		find_square (cr, x, y, &up_x, &up_y);
+		if (up_y < 0)
+		{
+		    release_widget (cr, &game, x);
+		}
+		else 
+		{
+		    release_widget (cr, &game, -1);
+		    if (game.status == status_t.playing && 
+			down_x == up_x && down_y == up_y)
 		    {
 			if (move (&game.board, up_x, up_y, game.turn)) {
 			    game.turn = other_player (game.turn);
 			    game.status = winner (&game.board);
-			    draw (&game);
 			}
 		    }
 		}
+		draw (&game);
 		break;
 	    case "delete":
 		exit (0);
@@ -472,4 +614,8 @@ void play (cairo_t cr)
     }
 }
 
-play (create (Surface::create_window ("Tic Tac Toe", 0, 0)));
+int size = 200;
+
+play (create (Surface::create_window ("Tic Tac Toe",
+				      size,
+				      floor (size / game_part + 0.5))));
