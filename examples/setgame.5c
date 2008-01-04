@@ -1,0 +1,532 @@
+/*
+ * Copyright © 2008 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
+
+/*
+ * Carl Worth wrote a C program to play the same game, with a slightly
+ * different user interface. This program doesn't use any of the code, but
+ * borrows some of the ideas for drawing the cards.
+ */
+ 
+autoimport Cairo;
+autoimport PRNG;
+
+dev_srandom (32);
+
+/*
+ * Set cards come in three colors
+ */
+typedef enum { red, green, purple } color_t;
+color_t[*] colors = { color_t.red, color_t.green, color_t.purple };
+
+/*
+ * with three patterns,
+ */
+typedef enum { empty, striped, solid } pat_t;
+pat_t[*] pats = { pat_t.empty, pat_t.striped, pat_t.solid };
+
+/*
+ * three shapes
+ */
+typedef enum { diamond, oval, squiggle } shape_t;
+shape_t[*] shapes = { shape_t.diamond, shape_t.oval, shape_t.squiggle };
+
+/*
+ * and three colors
+ */
+rgb_color_t[color_t] rgb_colors = {
+    color_t.red => (rgb_color_t) { red = 0.8, green = 0, blue = 0 },
+    color_t.green => (rgb_color_t) { red = 0, green = 0.6, blue = 0 },
+    color_t.purple => (rgb_color_t) { red = 0.6, green = 0, blue = 0.7 },
+};
+
+typedef struct {
+    color_t color;
+    pat_t pat;
+    shape_t shape;
+    int number;
+} card_t;
+
+/*
+ * Construct a path for the object shape
+ */
+void
+draw_shape (cairo_t cr, shape_t shape)
+{
+    enum switch (shape) {
+    case diamond:
+	move_to (cr, 0.0, -0.5);
+	line_to (cr, 0.5, 0.0);
+	line_to (cr, 0.0, 0.5);
+	line_to (cr, -0.5, 0.0);
+	close_path (cr);
+	break;
+    case oval:
+	arc (cr, 0, 0, 0.5, 0, 2 * pi);
+	break;
+    case squiggle:
+	real sqf = 0.75;
+	move_to (cr, 0.25, -0.5);
+	curve_to (cr,
+		  0.25 + sqf, sqf / 3.0 - 0.5,
+		  0.25 - sqf, 0.5 - (sqf / 3.0),
+		  0.25, 0.5);
+	line_to (cr, -0.25, 0.5);
+	curve_to (cr,
+		  -0.25 - sqf, 0.5 - (sqf / 3.0),
+		  -0.25 + sqf, sqf / 3.0 - 0.5,
+		  -0.25, -0.5);
+	close_path (cr);
+	break;
+    }
+}
+
+void
+set_color (cairo_t cr, color_t color) {
+    rgb_color_t	rgb = rgb_colors[color];
+    set_source_rgb (cr, rgb.red, rgb.green, rgb.blue);
+}
+
+void
+set_transform (cairo_t cr, int n, &card_t card) {
+    translate (cr, .5, .5);
+    scale (cr, .9, .9);
+    scale (cr, 1/3, 1);
+    translate (cr, -(card.number + 1) / 2 + n, 0);
+    if (card.pat == pat_t.empty)
+	scale (cr, 0.81, 0.81);
+    else
+	scale (cr, 0.9, 0.9);
+}
+
+void
+draw_card (cairo_t cr, &card_t card) {
+    set_line_join (cr, line_join_t.MITER);
+    set_miter_limit (cr, 100);
+    set_source_rgb (cr, 1, 1, 1);
+    rectangle (cr, 0, 0, 1, 1);
+    fill (cr);
+    set_source_rgb (cr, 0, 0, 0);
+    set_fill_rule (cr, fill_rule_t.EVEN_ODD);
+    rectangle (cr, 0, 0, 1, 1);
+    rectangle (cr, .025, .025, .95, .95);
+    fill (cr);
+    for (int n = 1; n <= card.number; n++) {
+	save (cr);
+	set_transform (cr, n, &card);
+	draw_shape (cr, card.shape);
+	restore (cr);
+	enum switch (card.pat) {
+	case empty:
+	    set_line_width (cr, 0.05);
+	    set_color (cr, card.color);
+	    /* XXX work around bug in cairo 1.4.12 */
+	    set_tolerance (cr, 0.01);
+	    stroke (cr);
+	    break;
+	case solid:
+	    set_color (cr, card.color);
+	    fill (cr);
+	    break;
+	case striped:
+	    pattern_t stripes = Pattern::create_linear (0, 0, .05, .025);
+	    Pattern::add_color_stop_rgba (stripes, 0.0, 0, 0, 0, 0);
+	    Pattern::set_extend (stripes, Pattern::extend_t.REPEAT);
+	    
+	    rgb_color_t	rgb = rgb_colors[card.color];
+	    Pattern::add_color_stop_rgb (stripes, 0.3,
+					 rgb.red, rgb.green, rgb.blue);
+	    Pattern::add_color_stop_rgb (stripes, 0.7,
+					 rgb.red, rgb.green, rgb.blue);
+	    Pattern::add_color_stop_rgba (stripes, 1.0, 0, 0, 0, 0);
+	    set_source (cr, stripes);
+	    fill (cr);
+	    break;
+	}
+    }
+}
+
+typedef card_t[...] deck_t;
+
+deck_t
+make_deck () {
+    deck_t  deck;
+    int	    d = 0;
+
+    for (int n = 1; n <= 3; n++)
+	for (int c = 0; c < dim (colors); c++)
+	    for (int p = 0; p < dim (pats); p++)
+		for (int s = 0; s < dim (shapes); s++) {
+		    card_t card = (card_t) {
+			number = n,
+			color = colors[c],
+			shape = shapes[s],
+			pat = pats[p]
+		    };
+		    deck[d++] = card;
+		}
+    shuffle (&deck);
+    return deck;
+}
+
+typedef struct {
+    card_t  card;
+    bool    highlight;
+} board_card_t;
+
+typedef union {
+    void	    empty;
+    board_card_t    card;
+} board_spot_t;
+    
+typedef board_spot_t[4,3] board_t;
+
+board_t make_board () = (board_t) { { { empty = ◊ } ... } ... };
+
+void
+fill_board (&board_t board, &deck_t deck)
+{
+    int[2] d = dims (board);
+
+    for (int y = 0; y < d[0]; y++)
+	for (int x = 0; x < d[1]; x++)
+	    if (board[y,x] == board_spot_t.empty && dim(deck) > 0) {
+		board[y,x].card = (board_card_t) {
+		    card = deck[dim(deck)-1],
+		    highlight = false
+		};
+		setdim (deck, dim(deck)-1);
+	    }
+}
+
+void
+draw_board (cairo_t cr, &board_t board)
+{
+    int[2] d = dims (board);
+    real xinc = width (cr) / d[0];
+    real yinc = height (cr) / d[1];
+
+    disable (cr);
+    set_source_rgb (cr, 1, 1, 1);
+    paint (cr);
+    save (cr);
+    scale (cr, width(cr) / d[1], height(cr) / d[0]);
+    for (int y = 0; y < d[0]; y++)
+	for (int x = 0; x < d[1]; x++) {
+	    save (cr);
+	    translate (cr, x + 0.5, y + 0.5);
+	    scale (cr, 0.9, 0.9);
+	    translate (cr, -0.5, -0.5);
+	    enum switch (board[y,x]) {
+	    case empty:
+		break;
+	    case card c:
+		draw_card (cr, &c.card);
+		if (c.highlight) {
+		    set_source_rgba (cr, 0, 0, .5, 0.25);
+		    rectangle (cr, 0, 0, 1, 1);
+		    fill (cr);
+		}
+		break;
+	    }
+	    restore (cr);
+	}
+    restore (cr);
+    enable (cr);
+}
+
+int nset = 3;
+
+typedef struct {
+    cairo_t cr;
+    file    event;
+    board_t board;
+    deck_t  deck;
+    int	    nhighlight;
+} game_t;
+
+void highlight (&game_t game, int x, int y)
+{
+    enum switch (game.board[y,x]) {
+    case card:
+	if (game.board[y,x].card.highlight) {
+	    game.board[y,x].card.highlight = false;
+	    --game.nhighlight;
+	} else {
+	    if (game.nhighlight == nset)
+		break;
+	    game.board[y,x].card.highlight = true;
+	    ++game.nhighlight;
+	}
+	break;
+    case empty:
+	break;
+    }
+}
+
+(poly(card_t c))[*] getters = {
+    poly func (card_t c) = c.number,
+    poly func (card_t c) = c.color,
+    poly func (card_t c) = c.shape,
+    poly func (card_t c) = c.pat,
+};
+
+bool
+all_same (&card_t[*] c, poly(card_t c) f)
+{
+    for (int i = 1; i < dim (c); i++)
+	if (f(c[0]) != f(c[i]))
+	    return false;
+    return true;
+}
+
+bool
+all_different (&card_t[*] c, poly(card_t c) f)
+{
+    for (int j = 0; j < dim (c); j++)
+	for (int i = j+1; i < dim (c); i++)
+	    if (f(c[j]) == f(c[i]))
+		return false;
+    return true;
+}
+
+bool
+check_set (&card_t[*] c,  poly(card_t c) f)
+{
+    return all_same (&c, f) || all_different (&c, f);
+}
+
+bool
+is_set (&card_t[*] c)
+{
+    for (int g = 0; g < dim (getters); g++)
+	if (!check_set (&c, getters[g]))
+	    return false;
+
+    return true;
+}
+
+bool
+check_game (&game_t game)
+{
+    card_t[3]  cards;
+    
+    if (game.nhighlight != 3)
+	return false;
+    int c = 0;
+    int[2] d = dims(game.board);
+    for (int y = 0; y < d[0]; y++)
+	for (int x = 0; x < d[1]; x++)
+	    enum switch (game.board[y,x]) {
+	    case card:
+		if (game.board[y,x].card.highlight)
+		    cards[c++] = game.board[y,x].card.card;
+		break;
+	    case empty:
+		break;
+	    }
+    return is_set (&cards);
+}
+
+game_t
+make_game ()
+{
+    cairo_t cr = create (Surface::create_window ("Set", 0, 0));
+    game_t game = {
+	cr = cr,
+	event = open_event (cr),
+	deck = make_deck (),
+	board = make_board (),
+	nhighlight = 0
+    };
+    fill_board (&game.board, &game.deck);
+    return game;
+}
+
+void
+clear_highlight (&game_t game)
+{
+    int[2] d = dims (game.board);
+    game.nhighlight = 0;
+    for (int y = 0; y < d[0]; y++)
+	for (int x = 0; x < d[1]; x++)
+	    enum switch (game.board[y,x]) {
+	    case card:
+		if (game.board[y,x].card.highlight)
+		    game.board[y,x] = board_spot_t.empty;
+		break;
+	    case empty:
+		break;
+	    }
+}
+
+void
+new (&game_t game)
+{
+    int[2] d = dims (game.board);
+    for (int y = 0; y < d[0]; y++)
+	for (int x = 0; x < d[1]; x++)
+	    enum switch (game.board[y,x]) {
+	    case card:
+		game.deck[dim(game.deck)] = game.board[y,x].card.card;
+		break;
+	    case empty:
+		break;
+	    }
+    shuffle (&game.deck);
+    game.board = make_board ();
+    fill_board (&game.board, &game.deck);
+}
+
+void
+find_set (&game_t game)
+{
+    card_t[3]  cards;
+    int[2] d = dims(game.board);
+    struct {
+	int x;
+	int y;
+    } [d[0]*d[1]] order = {
+	[i] = { x = i // d[0], y = i % d[0] }
+    };
+    
+    bool get_card (int o, int c) {
+	enum switch (game.board[order[o].y, order[o].x]) {
+	case card:
+	    cards[c] = game.board[order[o].y, order[o].x].card.card;
+	    return true;
+	case empty:
+	    return false;
+	}
+    }
+    
+    void unhighlight () {
+	for (int y = 0; y < d[0]; y++)
+	    for (int x = 0; x < d[1]; x++)
+		enum switch (game.board[y,x]) {
+		case card:
+		    game.board[y,x].card.highlight = false;
+		    break;
+		case empty:
+		    break;
+		}
+	game.nhighlight = 0;
+    }
+    
+    for (int i = 0; i < dim (order); i++) {
+	if (!get_card (i, 0))
+	    continue;
+	for (int j = i + 1; j < dim (order); j++) {
+	    if (!get_card (j, 1))
+		continue;
+	    for (int k = j + 1; k < dim (order); k++) {
+		if (!get_card (k, 2))
+		    continue;
+		if (is_set (&cards))
+		{
+		    unhighlight ();
+		    highlight (&game, order[i].x, order[i].y);
+		    highlight (&game, order[j].x, order[j].y);
+		    highlight (&game, order[k].x, order[k].y);
+		    return;
+		}
+	    }
+	}
+    }
+}
+
+void
+play (&game_t game)
+{
+    bool redisplay = true;
+    
+    for (;;) {
+	if (redisplay) {
+	    draw_board (game.cr, &game.board);
+	    redisplay = false;
+	}
+	if (File::end (game.event))
+	    break;
+	
+	int[2] d = dims (game.board);
+
+	string	line = File::fgets (game.event);
+	file	l = File::string_read (line);
+
+	int time = 0;
+	string name = "";
+	
+	if (File::fscanf (l, "%d %s", &time, &name) != 2)
+	    continue;
+
+	switch (name) {
+	case "press":
+	    File::fscanf (l, "%d %d %d",
+			  &(int button), &(real x), &(real y));
+	    switch (button) {
+	    case 1:
+		int x_i = floor (x * d[1] / width (game.cr));
+		int y_i = floor (y * d[0] / height (game.cr));
+		line = "";
+		highlight (&game, x_i, y_i);
+		if (check_game (&game)) {
+		    clear_highlight (&game);
+		    fill_board (&game.board, &game.deck);
+		}
+		redisplay = true;
+		break;
+	    case 2:
+		new (&game);
+		redisplay = true;
+		break;
+	    case 3:
+		find_set (&game);
+		redisplay = true;
+		break;
+	    }
+	    break;
+	case "configure":
+	    redisplay = true;
+	    break;
+	case "motion":
+	    break;
+	case "delete":
+	    return;
+	default:
+	    break;
+	}
+    }
+}
+
+game_t g = make_game ();
+play (&g);
