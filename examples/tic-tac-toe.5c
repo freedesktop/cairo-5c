@@ -39,6 +39,11 @@
 autoimport Cairo;
 autoimport PRNG;
 
+/* Check nickle version; need 2.64 to work */
+File::sscanf (version, "%f", &(real rversion));
+if (rversion < 2.64)
+    File::fprintf (stderr, "Nickle version %s too old\n", version);
+
 srandom (time());
 
 typedef int piece_t;
@@ -55,6 +60,11 @@ typedef struct {
     int x, y;
 } position_t;
 
+/*
+ * Encode the current game state, which is
+ * either 'in progress' or 'player foo has
+ * won with pieces from p1 to p2'
+ */
 typedef union {
     void    playing;
     struct {
@@ -63,19 +73,36 @@ typedef union {
     } finished;
 } status_t;
 
+/*
+ * Provide some simple UI buttons
+ */
+typedef widget_t;
+
 typedef struct {
-    string  label;
-    real    position;
-    real    width;
-    bool    pressed;
-    void()  activate;
+    real width, height;
+} dimension_t;
+
+typedef struct {
+    real	    position;
+    real	    width;
+    bool	    pressed;
+    dimension_t(cairo_t, &widget_t)
+		    dimension;
+    void(cairo_t, &widget_t)
+		    draw;
+    void(&widget_t) activate;
+    poly	    data;
 } widget_t;
 
+/*
+ * Game state
+ */
 typedef struct {
     cairo_t	    cr;
     board_t	    board;
     status_t	    status;
     piece_t	    turn;
+    piece_t	    computer;
     file	    event;
     widget_t[...]   widgets;
 } game_t;
@@ -95,8 +122,15 @@ set_color (cairo_t cr, piece_t piece)
     }
 }
 
+/*
+ * use 90% of the application height for the game
+ * board, and 10% for the widgets
+ */
 real game_part = .9;
 
+/*
+ * Set up cr to draw the game board
+ */
 void
 scale_board (cairo_t cr)
 {
@@ -116,7 +150,7 @@ start_draw (cairo_t cr)
     set_line_cap (cr, line_cap_t.ROUND);
 }
 
-string widget_font = "Frutiger-0.07:Bold";
+string widget_font = "Bitstream Vera Sans-0.07:Bold";
 
 void
 start_widgets (cairo_t cr)
@@ -138,28 +172,73 @@ end_draw (cairo_t cr)
     restore (cr);
 }
 
+/*
+ * Widgets know how to size, draw and activate themselves
+ */
+widget_t
+create_widget (poly data,
+	       dimension_t (cairo_t, &widget_t) dimension,
+	       void (cairo_t, &widget_t) draw,
+	       void (&widget_t) activate)
+{
+    return (widget_t) {
+	pressed = false,
+	dimension = dimension,
+	draw = draw,
+	activate = activate,
+	data = data
+    };
+}
+
+/*
+ * Text widgets just paint a simple string label
+ */
+widget_t
+create_text_widget (string label, void(&widget_t) activate)
+{
+    return create_widget 
+    (label,
+     dimension_t func (cairo_t cr, &widget_t widget) {
+	text_extents_t text = text_extents (cr, widget.data);
+	font_extents_t font = font_extents (cr);
+	return (dimension_t) {
+	    width = text.width,
+	    height = font.height
+	};
+     },
+     void func (cairo_t cr, &widget_t widget) {
+	text_extents_t text = text_extents (cr, widget.data);
+	font_extents_t font = font_extents (cr);
+	set_source_rgba (cr, 0, 0, 0, 1);
+	move_to (cr, -text.x_bearing, font.height);
+	show_text (cr, widget.data);
+     },
+     activate);
+}
+
 void
 draw_widget (cairo_t cr, &widget_t widget)
 {
     save (cr);
     translate (cr, widget.position, 0);
     
-    text_extents_t text = text_extents (cr, widget.label);
-    font_extents_t font = font_extents (cr);
+    dimension_t	dimension = widget.dimension (cr, &widget);
     
     real height = 1 - game_part;
-    real pad = (height - font.height) / 2;
+    real pad = (height - dimension.height) / 2;
     
-    widget.width = pad + text.width + pad;
+    widget.width = pad + dimension.width + pad;
     
+    /*
+     * Draw a light blue background when pressed
+     */
     if (widget.pressed) {
 	rectangle (cr, 0, 0, widget.width, height);
 	set_source_rgba (cr, 0, 0, .5, .25);
 	fill (cr);
     }
-    move_to (cr, pad - text.x_bearing, pad + font.height);
-    set_source_rgba (cr, 0, 0, 0, 1);    
-    show_text (cr, widget.label);
+    translate (cr, pad, pad);
+    widget.draw (cr, &widget);
     restore (cr);
 }
 
@@ -178,7 +257,7 @@ draw_widgets (cairo_t cr, &game_t game)
 }
 
 void
-grid (cairo_t cr)
+draw_grid (cairo_t cr)
 {
     set_source_rgba (cr, 0, 0, 0, 1);
     for (real line = 0; line < size - 1; line++)
@@ -192,35 +271,50 @@ grid (cairo_t cr)
 }
 
 void
-pieces (cairo_t cr, &board_t board)
+draw_piece (cairo_t cr, piece_t piece)
+{
+    new_path (cr);
+    set_line_width (cr, 0.2);
+    set_line_cap (cr, line_cap_t.ROUND);
+    switch (piece) {
+    case piece__:
+	return;
+    case piece_x:
+	move_to (cr, -.4, -.4);
+	line_to (cr, .4, .4);
+	move_to (cr, .4, -.4);
+	line_to (cr, -.4, .4);
+	break;
+    case piece_o:
+	arc (cr, 0, 0, 0.4, 0, 2 * pi);
+	break;
+    }
+    set_color (cr, piece);
+    stroke (cr);
+}
+
+/*
+ * Draw the whole board
+ */
+void
+draw_pieces (cairo_t cr, &board_t board)
 {
     for (int y = 0; y < size; y++)
 	 for (int x = 0; x < size; x++)
 	 {
 	    save (cr);
 	    translate (cr, (x + 1/2) / size, (y + 1/2) / size);
-	    scale (cr, 1/(size * 5/3), 1/(size * 5/3));
-	    switch (board[y,x]) {
-	    case piece__:
-		break;
-	    case piece_x:
-		move_to (cr, -.5, -.5);
-		line_to (cr, .5, .5);
-		move_to (cr, .5, -.5);
-		line_to (cr, -.5, .5);
-		break;
-	    case piece_o:
-		arc (cr, 0, 0, 0.5, 0, 2 * pi);
-		break;
-	    }
+	    scale (cr, 1/(size * 4/3), 1/(size * 4/3));
+	    draw_piece (cr, board[y,x]);
 	    restore (cr);
-	    set_color (cr, board[y,x]);
-	    stroke (cr);
 	 }
 }
 
+/*
+ * Draw a line through the three winning pieces
+ */
 void
-win_line (cairo_t cr, &status_t status)
+draw_win_line (cairo_t cr, &status_t status)
 {
     union switch (status) {
     case finished f:
@@ -254,6 +348,9 @@ win_line (cairo_t cr, &status_t status)
     }
 }
 
+/*
+ * Draw the current state of the game
+ */
 void
 draw (&game_t game)
 {
@@ -262,9 +359,9 @@ draw (&game_t game)
     disable (cr);
 
     start_draw (cr);
-    grid (cr);
-    pieces (cr, &game.board);
-    win_line (cr, &game.status);
+    draw_grid (cr);
+    draw_pieces (cr, &game.board);
+    draw_win_line (cr, &game.status);
     end_draw (cr);
 
     start_widgets (cr);
@@ -274,19 +371,10 @@ draw (&game_t game)
     enable (cr);
 }
 
-void
-draw_board (cairo_t cr, &board_t board)
-{
-    disable (cr);
-    start_draw (cr);
-    grid (cr);
-    pieces (cr, &board);
-    end_draw (cr);
-    enable (cr);
-}
-
-status_t
-winner (&board_t board)
+/*
+ * Figure out the current game status
+ */
+status_t get_status (&board_t board)
 {
     position_t	p1, p2;
     
@@ -330,6 +418,10 @@ winner (&board_t board)
     return make_winner (piece__);
 }
 
+/*
+ * Make a move and return true if the space is empty,
+ * otherwise return false
+ */
 bool move (&board_t board, int x, int y, piece_t piece)
 {
     if (board[y,x] != piece__)
@@ -338,30 +430,33 @@ bool move (&board_t board, int x, int y, piece_t piece)
     return true;
 }
 
-piece_t
-other_player (piece_t piece)
+piece_t other_player (piece_t piece)
 {
     if (piece == piece_x)
 	return piece_o;
     return piece_x;
 }
 
-
-int
-score (&board_t board, piece_t turn)
+/*
+ * Minmax score computation -- very simple, just 0, 2, -2
+ * depending on whether the game is in progress, won by us,
+ * or won by the other player. A special -1 value is returned
+ * for a cats game
+ */
+int score (&board_t board, piece_t turn)
 {
-    status_t	status = winner (&board);
+    status_t	status = get_status (&board);
 
     union switch (status) {
     case playing:
 	return 0;
     case finished f:
 	if (f.winner == piece__)
-	    return -2;
-	else if (f.winner == turn)
-	    return 1;
-	else
 	    return -1;
+	else if (f.winner == turn)
+	    return 2;
+	else
+	    return -2;
     }
 }
 
@@ -369,27 +464,6 @@ typedef struct {
     position_t	position;
     int		score;
 } move_t;
-
-void indent (int level)
-{
-    while (level-- > 0)
-	putchar (' ');
-}
-
-void
-print_board (int level, &board_t board)
-{
-    for (int y = 0; y < size; y++) {
-	indent (level);
-	for (int x = 0; x < size; x++)
-	    switch (board[y,x]) {
-	    case piece_x: printf ("X "); break;
-	    case piece_o: printf ("O "); break;
-	    case piece__: printf (". "); break;
-	    }
-	printf ("\n");
-    }
-}
 
 int moves = 0;
 int memos = 0;
@@ -404,18 +478,18 @@ void reset_stats () {
 }
 
 void show_stats () {
-	printf ("%d moves %d memos %d rands\n", moves, memos, rands);
+    printf ("%d moves %d memos %d rands\n", moves, memos, rands);
 }
     
-bool
-pick_random () {
+bool pick_random () {
     ++rands;
     return randbits(1) != 0;
 }
 
-move_t
-best_move (&board_t board, piece_t turn)
-{
+/*
+ * Compute the best move using minmax search
+ */
+move_t best_move (&board_t board, piece_t turn) {
     ++moves;
 
     move_t  best = {
@@ -424,24 +498,32 @@ best_move (&board_t board, piece_t turn)
     };
     
     if (best.score != 0) {
-	if (best.score == -2)
-	    best.score = 0;
 	return best;
     }
     
-    if (hash_test (memo, board))
-    {
+    /*
+     * Check to see if this position has already
+     * been scored
+     */
+    if (hash_test (memo, board)) {
 	++memos;
 	return memo[board];
     }
     
     piece_t next_turn = other_player (turn);
     
-    best.score = -2;
+    best.score = -3;
+    /*
+     * Search the whole board for possible moves
+     */
     for (int y = 0; y < size; y++)
 	for (int x = 0; x < size; x++) {
 	    if (move (&board, x, y, turn)) {
 		move_t next = best_move (&board, next_turn);
+		/*
+		 * Minimize our opponents best possible move.
+		 * When two moves are equal, pick randomly
+		 */
 		if (-next.score > best.score || 
 		    -next.score == best.score && pick_random())
 		{
@@ -449,12 +531,17 @@ best_move (&board_t board, piece_t turn)
 		    best.position.y = y;
 		    best.score = -next.score;
 		}
+		/*
+		 * Undo this move
+		 */
 		board[y,x] = piece__;
 	    }
 	}
     
-    board_t copy = board;
-    memo[copy] = best;
+    /*
+     * Remember this move for next time
+     */
+    memo[board] = best;
     return best;
 }
 
@@ -463,8 +550,13 @@ void reset_game (&game_t game)
     game.board = (board_t) { { piece__ ... } ... };
     game.status.playing = ◊;
     game.turn = piece_x;
+    memo = (move_t[board_t]) {};
 }
 
+/*
+ * Given an X position in the widget row, locate
+ * the widget containing it
+ */
 int
 find_widget (cairo_t cr, &game_t game, real x)
 {
@@ -495,11 +587,14 @@ release_widget (cairo_t cr, &game_t game, real x)
 {
     int	w = find_widget (cr, &game, x);
     if (w >= 0 && game.widgets[w].pressed)
-	game.widgets[w].activate ();
+	game.widgets[w].activate (&game.widgets[w]);
     for (w = 0; w < dim (game.widgets); w++)
 	game.widgets[w].pressed = false;
 }
 
+/*
+ * Play tic tac toe
+ */
 void play (cairo_t cr)
 {
     game_t  game = {
@@ -507,24 +602,46 @@ void play (cairo_t cr)
 	board = { { piece__ ... } ... },
 	status = { playing = ◊ },
 	turn = piece_x,
+	computer = piece_o,
 	event = open_event (cr),
 	widgets = {
-	    {
-		label = "new",
-		pressed = false,
-		activate = void func () {
-		    reset_game (&game);
-		}
-	    },
-	    { 
-		label = "quit",
-		pressed = false,
-		activate = void func () {
-		    exit (0);
-		}
-	    }
+	    create_text_widget ("new",
+				void func (&widget_t widget) {
+				    reset_game (&game);
+				}),
+	    create_text_widget ("quit",
+				void func (&widget_t widget) {
+				    exit (0);
+				}),
+	    create_widget ("computer: ",
+			   dimension_t func (cairo_t cr, &widget_t widget) {
+			    text_extents_t text = text_extents (cr, 
+								widget.data);
+			    font_extents_t font = font_extents (cr);
+			    return (dimension_t) {
+				width = text.x_advance + font.height,
+				height = font.height
+			    };
+			   },
+			   void func (cairo_t cr, &widget_t widget) {
+			    text_extents_t text = text_extents (cr, 
+								widget.data);
+			    font_extents_t font = font_extents (cr);
+			    set_source_rgba (cr, 0, 0, 0, 1);
+			    move_to (cr, 0, font.height);
+			    show_text (cr, widget.data);
+			    save (cr);
+			    translate (cr, 
+				       text.x_advance + font.height/2,
+				       font.height/2);
+			    scale (cr, font.height, font.height);
+			    draw_piece (cr, game.computer);
+			    restore (cr);
+			   },
+			   void func (&widget_t widget) {
+			    game.computer = other_player (game.computer);
+			   })
 	}
-	    
     };
 
     void find_square (cairo_t cr, real x, real y, *int sxp, *int syp) {
@@ -539,7 +656,7 @@ void play (cairo_t cr)
     draw (&game);
 
     for (;;) {
-	if (game.turn == piece_x || game.status != status_t.playing) {
+	if (game.turn != game.computer || game.status != status_t.playing) {
 	    if (File::end (game.event))
 		break;
 	    string	line = File::fgets (game.event);
@@ -579,7 +696,7 @@ void play (cairo_t cr)
 		    {
 			if (move (&game.board, up_x, up_y, game.turn)) {
 			    game.turn = other_player (game.turn);
-			    game.status = winner (&game.board);
+			    game.status = get_status (&game.board);
 			}
 		    }
 		}
@@ -607,7 +724,7 @@ void play (cairo_t cr)
 		      game.turn)) 
 	    {
 		game.turn = other_player (game.turn);
-		game.status = winner (&game.board);
+		game.status = get_status (&game.board);
 		draw (&game);
 	    }
 	}
