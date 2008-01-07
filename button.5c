@@ -1,0 +1,23 @@
+autoload "Chrome";
+
+extend namespace Chrome {
+    public namespace Button {
+
+	typedef void func (&widget_t widget, poly user_data) callback_t;
+	
+	typedef widget_t + struct {
+	    string  label;
+	    string  font;
+	    poly    user_data;
+	    callback_t	callback;
+	} button_t;
+	
+	public &widget_t new (&chrome_t chrome,
+			      callback_t callback,
+			      poly user_data) {
+	    return (button_t) {
+		
+	    }
+	}
+    }
+}

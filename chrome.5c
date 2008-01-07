@@ -1,0 +1,234 @@
+autoload Cairo;
+
+namespace Chrome {
+    import Cairo;
+    
+    /*
+     * Event types
+     */
+    public typedef enum { press, release, double, triple } button_type_t;
+    
+    public typedef struct {
+	button_type_t	type;
+	int		time;
+	int		button;
+	real		x;
+	real		y;
+    } button_event_t;
+
+    public typedef enum { inside, entering, leaving } motion_type_t;
+    
+    public typedef struct {
+	motion_type_t	type;
+	int		time;
+	real		x;
+	real		y;
+    } motion_event_t;
+    
+    public typedef enum { press, release } key_type_t;
+    
+    public typedef struct {
+	key_type_t	type;
+	int		time;
+	string		key;
+	string		text;
+    } key_event_t;
+    
+    public typedef chrome_t;
+
+    public typedef widget_t;
+
+    public typedef void(cairo_t cr, &widget_t widget) draw_t;
+
+    public typedef void(&widget_t, &button_event_t) button_handler_t;
+    public typedef void(&widget_t, &motion_event_t) motion_handler_t;
+    public typedef void(&widget_t, &key_event_t) key_handler_t;
+
+    /*
+     * Widgets, as seen by the toolkit
+     */
+    public typedef struct {
+	rect_t		    rect;
+	draw_t		    outline;
+	draw_t		    draw;
+	button_handler_t    button;
+	motion_handler_t    motion;
+	key_handler_t	    key;
+	&chrome_t	    chrome;
+    } widget_t;
+
+    public typedef struct {
+	surface_t	    surface;
+	file		    event;
+	bool		    draw;
+	widget_t[...]	    widgets;
+	&widget_t	    key_focus;
+	&widget_t	    mouse_focus;
+    } chrome_t;
+
+    public widget_t no_widget;
+
+    bool rect_contains (&rect_t rect, real x, real y) =
+    (rect.x <= x && x < rect.x + rect.width &&
+     rect.y <= y && y < rect.y + rect.height);
+
+    *widget_t xy_to_widget (&chrome_t chrome, real x, real y) {
+	if (&chrome.mouse_focus != &no_widget)
+	    return &chrome.mouse_focus;
+
+	for (int w = 0; w < dim (chrome.widgets); w++) {
+	    &widget_t widget = &chrome.widgets[w];
+	    if (rect_contains (&widget.rect, x, y))
+		return &widget;
+	}
+	return &no_widget;
+    }
+
+    public void dispatch_button (&chrome_t chrome, &button_event_t event) {
+	&widget_t   widget = xy_to_widget (&chrome, event.x, event.y);
+
+	if (&widget != &no_widget) {
+	    if (event.type == button_type_t.press)
+		&chrome.mouse_focus = &widget;
+	    if (!is_uninit (&widget.button))
+		widget.button (&widget, &event);
+	    if (event.type == button_type_t.release)
+		&chrome.mouse_focus = &no_widget;
+	} else
+	    &chrome.mouse_focus = &no_widget;
+    }
+
+    public void dispatch_motion (&chrome_t chrome, &motion_event_t event) {
+	&widget_t   widget = xy_to_widget (&chrome, event.x, event.y);
+
+	if (&widget != &no_widget)
+	    if (!is_uninit (&widget.motion))
+		widget.motion (&widget, &event);
+    }
+
+    public void dispatch_key (&chrome_t chrome, &key_event_t event) {
+	&widget_t   widget = &chrome.key_focus;
+
+	if (&widget != &no_widget)
+	    if (!is_uninit (&widget.key))
+		widget.key (&widget, &event);
+    }
+
+    public void set_key_focus (&chrome_t chrome, &widget_t widget) {
+	&chrome.key_focus = &widget;
+    }
+
+    string hex_utf8 (int[...] bytes)
+    {
+	string	s = "";
+	for (int i = 0; i < dim (bytes); i++) {
+	    int first = bytes[i];
+	    int c;
+	    int extra = 0;
+	    if ((first & 0x80) == 0) {
+		c = first;
+	    } else if ((first & 0xc0) != 0xc0) {
+		c = first;
+	    } else {
+		int mask = 0x40;
+		while ((first & mask) != 0)
+		{
+		    extra++;
+		    mask >>= 1;
+		}
+		c = first & (mask - 1);
+		while (i < dim (bytes) && extra-- > 0)
+		    c = c << 6 | (bytes[i++] & 0x3f);
+	    }
+	    s += String::new (c);
+	}
+	return s;
+    }
+
+    real dots_per_cm (cairo_t cr) = 37.8;
+    
+    void draw (&chrome_t chrome) {
+	cairo_t cr = create (chrome.surface);
+	int	i;
+
+	real res = dots_per_cm (cr);
+	scale (cr, res, res);
+	disable (cr);
+	set_source_rgba (cr, 1, 1, 1, 1);
+	paint (cr);
+	for (i = dim (chrome.widgets) - 1; i >= 0; i--)
+	{
+	    &widget_t	widget = &chrome.widgets[i];
+	    if (!is_uninit (&widget.draw)) {
+		save (cr);
+		translate (cr, widget.rect.x, widget.rect.y);
+		widget.draw (cr, &widget);
+		restore (cr);
+	    }
+	}
+	enable (cr);
+	destroy (cr);
+    }
+    
+    public void main_loop (&chrome_t chrome) {
+	bool	running = true;
+
+	while (running) {
+	    if (File::end (chrome.event))
+		break;
+	    if (chrome.draw)
+		draw (&chrome);
+
+	    string line = File::fgets (chrome.event);
+	    file l = File::string_read (line);
+
+	    File::fscanf (l, "%d %s", &(int time), &(string name));
+
+	    switch (name) {
+	    case "press":
+	    case "release":
+	    case "double-press":
+	    case "triple-press":
+		File::fscanf (l, "%d %g %g", &(int button),
+			      &(real x), &(real y));
+		button_event_t bev = {
+		    type = ((button_type_t[string]) {
+			"press" => button_type_t.press,
+			"release" => button_type_t.release,
+			"double-press" => button_type_t.double,
+			"triple-press" => button_type_t.triple }) [name],
+		    time = time,
+		    button = button,
+		    x = x,
+		    y = y };
+		dispatch_button (&chrome, &bev);
+		break;
+	    case "motion":
+		File::fscanf (l, "%g %g", &(real x), &(real y));
+		motion_event_t mev = {
+		    type = motion_type_t.inside,
+		    time = time,
+		    x = x,
+		    y = y };
+		dispatch_motion (&chrome, &mev);
+		break;
+	    case "key-down":
+	    case "key-up":
+		File::fscanf (l, "%s", &(string keyname));
+		int[...] bytes = {};
+		while (File::fscanf (l, "%02x", &(int byte)) == 1)
+		    bytes[dim(bytes)] = byte;
+		string s = hex_utf8(bytes);
+		key_event_t kev = {
+		    type = (key_type_t[string]) {
+			"key-down" => key_type_t.press,
+			"key-up" => key_type_t.release } [name],
+		    time = time,
+		    key = keyname,
+		    text = s };
+		dispatch_key (&chrome, &kev);
+		break;
+	    }
+	}
+    }
+}
