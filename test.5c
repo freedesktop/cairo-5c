@@ -1,0 +1,18 @@
+autoload Chrome;
+autoload Button;
+
+chrome = Chrome::new ();
+
+void button_callback (&Chrome::widget_t widget) {
+    printf ("click\n");
+}
+
+void exit_callback (&Chrome::widget_t widget) {
+    exit (0);
+}
+
+Chrome::Button::new (&chrome, "hello, world", button_callback);
+&Chrome::widget_t exit_widget = &Chrome::Button::new (&chrome, "exit", exit_callback);
+exit_widget.rect.y = 3;
+
+Chrome::main_loop (&chrome);

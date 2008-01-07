@@ -61,25 +61,54 @@ namespace Chrome {
 	surface_t	    surface;
 	file		    event;
 	bool		    draw;
-	widget_t[...]	    widgets;
+	(&widget_t)[...]    widgets;
 	&widget_t	    key_focus;
 	&widget_t	    mouse_focus;
     } chrome_t;
 
     public widget_t no_widget;
 
-    bool rect_contains (&rect_t rect, real x, real y) =
-    (rect.x <= x && x < rect.x + rect.width &&
-     rect.y <= y && y < rect.y + rect.height);
+    public namespace Widget {
+	public void init (&chrome_t chrome, &widget_t widget) {
+	    widget.rect = (rect_t) { x = 0, y = 0, width = 3, height = 1 };
+	    &widget.chrome = &chrome;
+	}
+	public void redraw (&widget_t widget) {
+	    widget.chrome.draw = true;
+	}
+	public string default_font = sprintf ("sans-%f", 12 / 28.45);
+    }
+
+    real dots_per_cm (cairo_t cr) = 37.8;
+    
+    cairo_t cairo (&chrome_t chrome)
+    {
+	cairo_t cr = create (chrome.surface);
+	real res = dots_per_cm (cr);
+	scale (cr, res, res);
+	return cr;
+    }
+    
+    bool rect_contains (&rect_t rect, real x, real y) {
+	return (rect.x <= x && x < rect.x + rect.width &&
+		rect.y <= y && y < rect.y + rect.height);
+    }
 
     *widget_t xy_to_widget (&chrome_t chrome, real x, real y) {
 	if (&chrome.mouse_focus != &no_widget)
 	    return &chrome.mouse_focus;
 
+	cairo_t cr = cairo (&chrome);
+
+	point_t a = device_to_user (cr, (point_t) { x = x, y = y });
+	destroy (cr);
+	x = a.x; y = a.y;
 	for (int w = 0; w < dim (chrome.widgets); w++) {
 	    &widget_t widget = &chrome.widgets[w];
 	    if (rect_contains (&widget.rect, x, y))
+	    {
 		return &widget;
+	    }
 	}
 	return &no_widget;
     }
@@ -91,7 +120,9 @@ namespace Chrome {
 	    if (event.type == button_type_t.press)
 		&chrome.mouse_focus = &widget;
 	    if (!is_uninit (&widget.button))
+	    {
 		widget.button (&widget, &event);
+	    }
 	    if (event.type == button_type_t.release)
 		&chrome.mouse_focus = &no_widget;
 	} else
@@ -145,40 +176,88 @@ namespace Chrome {
 	return s;
     }
 
-    real dots_per_cm (cairo_t cr) = 37.8;
-    
     void draw (&chrome_t chrome) {
-	cairo_t cr = create (chrome.surface);
-	int	i;
-
-	real res = dots_per_cm (cr);
-	scale (cr, res, res);
-	disable (cr);
-	set_source_rgba (cr, 1, 1, 1, 1);
-	paint (cr);
-	for (i = dim (chrome.widgets) - 1; i >= 0; i--)
+	while (chrome.draw)
 	{
-	    &widget_t	widget = &chrome.widgets[i];
-	    if (!is_uninit (&widget.draw)) {
-		save (cr);
-		translate (cr, widget.rect.x, widget.rect.y);
-		widget.draw (cr, &widget);
-		restore (cr);
+	    chrome.draw = false;
+	    cairo_t cr = cairo (&chrome);
+	    int	i;
+    
+	    disable (cr);
+	    set_source_rgba (cr, 1, 1, 1, 1);
+	    paint (cr);
+	    for (i = dim (chrome.widgets) - 1; i >= 0; i--)
+	    {
+		&widget_t	widget = &chrome.widgets[i];
+		if (!is_uninit (&widget.draw)) {
+		    save (cr);
+		    translate (cr, widget.rect.x, widget.rect.y);
+		    widget.draw (cr, &widget);
+		    restore (cr);
+		}
 	    }
+	    enable (cr);
+	    destroy (cr);
 	}
-	enable (cr);
-	destroy (cr);
+    }
+    
+    public chrome_t new () {
+	chrome_t chrome;
+	
+	chrome.surface = Cairo::Surface::create_window ("Chrome",
+							300, 300),
+	chrome.event = Cairo::Surface::open_event (chrome.surface);
+	chrome.draw = true;
+	chrome.widgets = ((&widget_t)[...]) {};
+	&chrome.key_focus = &no_widget;
+	&chrome.mouse_focus = &no_widget;
+	return chrome;
+    }
+    
+    public void add (&chrome_t chrome, &widget_t widget) {
+	&chrome.widgets[dim(chrome.widgets)] = &widget;
+	chrome.draw = true;
+    }
+
+    public exception unknown_widget (&chrome_t chrome, &widget_t widget);
+    
+    int widget_pos (&chrome_t chrome, &widget_t widget) {
+	for (int i = 0; i < dim(chrome.widgets); i++)
+	    if (&chrome.widgets[i] == &widget)
+		return i;
+	raise unknown_widget (&chrome, &widget);
+    }
+
+    public void remove (&chrome_t chrome, &widget_t widget) {
+	for (int i = widget_pos (&chrome, &widget); 
+	     i < dim(chrome.widgets) - 1;
+	     i++)
+	{
+    	    &chrome.widgets[i] = &chrome.widgets[i + 1];
+	}
+	setdim (chrome.widgets, dim(chrome.widgets) - 1);
+	chrome.draw = true;
+    }
+
+    public void top (&chrome_t chrome, &widget_t widget) {
+	for (int i = widget_pos (&chrome, &widget);
+	     i > 0;
+	     i--)
+	{
+	    &chrome.widgets[i] = &chrome.widgets[i-1];
+	}
+	&chrome.widgets[0] = &widget;
+	chrome.draw = true;
     }
     
     public void main_loop (&chrome_t chrome) {
 	bool	running = true;
 
 	while (running) {
-	    if (File::end (chrome.event))
-		break;
 	    if (chrome.draw)
 		draw (&chrome);
-
+	    if (File::end (chrome.event))
+		break;
 	    string line = File::fgets (chrome.event);
 	    file l = File::string_read (line);
 

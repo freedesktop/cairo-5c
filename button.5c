@@ -1,23 +1,70 @@
-autoload "Chrome";
+autoload Chrome;
 
 extend namespace Chrome {
     public namespace Button {
 
-	typedef void func (&widget_t widget, poly user_data) callback_t;
+	typedef void (&widget_t widget) callback_t;
 	
 	typedef widget_t + struct {
 	    string  label;
 	    string  font;
-	    poly    user_data;
+	    bool    pressed;
 	    callback_t	callback;
 	} button_t;
 	
-	public &widget_t new (&chrome_t chrome,
-			      callback_t callback,
-			      poly user_data) {
-	    return (button_t) {
-		
+	public void draw (cairo_t cr, &button_t widget) {
+	    set_font (cr, widget.font);
+	    if (widget.pressed)
+	    {
+		rectangle (cr, 0, 0, widget.rect.width, widget.rect.height);
+		set_source_rgba (cr, 0, 0, .5, .5);
+		fill (cr);
 	    }
+	    set_source_rgb (cr, 0, 0, 0);
+	    rectangle (cr, .01, .01, 
+		       widget.rect.width - .02,
+		       widget.rect.height - .02);
+	    set_line_width (cr, .02);
+	    stroke (cr);
+	    text_extents_t text = text_extents (cr, widget.label);
+	    font_extents_t font = font_extents (cr);
+	    real hpad = (widget.rect.width - text.width) / 2;
+	    real vpad = (widget.rect.height - font.height) / 2;
+	    move_to (cr, hpad - text.x_bearing,
+		     vpad - text.y_bearing);
+	    show_text (cr, widget.label);
+	}
+	
+	public void button (&button_t widget, &button_event_t event) {
+	    enum switch (event.type) {
+	    case press:
+		widget.pressed = true;
+		Widget::redraw (&widget);
+		break;
+	    case release:
+		Widget::redraw (&widget);
+		widget.pressed = false;
+		widget.callback (&widget);
+		break;
+	    default:
+		break;
+	    }
+	}
+	
+	public &widget_t new (&chrome_t chrome,
+			      string label,
+			      callback_t callback) {
+	    button_t	widget;
+
+	    Widget::init (&chrome, &widget);
+	    widget.label = label;
+	    widget.font = Widget::default_font;
+	    widget.draw = draw;
+	    widget.pressed = false;
+	    widget.button = button;
+	    widget.callback = callback;
+	    Chrome::add (&chrome, &widget);
+	    return &widget;
 	}
     }
 }
