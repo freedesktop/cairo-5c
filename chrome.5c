@@ -1,4 +1,5 @@
 autoload Cairo;
+autoimport Mutex;
 
 namespace Chrome {
     import Cairo;
@@ -16,7 +17,7 @@ namespace Chrome {
 	real		y;
     } button_event_t;
 
-    public typedef enum { inside, entering, leaving } motion_type_t;
+    public typedef enum { inside, outside, entering, leaving } motion_type_t;
     
     public typedef struct {
 	motion_type_t	type;
@@ -48,7 +49,8 @@ namespace Chrome {
      * Widgets, as seen by the toolkit
      */
     public typedef struct {
-	rect_t		    rect;
+	real		    x, y;
+	rect_t		    extents;
 	draw_t		    outline;
 	draw_t		    draw;
 	button_handler_t    button;
@@ -61,80 +63,183 @@ namespace Chrome {
 	surface_t	    surface;
 	file		    event;
 	bool		    draw;
+	point_t		    scale;
+	void(&chrome_t)	    destroy;
 	(&widget_t)[...]    widgets;
 	&widget_t	    key_focus;
-	&widget_t	    mouse_focus;
+	&widget_t	    mouse_grab;
+	int		    button_down;
+	&widget_t	    mouse_in;
     } chrome_t;
 
     public widget_t no_widget;
 
     public namespace Widget {
 	public void init (&chrome_t chrome, &widget_t widget) {
-	    widget.rect = (rect_t) { x = 0, y = 0, width = 3, height = 1 };
+	    widget.x = 0;
+	    widget.y = 0;
 	    &widget.chrome = &chrome;
 	}
+	
 	public void redraw (&widget_t widget) {
 	    widget.chrome.draw = true;
 	}
-	public string default_font = sprintf ("sans-%f", 12 / 28.45);
+	
+	public bool in_widget (cairo_t cr, &widget_t widget,
+				     real x, real y)
+	{
+	    bool    in;
+
+	    if (x < widget.extents.x || 
+		widget.extents.x + widget.extents.width <= x)
+		return false;
+	    
+	    if (y < widget.extents.y || 
+		widget.extents.y + widget.extents.height <= y)
+		return false;
+	    
+	    save (cr);
+	    translate (cr, widget.x, widget.y);
+	    widget.outline (cr, &widget);
+	    restore (cr);
+	    in = in_fill (cr, x, y);
+	    new_path (cr);
+	    return in;
+	}
+	
+	public string default_font = sprintf ("sans-12");
     }
 
-    real dots_per_cm (cairo_t cr) = 37.8;
-    
     cairo_t cairo (&chrome_t chrome)
     {
 	cairo_t cr = create (chrome.surface);
-	real res = dots_per_cm (cr);
-	scale (cr, res, res);
+	scale (cr, chrome.scale.x, chrome.scale.y);
 	return cr;
     }
     
-    bool rect_contains (&rect_t rect, real x, real y) {
-	return (rect.x <= x && x < rect.x + rect.width &&
-		rect.y <= y && y < rect.y + rect.height);
-    }
-
     *widget_t xy_to_widget (&chrome_t chrome, real x, real y) {
-	if (&chrome.mouse_focus != &no_widget)
-	    return &chrome.mouse_focus;
-
 	cairo_t cr = cairo (&chrome);
 
 	point_t a = device_to_user (cr, (point_t) { x = x, y = y });
-	destroy (cr);
 	x = a.x; y = a.y;
 	for (int w = 0; w < dim (chrome.widgets); w++) {
 	    &widget_t widget = &chrome.widgets[w];
-	    if (rect_contains (&widget.rect, x, y))
-	    {
+	    if (Widget::in_widget (cr, &widget, x, y))
 		return &widget;
-	    }
 	}
+	destroy (cr);
 	return &no_widget;
     }
 
-    public void dispatch_button (&chrome_t chrome, &button_event_t event) {
-	&widget_t   widget = xy_to_widget (&chrome, event.x, event.y);
+    /*
+     * As usual, mouse grabs make this more complicated than we'd like.
+     *
+     * chrome.mouse_in tracks the widget containing the pointer.
+     * chrome.mouse_grab tracks the grabbing widget.*
+     * chrome.button_down tracks which buttons are down
+     *
+     * While grabbed, events are delivered only to the grab widget.
+     * Otherwise, events are delivered to the containing widget.
+     * Pressing any button grabs the mouse.
+     * Releasing all buttons ungrabs the mouse. This can also
+     * generate an entering motion event when the ungrab
+     * occurs over another widget.
+     */
+    
+    void deliver_button (&widget_t widget, button_event_t event)
+    {
+	if (!is_uninit (&widget.button)) {
+	    event.x -= widget.x;
+	    event.y -= widget.y;
+	    widget.button (&widget, &event);
+	}
+    }
 
-	if (&widget != &no_widget) {
-	    if (event.type == button_type_t.press)
-		&chrome.mouse_focus = &widget;
-	    if (!is_uninit (&widget.button))
+    void deliver_motion (&widget_t widget, motion_event_t event)
+    {
+	if (!is_uninit (&widget.motion)) {
+	    event.x -= widget.x;
+	    event.y -= widget.y;
+	    widget.motion (&widget, &event);
+	}
+    }
+    
+    public void dispatch_button (&chrome_t chrome, &button_event_t event) {
+	&widget_t   widget;
+
+	if (&chrome.mouse_grab != &no_widget)
+	    &widget = &chrome.mouse_grab;
+	else {
+	    &widget = &chrome.mouse_in;
+	    if (&widget == &no_widget)
+		return;
+	}
+
+	if (event.type == button_type_t.press)
+	{
+	    &chrome.mouse_grab = &widget;
+	    chrome.button_down |= 1 << event.button;
+	}
+	
+	deliver_button (&widget, event);
+
+	if (event.type == button_type_t.release)
+	{
+	    chrome.button_down &= ~(1 << event.button);
+	    if (chrome.button_down == 0)
 	    {
-		widget.button (&widget, &event);
+		&chrome.mouse_grab = &no_widget;
+		
+		/*
+		 * On ungrab, deliver an entering motion
+		 * to the widget under the pointer
+		 */
+		if (&widget != &chrome.mouse_in)
+		    deliver_motion (&chrome.mouse_in,
+				    (motion_event_t) {
+					type = motion_type_t.entering,
+					time = event.time,
+					x = event.x,
+					y = event.y });
 	    }
-	    if (event.type == button_type_t.release)
-		&chrome.mouse_focus = &no_widget;
-	} else
-	    &chrome.mouse_focus = &no_widget;
+	}
     }
 
     public void dispatch_motion (&chrome_t chrome, &motion_event_t event) {
-	&widget_t   widget = xy_to_widget (&chrome, event.x, event.y);
+	&widget_t   in = xy_to_widget (&chrome, event.x, event.y);
 
-	if (&widget != &no_widget)
-	    if (!is_uninit (&widget.motion))
-		widget.motion (&widget, &event);
+	if (&chrome.mouse_grab == &no_widget) {
+	    /*
+	     * Without a mouse grab, deliver events to the containing widget
+	     */
+	    if (&in != &chrome.mouse_in) {
+		
+		event.type = motion_type_t.leaving;
+		deliver_motion (&chrome.mouse_in, event);
+		
+		event.type = motion_type_t.entering;
+	    } else
+		event.type = motion_type_t.inside;
+	    deliver_motion (&in, event);
+	    
+	} else {
+	    /*
+	     * With mouse grab, deliver events to the grab widget
+	     */
+	    if (&in != &chrome.mouse_grab) {
+		if (&chrome.mouse_in == &chrome.mouse_grab)
+		    event.type = motion_type_t.leaving;
+		else
+		    event.type = motion_type_t.outside;
+	    } else {
+		if (&chrome.mouse_in == &chrome.mouse_grab)
+		    event.type = motion_type_t.inside;
+		else
+		    event.type = motion_type_t.entering;
+	    }
+	    deliver_motion (&chrome.mouse_grab, event);
+	}
+        &chrome.mouse_in = &in;
     }
 
     public void dispatch_key (&chrome_t chrome, &key_event_t event) {
@@ -177,28 +282,37 @@ namespace Chrome {
     }
 
     void draw (&chrome_t chrome) {
-	while (chrome.draw)
+	chrome.draw = false;
+	cairo_t cr = cairo (&chrome);
+	int	i;
+
+	disable (cr);
+	set_source_rgba (cr, 1, 1, 1, 1);
+	paint (cr);
+	for (i = dim (chrome.widgets) - 1; i >= 0; i--)
 	{
-	    chrome.draw = false;
-	    cairo_t cr = cairo (&chrome);
-	    int	i;
-    
-	    disable (cr);
-	    set_source_rgba (cr, 1, 1, 1, 1);
-	    paint (cr);
-	    for (i = dim (chrome.widgets) - 1; i >= 0; i--)
-	    {
-		&widget_t	widget = &chrome.widgets[i];
-		if (!is_uninit (&widget.draw)) {
-		    save (cr);
-		    translate (cr, widget.rect.x, widget.rect.y);
-		    widget.draw (cr, &widget);
-		    restore (cr);
-		}
+	    &widget_t	widget = &chrome.widgets[i];
+	    if (!is_uninit (&widget.draw)) {
+		save (cr);
+		translate (cr, widget.x, widget.y);
+		widget.draw (cr, &widget);
+		restore (cr);
 	    }
-	    enable (cr);
-	    destroy (cr);
+	    if (!is_uninit (&widget.outline)) {
+		save (cr);
+		translate (cr, widget.x, widget.y);
+		widget.outline (cr, &widget);
+		restore (cr);
+		widget.extents = fill_extents (cr);
+		new_path (cr);
+	    }
 	}
+	enable (cr);
+	destroy (cr);
+    }
+    
+    public void destroy (&chrome_t chrome) {
+	exit (0);
     }
     
     public chrome_t new () {
@@ -209,8 +323,12 @@ namespace Chrome {
 	chrome.event = Cairo::Surface::open_event (chrome.surface);
 	chrome.draw = true;
 	chrome.widgets = ((&widget_t)[...]) {};
+	chrome.scale = (point_t) { x = 1, y = 1 };
+	chrome.destroy = destroy;
 	&chrome.key_focus = &no_widget;
-	&chrome.mouse_focus = &no_widget;
+	&chrome.mouse_grab = &no_widget;
+	chrome.button_down = 0;
+	&chrome.mouse_in = &no_widget;
 	return chrome;
     }
     
@@ -253,12 +371,34 @@ namespace Chrome {
     public void main_loop (&chrome_t chrome) {
 	bool	running = true;
 
+	string event_line;
+
+	semaphore has_event = Semaphore::new(0);
+	semaphore read_event = Semaphore::new(0);
+	
+	void event_reader () {
+	    for (;;) {
+		event_line = File::fgets (chrome.event);
+		Semaphore::signal (has_event);
+		Semaphore::wait (read_event);
+	    }
+	}
+	
+	thread event_thread = fork event_reader ();
+
 	while (running) {
 	    if (chrome.draw)
-		draw (&chrome);
-	    if (File::end (chrome.event))
-		break;
-	    string line = File::fgets (chrome.event);
+	    {
+		if (Semaphore::test (has_event))
+		    Semaphore::signal (has_event);
+		else
+		    draw (&chrome);
+	    }
+	    
+	    Semaphore::wait (has_event);
+	    string line = event_line;
+	    Semaphore::signal (read_event);
+
 	    file l = File::string_read (line);
 
 	    File::fscanf (l, "%d %s", &(int time), &(string name));
@@ -306,6 +446,12 @@ namespace Chrome {
 		    key = keyname,
 		    text = s };
 		dispatch_key (&chrome, &kev);
+		break;
+	    case "delete":
+		chrome.destroy (&chrome);
+		break;
+	    case "configure":
+		chrome.draw = true;
 		break;
 	    }
 	}
