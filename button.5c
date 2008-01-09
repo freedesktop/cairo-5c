@@ -3,7 +3,7 @@ autoload Chrome;
 extend namespace Chrome {
     public namespace Button {
 
-	public typedef void (&widget_t widget) callback_t;
+	public typedef void (&widget_t widget, bool state) callback_t;
 	
 	public typedef widget_t + struct {
 	    string  label;
@@ -13,25 +13,35 @@ extend namespace Chrome {
 	    callback_t	callback;
 	} button_t;
 	
-	typedef struct {
+	public typedef struct {
 	    real x, y;
 	    real pad;
 	    real width, height;
+	    real preferred_width, preferred_height;
 	} metrics_t;
 	
-	metrics_t get_metrics (cr, &button_t widget) {
+	public metrics_t get_metrics (cr, &button_t widget) {
 	    set_font (cr, widget.font);
 	    text_extents_t text = text_extents (cr, widget.label);
 	    font_extents_t font = font_extents(cr);
-	    real pad = font.height / 2;
+	    metrics_t metrics;
 	    
-	    return (metrics_t) {
-		pad = pad,
-		y = pad + font.height,
-		x = pad,
-		width = pad + text.width + pad,
-		height = pad + font.height + pad
-	    };
+	    real pad = font.height / 2;
+	    metrics.pad = pad;
+	    metrics.preferred_width = pad + text.width + pad;
+	    metrics.preferred_height = pad + font.height + pad;
+	    metrics.width = max (widget.geometry.width, metrics.preferred_width);
+	    metrics.height = max (widget.geometry.height, metrics.preferred_height);
+	    metrics.y = (metrics.height - font.height) / 2 + font.height;
+	    metrics.x = (metrics.width - text.width) / 2;
+	    
+	    return metrics;
+	}
+	
+	public void natural (cairo_t cr, &button_t widget) {
+	    metrics_t	metrics = get_metrics (cr, &widget);
+
+	    rectangle (cr, 0, 0, metrics.preferred_width, metrics.preferred_height);
 	}
 	
 	public void outline (cairo_t cr, &button_t widget) {
@@ -49,15 +59,13 @@ extend namespace Chrome {
 		set_source_rgba (cr, 0, 0, .5, .5);
 		fill (cr);
 	    }
-	    if (widget.inside)
-		set_source_rgb (cr, 1, 0, 0);
-	    else
-		set_source_rgb (cr, 0, 0, 0);
-	    rectangle (cr, 1, 1,
-		       metrics.width - 2,
-		       metrics.height - 2);
-	    set_line_width (cr, 2);
-	    stroke (cr);
+	    if (widget.inside && !widget.pressed) {
+		set_source_rgba (cr, 0, 0, .5, .2);
+		rectangle (cr, metrics.pad / 2, metrics.pad / 2,
+			   metrics.width - metrics.pad, metrics.height -
+			   metrics.pad);
+		fill (cr);
+	    }
 	    move_to (cr, metrics.x, metrics.y);
 	    set_source_rgb (cr, 0, 0, 0);
 	    show_text (cr, widget.label);
@@ -78,7 +86,7 @@ extend namespace Chrome {
 		Widget::redraw (&widget);
 		widget.pressed = false;
 		if (widget.inside)
-		    widget.callback (&widget);
+		    widget.callback (&widget, true);
 		break;
 	    default:
 		break;
@@ -100,11 +108,11 @@ extend namespace Chrome {
 		break;
 	    }
 	}
-	public &widget_t new (&chrome_t chrome,
-			      string label,
-			      callback_t callback) {
-	    button_t	widget;
 
+	public void init (&button_t widget,
+			  &chrome_t chrome,
+			  string label,
+			  callback_t callback) {
 	    Widget::init (&chrome, &widget);
 	    widget.label = label;
 	    widget.font = Widget::default_font;
@@ -115,7 +123,15 @@ extend namespace Chrome {
 	    widget.motion = motion;
 	    widget.callback = callback;
 	    widget.outline = outline;
-	    Chrome::add (&chrome, &widget);
+	    widget.natural = natural;
+	}
+	
+	public *widget_t new (&chrome_t chrome,
+			      string label,
+			      callback_t callback) {
+	    button_t	widget;
+
+	    init (&widget, &chrome, label, callback);
 	    return &widget;
 	}
     }

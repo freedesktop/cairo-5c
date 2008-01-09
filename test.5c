@@ -1,5 +1,6 @@
 autoload Chrome;
-autoload Button;
+autoload Chrome::Button;
+autoload Chrome::Box;
 
 chrome = Chrome::new ();
 
@@ -9,11 +10,26 @@ void button_callback (&Chrome::widget_t widget) {
 }
 
 void exit_callback (&Chrome::widget_t widget) {
-    exit (0);
+    widget.chrome.running = false;
 }
 
-Chrome::Button::new (&chrome, "hello, world", button_callback);
+&Chrome::widget_t hello_widget = &Chrome::Button::new (&chrome, "hello, world", button_callback);
 &Chrome::widget_t exit_widget = &Chrome::Button::new (&chrome, "exit", exit_callback);
-exit_widget.y = 150;
+
+Chrome::Box::box_t box = Chrome::Box::new (Chrome::Box::dir_t.horizontal,
+					   Chrome::Box::glue_item (10),
+					   Chrome::Box::widget_item (&hello_widget, 10, 0),
+					   Chrome::Box::glue_item (10),
+					   Chrome::Box::widget_item (&exit_widget, 10, 0),
+					   Chrome::Box::glue_item (10));
+
+Chrome::configure (&chrome, &box);
+
+void configure (&Chrome::chrome_t chrome) {
+    Chrome::configure (&chrome, &box);
+}
+
+chrome.configure = configure;
 
 Chrome::main_loop (&chrome);
+

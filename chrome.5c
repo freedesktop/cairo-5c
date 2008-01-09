@@ -41,6 +41,8 @@ namespace Chrome {
 
     public typedef void(cairo_t cr, &widget_t widget) draw_t;
 
+    public typedef void(&chrome_t chrome) callback_t;
+
     public typedef void(&widget_t, &button_event_t) button_handler_t;
     public typedef void(&widget_t, &motion_event_t) motion_handler_t;
     public typedef void(&widget_t, &key_event_t) key_handler_t;
@@ -49,9 +51,10 @@ namespace Chrome {
      * Widgets, as seen by the toolkit
      */
     public typedef struct {
-	real		    x, y;
+	rect_t		    geometry;
 	rect_t		    extents;
 	draw_t		    outline;
+	draw_t		    natural;
 	draw_t		    draw;
 	button_handler_t    button;
 	motion_handler_t    motion;
@@ -64,29 +67,46 @@ namespace Chrome {
 	file		    event;
 	bool		    draw;
 	point_t		    scale;
-	void(&chrome_t)	    destroy;
 	(&widget_t)[...]    widgets;
 	&widget_t	    key_focus;
 	&widget_t	    mouse_grab;
 	int		    button_down;
 	&widget_t	    mouse_in;
+	callback_t	    destroy;
+	callback_t	    configure;
+	cairo_t		    outline_cr;
+	&widget_t	    outline_widget;
+	bool		    running;
     } chrome_t;
 
     public widget_t no_widget;
 
+    cairo_t cairo (&chrome_t chrome)
+    {
+	cairo_t cr = create (chrome.surface);
+	scale (cr, chrome.scale.x, chrome.scale.y);
+	return cr;
+    }
+    
+    public void add (&chrome_t chrome, &widget_t widget) {
+	&chrome.widgets[dim(chrome.widgets)] = &widget;
+	chrome.draw = true;
+    }
+
     public namespace Widget {
 	public void init (&chrome_t chrome, &widget_t widget) {
-	    widget.x = 0;
-	    widget.y = 0;
+	    widget.geometry = (rect_t) {
+		x = 0, y = 0, width = 0, height = 0
+	    };
 	    &widget.chrome = &chrome;
+	    Chrome::add (&chrome, &widget);
 	}
 	
 	public void redraw (&widget_t widget) {
 	    widget.chrome.draw = true;
 	}
 	
-	public bool in_widget (cairo_t cr, &widget_t widget,
-				     real x, real y)
+	public bool in_widget (&widget_t widget, real x, real y)
 	{
 	    bool    in;
 
@@ -98,36 +118,33 @@ namespace Chrome {
 		widget.extents.y + widget.extents.height <= y)
 		return false;
 	    
-	    save (cr);
-	    translate (cr, widget.x, widget.y);
-	    widget.outline (cr, &widget);
-	    restore (cr);
+	    cairo_t cr = widget.chrome.outline_cr;
+	    
+	    if (&widget.chrome.outline_widget != &widget) {
+		new_path (cr);
+		save (cr);
+		translate (cr, widget.geometry.x, widget.geometry.y);
+		widget.outline (cr, &widget);
+		restore (cr);
+		&widget.chrome.outline_widget = &widget;
+	    }
 	    in = in_fill (cr, x, y);
-	    new_path (cr);
 	    return in;
 	}
 	
-	public string default_font = sprintf ("sans-12");
+	public string default_font = "sans-12";
     }
 
-    cairo_t cairo (&chrome_t chrome)
-    {
-	cairo_t cr = create (chrome.surface);
-	scale (cr, chrome.scale.x, chrome.scale.y);
-	return cr;
-    }
-    
-    *widget_t xy_to_widget (&chrome_t chrome, real x, real y) {
+    public *widget_t xy_to_widget (&chrome_t chrome, real x, real y) {
 	cairo_t cr = cairo (&chrome);
-
 	point_t a = device_to_user (cr, (point_t) { x = x, y = y });
+	Cairo::destroy (cr);
 	x = a.x; y = a.y;
 	for (int w = 0; w < dim (chrome.widgets); w++) {
 	    &widget_t widget = &chrome.widgets[w];
-	    if (Widget::in_widget (cr, &widget, x, y))
+	    if (Widget::in_widget (&widget, x, y))
 		return &widget;
 	}
-	destroy (cr);
 	return &no_widget;
     }
 
@@ -149,8 +166,8 @@ namespace Chrome {
     void deliver_button (&widget_t widget, button_event_t event)
     {
 	if (!is_uninit (&widget.button)) {
-	    event.x -= widget.x;
-	    event.y -= widget.y;
+	    event.x -= widget.geometry.x;
+	    event.y -= widget.geometry.y;
 	    widget.button (&widget, &event);
 	}
     }
@@ -158,8 +175,8 @@ namespace Chrome {
     void deliver_motion (&widget_t widget, motion_event_t event)
     {
 	if (!is_uninit (&widget.motion)) {
-	    event.x -= widget.x;
-	    event.y -= widget.y;
+	    event.x -= widget.geometry.x;
+	    event.y -= widget.geometry.y;
 	    widget.motion (&widget, &event);
 	}
     }
@@ -294,13 +311,13 @@ namespace Chrome {
 	    &widget_t	widget = &chrome.widgets[i];
 	    if (!is_uninit (&widget.draw)) {
 		save (cr);
-		translate (cr, widget.x, widget.y);
+		translate (cr, widget.geometry.x, widget.geometry.y);
 		widget.draw (cr, &widget);
 		restore (cr);
 	    }
 	    if (!is_uninit (&widget.outline)) {
 		save (cr);
-		translate (cr, widget.x, widget.y);
+		translate (cr, widget.geometry.x, widget.geometry.y);
 		widget.outline (cr, &widget);
 		restore (cr);
 		widget.extents = fill_extents (cr);
@@ -315,11 +332,18 @@ namespace Chrome {
 	exit (0);
     }
     
-    public chrome_t new () {
+    public *chrome_t new (string name, real size ...) {
 	chrome_t chrome;
+	real width, height;
+
+	switch (dim (size)) {
+	case 0:	width = height = 300; break;
+	case 1: width = height = size[0]; break;
+	default: width = size[0], height = size[1]; break;
+	}
 	
-	chrome.surface = Cairo::Surface::create_window ("Chrome",
-							300, 300),
+	chrome.surface = Cairo::Surface::create_window (name, width, height);
+
 	chrome.event = Cairo::Surface::open_event (chrome.surface);
 	chrome.draw = true;
 	chrome.widgets = ((&widget_t)[...]) {};
@@ -329,14 +353,11 @@ namespace Chrome {
 	&chrome.mouse_grab = &no_widget;
 	chrome.button_down = 0;
 	&chrome.mouse_in = &no_widget;
-	return chrome;
+	&chrome.outline_widget = &no_widget;
+	chrome.outline_cr = cairo (&chrome);
+	return &chrome;
     }
     
-    public void add (&chrome_t chrome, &widget_t widget) {
-	&chrome.widgets[dim(chrome.widgets)] = &widget;
-	chrome.draw = true;
-    }
-
     public exception unknown_widget (&chrome_t chrome, &widget_t widget);
     
     int widget_pos (&chrome_t chrome, &widget_t widget) {
@@ -369,7 +390,8 @@ namespace Chrome {
     }
     
     public void main_loop (&chrome_t chrome) {
-	bool	running = true;
+	
+	chrome.running = true;
 
 	string event_line;
 
@@ -386,7 +408,7 @@ namespace Chrome {
 	
 	thread event_thread = fork event_reader ();
 
-	while (running) {
+	while (chrome.running) {
 	    if (chrome.draw)
 	    {
 		if (Semaphore::test (has_event))
@@ -451,9 +473,35 @@ namespace Chrome {
 		chrome.destroy (&chrome);
 		break;
 	    case "configure":
+		Cairo::destroy (chrome.outline_cr);
+		chrome.outline_cr = cairo (&chrome);
+		&chrome.outline_widget = &no_widget;
+		if (!is_uninit (&chrome.configure))
+		    chrome.configure (&chrome);
 		chrome.draw = true;
 		break;
 	    }
 	}
+
+	Thread::kill (event_thread);
+    }
+
+    string preferences_file = ".chromerc";
+    
+    public void load_preferences () {
+	string	home = Environ::get ("HOME");
+	if (home[String::length(home) - 1] != '/')
+	    home += "/";
+	try {
+	    Command::lex_file (home + preferences_file);
+	} catch File::open_error (string error_name,
+			    File::error_type error,
+			    string name) 
+	{
+	    if (error != File::error_type.NOENT)
+		raise File::open_error (error_name, error, name);
+	}
     }
 }
+
+Chrome::load_preferences ();

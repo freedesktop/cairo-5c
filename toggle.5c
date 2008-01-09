@@ -1,0 +1,56 @@
+autoload Chrome;
+autoload Chrome::Button;
+
+extend namespace Chrome {
+    
+    public namespace Toggle {
+
+	public typedef Button::button_t + struct {
+	    bool really_inside;
+	} toggle_t;
+	
+	public void set (&toggle_t widget, bool pressed) {
+	    if (pressed != widget.pressed)
+	    {
+		widget.pressed = pressed;
+		widget.inside = widget.really_inside || widget.pressed;
+		widget.callback (&widget, widget.pressed);
+		Widget::redraw (&widget);
+	    }
+	}
+
+	public void button (&toggle_t widget, &button_event_t event) {
+	    enum switch (event.type) {
+	    case press:
+		set (&widget, !widget.pressed);
+		break;
+	    case release:
+	    default:
+		break;
+	    }
+	}
+
+	public void motion (&toggle_t widget, &motion_event_t event) {
+	    Button::motion (&widget, &event);
+	    enum switch (event.type) {
+	    case leaving:
+	    case entering:
+		widget.really_inside = widget.inside;
+		widget.inside = widget.really_inside || widget.pressed;
+		break;
+	    default:
+		break;
+	    }
+	}
+
+	public *widget_t new (&chrome_t chrome,
+			      string label,
+			      Button::callback_t callback) {
+	    toggle_t	widget;
+	    Button::init (&widget, &chrome, label, callback);
+	    widget.button = button;
+	    widget.motion = motion;
+	    return &widget;
+	}
+    }
+}

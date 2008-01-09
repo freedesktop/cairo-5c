@@ -1,0 +1,321 @@
+autoload Chrome;
+
+extend namespace Chrome {
+    public namespace Box {
+
+	public typedef enum { horizontal, vertical } dir_t;
+	
+	public typedef box_t;
+	
+	public exception unknown_widget (&box_t box, &widget_t widget);
+
+	public typedef struct {
+	    real	width;
+	    real	height;
+	    real	stretch_width;
+	    real	stretch_height;
+	} layout_t;
+
+	typedef union {
+	    &widget_t	    widget;
+	    &box_t	    box;
+	    void	    glue;
+	} member_t;
+	
+	public typedef struct {
+	    layout_t	layout;
+	    member_t	item;
+	} item_t;
+	
+	public typedef layout_t + struct {
+	    dir_t	    dir;
+	    item_t[...]	    items;
+	} box_t;
+
+	public *box_t new (dir_t dir, item_t items...) {
+	    return &(box_t) {
+		dir = dir,
+		items = items
+	    };
+	}
+	
+	rect_t widget_rect (&widget_t widget) {
+	    cairo_t cr = cairo (&widget.chrome);
+	    widget.natural (cr, &widget);
+	    rect_t r = fill_extents (cr);
+	    Cairo::destroy (cr);
+	    return r;
+	}
+
+	public item_t widget_item (&widget_t widget, real stretch...)
+	{
+	    rect_t  natural = widget_rect (&widget);
+	    real    stretch_width;
+	    real    stretch_height;
+
+	    switch (dim (stretch)) {
+	    case 0:
+		stretch_width = stretch_height = 1;
+		break;
+	    case 1:
+		stretch_width = stretch_height = stretch[0];
+		break;
+	    default:
+		stretch_width = stretch[0];
+		stretch_height= stretch[1];
+		break;
+	    }
+	    
+	    return (item_t) {
+		layout = {
+		    width = natural.width,
+		    height = natural.height,
+		    stretch_width = stretch_width,
+		    stretch_height = stretch_height
+		},
+		item = { widget = &widget },
+	    };
+	}
+
+	public item_t box_item (&box_t box)
+	{
+	    return (item_t) {
+		item = { box = &box }
+	    };
+	}
+	
+	public item_t glue_item (real stretch)
+	{
+	    return (item_t) {
+		layout = {
+		    width = 0,
+		    height = 0,
+		    stretch_width = stretch,
+		    stretch_height = stretch
+		},
+		item = { glue = ◊ }
+	    };
+	}
+	
+	public void add_item (&box_t box, item_t item)
+	{
+	    union switch (item.item) {
+	    case glue:
+		if (box.dir == dir_t.horizontal)
+		    item.layout.stretch_height = 10000;
+		else
+		    item.layout.stretch_width = 10000;
+	    default:
+		break;
+	    }
+	    box.items[dim(box.items)] = item;
+	}
+	
+	public void add_widget (&box_t box,
+				&widget_t widget,
+				real stretch_width,
+				real stretch_height)
+	{
+	    add_item (&box,
+		      widget_item (&widget, stretch_width, stretch_height));
+	}
+
+	public void add_box (&box_t box,
+			     &box_t add)
+	{
+	    add_item (&box, box_item (&add));
+	}
+
+	public void add_glue (&box_t box,
+			      real stretch)
+	{
+	    add_item (&box, glue_item (stretch));
+	}
+
+	public void set_layout (&box_t box,
+				&widget_t widget,
+				layout_t layout)
+	{
+	    member_t	find = { widget = &widget };
+	    
+	    for (int i = 0; i < dim (box.items); i++)
+		if (box.items[i].item == find) {
+		    box.items[i].layout = layout;
+		    return;
+		}
+	    raise unknown_widget (&box, &widget);
+	}
+	
+	public void set_size (&box_t box,
+			      &widget_t widget,
+			      real width,
+			      real height)
+	{
+	    member_t	find = { widget = &widget };
+	    
+	    for (int i = 0; i < dim (box.items); i++)
+		if (box.items[i].item == find) {
+		    box.items[i].layout.width = width;
+		    box.items[i].layout.height = height;
+		    return;
+		}
+	    raise unknown_widget (&box, &widget);
+	}
+	
+	public layout_t query (&box_t box) {
+	    layout_t	layout = {
+		width = 0,
+		height = 0
+	    };
+
+	    if (box.dir == dir_t.horizontal) {
+		layout.stretch_width = 0;
+		layout.stretch_height = 10000;
+	    } else {
+		layout.stretch_width = 10000;
+		layout.stretch_height = 0;
+	    }
+
+	    for (int i = 0; i < dim (box.items); i++)
+	    {
+		&layout_t child = &box.items[i].layout;
+
+		union switch (box.items[i].item) {
+		case box b:
+		    box.items[i].layout = query (&b);
+		    break;
+		case widget:
+		case glue:
+		    break;
+		}
+		if (box.dir == dir_t.horizontal) {
+		    layout.width += child.width;
+		    layout.stretch_width += child.stretch_width;
+		    if (child.height > layout.height)
+			layout.height = child.height;
+		    if (child.stretch_height < layout.stretch_height)
+			layout.stretch_height = child.stretch_height;
+		} else {
+		    layout.height += child.height;
+		    layout.stretch_height += child.stretch_height;
+		    if (child.width > layout.width)
+			layout.width = child.width;
+		    if (child.stretch_width < layout.stretch_width)
+			layout.stretch_width = child.stretch_width;
+		}
+	    }
+	    return layout;
+	}
+
+	public void configure (&box_t box,
+			       rect_t geometry,
+			       layout_t layout)
+	{
+	    real    actual;
+	    real    stretch;
+	    real    pref;
+	    real    pos;
+
+	    if (box.dir == dir_t.horizontal) {
+		stretch = layout.stretch_width;
+		actual = geometry.width;
+		pref = layout.width;
+		pos = geometry.x;
+	    } else {
+		stretch = layout.stretch_height;
+		actual = geometry.height;
+		pref = layout.height;
+		pos = geometry.y;
+	    }
+	    if (stretch == 0) stretch = 1;
+	    
+	    real delta = (real delta_remain) = actual - pref;
+	    
+	    for (int i = 0; i < dim (box.items); i++) {
+		real delta_this;
+		&layout_t child = &box.items[i].layout;
+		
+		if (i == dim (box.items) - 1)
+		    delta_this = delta_remain;
+		else {
+		    real stretch_this;
+
+		    if (box.dir == dir_t.horizontal)
+			stretch_this = child.stretch_width;
+		    else
+			stretch_this = child.stretch_height;
+		    delta_this = delta * stretch_this / stretch;
+		}
+		if (delta_remain < 0) {
+		    if (delta_this < delta_remain)
+			delta_this = delta_remain;
+		} else {
+		    if (delta_this > delta_remain)
+			delta_this = delta_remain;
+		}
+		delta_remain -= delta_this;
+
+		rect_t child_geometry;
+		
+		if (box.dir == dir_t.horizontal) {
+		    child_geometry = (rect_t) {
+			x = pos,
+			y = geometry.y,
+			width = child.width + delta_this,
+			height = geometry.height
+		    };
+		    pos = pos + child_geometry.width;
+		} else {
+		    child_geometry = (rect_t) {
+			x = geometry.x,
+			y = pos,
+			width = geometry.width,
+			height = child.height + delta_this,
+		    };
+		    pos = pos + child_geometry.height;
+		}
+		union switch (box.items[i].item) {
+		case box b:
+		    configure (&b, child_geometry, child);
+		    break;
+		case widget:
+		    box.items[i].item.widget.geometry = child_geometry;
+		    break;
+		case glue:
+		    break;
+		}
+	    }
+	}
+    }
+
+    public void configure (&chrome_t chrome, &Box::box_t box)
+    {
+	cairo_t cr = cairo (&chrome);
+	
+	rect_t	geometry = {
+	    x = 0,
+	    y = 0,
+	    width = width (cr),
+	    height = height (cr)
+	};
+
+	/*
+	 * Get box preferred size
+	 */
+	Box::layout_t    layout = Box::query (&box);
+
+	/*
+	 * Layout box
+	 */
+	Box::configure (&box, geometry, layout);
+	Cairo::destroy (cr);
+    }
+
+    public void set_box (&chrome_t chrome, &Box::box_t box)
+    {
+	Chrome::configure (&chrome, &box);
+	chrome.configure = void func (&chrome_t chrome) {
+	    Chrome::configure (&chrome, &box);
+	};
+    }
+}
