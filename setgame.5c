@@ -575,6 +575,7 @@ void play () {
     &button_t	    shuffle = Chrome::Button::new (&ui, "Shuffle",
 						   void func (&widget_t w, bool state) {
 						    reshuffle (&g);
+						    update_moves ();
 						   });
     &box_t	    menu = Chrome::Box::new (dir_t.horizontal,
 					     widget_item (&shuffle, 0),
