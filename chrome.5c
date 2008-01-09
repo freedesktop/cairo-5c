@@ -66,6 +66,7 @@ namespace Chrome {
 	surface_t	    surface;
 	file		    event;
 	bool		    draw;
+	bool		    resize;
 	point_t		    scale;
 	(&widget_t)[...]    widgets;
 	&widget_t	    key_focus;
@@ -346,6 +347,7 @@ namespace Chrome {
 
 	chrome.event = Cairo::Surface::open_event (chrome.surface);
 	chrome.draw = true;
+	chrome.resize = true;
 	chrome.widgets = ((&widget_t)[...]) {};
 	chrome.scale = (point_t) { x = 1, y = 1 };
 	chrome.destroy = destroy;
@@ -413,8 +415,17 @@ namespace Chrome {
 	    {
 		if (Semaphore::test (has_event))
 		    Semaphore::signal (has_event);
-		else
+		else {
+		    if (chrome.resize) {
+			chrome.resize = false;
+			Cairo::destroy (chrome.outline_cr);
+			chrome.outline_cr = cairo (&chrome);
+			&chrome.outline_widget = &no_widget;
+			if (!is_uninit (&chrome.configure))
+			    chrome.configure (&chrome);
+		    }
 		    draw (&chrome);
+		}
 	    }
 	    
 	    Semaphore::wait (has_event);
@@ -473,11 +484,7 @@ namespace Chrome {
 		chrome.destroy (&chrome);
 		break;
 	    case "configure":
-		Cairo::destroy (chrome.outline_cr);
-		chrome.outline_cr = cairo (&chrome);
-		&chrome.outline_widget = &no_widget;
-		if (!is_uninit (&chrome.configure))
-		    chrome.configure (&chrome);
+		chrome.resize = true;
 		chrome.draw = true;
 		break;
 	    }
