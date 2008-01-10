@@ -23,13 +23,7 @@ void exit_callback (&Chrome::widget_t widget, bool state) {
 					   Chrome::Box::widget_item (&exit_widget, 10, 0),
 					   Chrome::Box::glue_item (10));
 
-Chrome::configure (&chrome, &box);
-
-void configure (&Chrome::chrome_t chrome) {
-    Chrome::configure (&chrome, &box);
-}
-
-chrome.configure = configure;
+Chrome::set_box (&chrome, &box);
 
 Chrome::main_loop (&chrome);
 
