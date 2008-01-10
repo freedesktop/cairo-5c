@@ -2,21 +2,21 @@ autoload Chrome;
 autoload Chrome::Button;
 autoload Chrome::Box;
 
-chrome = Chrome::new ();
+&Chrome::chrome_t chrome = Chrome::new ("Test");
 
-void button_callback (&Chrome::widget_t widget) {
+void button_callback (&Chrome::widget_t widget, bool state) {
     static int	i = 0;
     Chrome::Button::relabel (&widget, sprintf ("click %d", ++i));
 }
 
-void exit_callback (&Chrome::widget_t widget) {
+void exit_callback (&Chrome::widget_t widget, bool state) {
     widget.chrome.running = false;
 }
 
-&Chrome::widget_t hello_widget = &Chrome::Button::new (&chrome, "hello, world", button_callback);
-&Chrome::widget_t exit_widget = &Chrome::Button::new (&chrome, "exit", exit_callback);
+&Chrome::widget_t hello_widget = Chrome::Button::new (&chrome, "hello, world", button_callback);
+&Chrome::widget_t exit_widget = Chrome::Button::new (&chrome, "exit", exit_callback);
 
-Chrome::Box::box_t box = Chrome::Box::new (Chrome::Box::dir_t.horizontal,
+&Chrome::Box::box_t box = Chrome::Box::new (Chrome::Box::dir_t.horizontal,
 					   Chrome::Box::glue_item (10),
 					   Chrome::Box::widget_item (&hello_widget, 10, 0),
 					   Chrome::Box::glue_item (10),
