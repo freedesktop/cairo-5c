@@ -43,13 +43,20 @@ extend namespace Chrome {
 	    }
 	}
 
+	public void init (&toggle_t widget,
+			  &chrome_t chrome,
+			  string label,
+			  Button::callback_t callback) {
+	    Button::init (&widget, &chrome, label, callback);
+	    widget.button = button;
+	    widget.motion = motion;
+	}
+	
 	public *widget_t new (&chrome_t chrome,
 			      string label,
 			      Button::callback_t callback) {
 	    toggle_t	widget;
-	    Button::init (&widget, &chrome, label, callback);
-	    widget.button = button;
-	    widget.motion = motion;
+	    init (&widget, &chrome, label, callback);
 	    return &widget;
 	}
     }
