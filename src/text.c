@@ -48,20 +48,78 @@ do_Cairo_select_font_face (Value cv, Value fv, Value sv, Value wv)
     return Void;
 }
 
-Value
-do_Cairo_set_font (Value cv, Value fv)
+typedef struct {
+    DataType		*data;
+    Value		name;
+    cairo_font_face_t	*font_face;
+    double		size;
+} cairo_5c_font_t;
+
+static void
+cairo_5c_font_mark (void *v)
+{
+    cairo_5c_font_t *c5f = v;
+    
+    MemReference (c5f->name);
+}
+
+static int
+cairo_5c_font_free (void *v)
+{
+    cairo_5c_font_t *c5f = v;
+
+    if (c5f->font_face) {
+	cairo_font_face_destroy (c5f->font_face);
+	c5f->font_face = NULL;
+    }
+    return 1;
+}
+
+static DataType Cairo5cFontType = {
+    cairo_5c_font_mark,
+    cairo_5c_font_free,
+    "Cairo5cFont"
+};
+
+#define CAIRO_5C_FONT_CACHE	31
+#define CAIRO_5C_FONT_REHASH	29
+
+typedef struct {
+    DataType	    *data;
+    cairo_5c_font_t *cache[CAIRO_5C_FONT_CACHE];
+} cairo_5c_font_cache_t;
+
+static void
+cairo_5c_font_cache_mark (void *v)
+{
+    cairo_5c_font_cache_t   *c5fc = v;
+    int			    i;
+
+    for (i = 0; i < CAIRO_5C_FONT_CACHE; i++)
+	MemReference (c5fc->cache[i]);
+}
+
+static DataType Cairo5cFontCacheType = {
+    cairo_5c_font_cache_mark,
+    NULL,
+    "Cairo5cFontCache"
+};
+
+static cairo_5c_font_t *
+cairo_5c_font_create (Value name)
 {
     ENTER ();
-    cairo_5c_t		*c5c = cairo_5c_get (cv);
-    char		*name = StrzPart (fv, "invalid name");
+    char		*string_name = StrzPart (name, "invalid name");
     FcPattern		*pat, *match;
     cairo_font_face_t	*font_face;
     double		size = 0;
     FcResult		result;
+    cairo_5c_font_t	*c5f;
 
     if (aborting)
-	RETURN (Void);
-    pat = FcNameParse ((FcChar8 *) name);
+	RETURN (NULL);
+    
+    pat = FcNameParse ((FcChar8 *) string_name);
 
     FcConfigSubstitute (0, pat, FcMatchPattern);
     FcDefaultSubstitute (pat);
@@ -72,23 +130,78 @@ do_Cairo_set_font (Value cv, Value fv)
     {
 	RaiseStandardException (exception_open_error,
 				"can't open font",
-				2, FileGetError (ENOENT), fv);
-	RETURN (Void);
+				2, FileGetError (ENOENT), name);
+	RETURN (NULL);
     }
 
     FcPatternGetDouble (match, FC_SIZE, 0, &size);
     font_face = cairo_ft_font_face_create_for_pattern (match);
+    
     FcPatternDestroy (match);
     if (!font_face)
     {
 	RaiseStandardException (exception_open_error,
 				"can't open font",
-				2, FileGetError (ENOENT), fv);
-	RETURN (Void);
+				2, FileGetError (ENOENT), name);
+	RETURN (NULL);
     }
-    cairo_set_font_face (c5c->cr, font_face);
-    cairo_set_font_size (c5c->cr, size);
-    cairo_font_face_destroy (font_face);
+    c5f = ALLOCATE (&Cairo5cFontType, sizeof (cairo_5c_font_t));
+    c5f->name = name;
+    c5f->font_face = font_face;
+    c5f->size = size;
+    RETURN (c5f);
+}
+
+static cairo_5c_font_cache_t	*font_cache;
+
+static int font_matches;
+static int font_misses;
+
+static cairo_5c_font_t *
+cairo_5c_font_find (Value name)
+{
+    ENTER ();
+    int		    hash = ValueInt (ValueHash (name));
+    cairo_5c_font_t *c5f;
+    int		    i;
+    int		    count;
+
+    if (!font_cache)
+    {
+	font_cache = ALLOCATE (&Cairo5cFontCacheType, sizeof (cairo_5c_font_cache_t));
+	for (i = 0; i < CAIRO_5C_FONT_CACHE; i++)
+	    font_cache->cache[i] = NULL;
+	MemAddRoot (font_cache);
+    }
+    for (i = hash % CAIRO_5C_FONT_CACHE, count = 0;
+	 (c5f = font_cache->cache[i]) && count < CAIRO_5C_FONT_CACHE;
+	 i = (i + (hash % CAIRO_5C_FONT_REHASH + 1)) % CAIRO_5C_FONT_CACHE,
+	 count++)
+    {
+	if (Equal (c5f->name, name) == TrueVal) {
+	    ++font_matches;
+	    RETURN(c5f);
+	}
+    }
+    ++font_misses;
+    c5f = cairo_5c_font_create (name);
+    if (c5f)
+	font_cache->cache[hash % CAIRO_5C_FONT_CACHE] = c5f;
+    RETURN (c5f);
+}
+
+Value
+do_Cairo_set_font (Value cv, Value fv)
+{
+    ENTER ();
+    cairo_5c_t		*c5c = cairo_5c_get (cv);
+    cairo_5c_font_t	*c5f = cairo_5c_font_find (fv);
+
+    if (!c5f)
+	RETURN (Void);
+
+    cairo_set_font_face (c5c->cr, c5f->font_face);
+    cairo_set_font_size (c5c->cr, c5f->size);
     RETURN(Void);
 }
 
