@@ -852,11 +852,11 @@ nickle_init (void)
 	    " void destroy (surface_t surface)\n"
 	    "\n"
 	    " Destroy a surface.  Further usage will raise an exception.\n" },
-	{ do_Cairo_Surface_width, "width", "i", SURFACE_S, "\n"
+	{ do_Cairo_Surface_width, "width", "n", SURFACE_S, "\n"
 	    " int width (surface_t surface)\n"
 	    "\n"
 	    " Returns the width of the given surface\n" },
-	{ do_Cairo_Surface_height, "height", "i", SURFACE_S, "\n"
+	{ do_Cairo_Surface_height, "height", "n", SURFACE_S, "\n"
 	    " int height (surface_t surface)\n"
 	    "\n"
 	    " Returns the height of the given surface\n" },
