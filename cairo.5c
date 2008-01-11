@@ -46,10 +46,10 @@ extend namespace Cairo {
 	real hue, saturation, value;
     } hsv_color_t;
     
-    public int width (cairo_t cr) = 
+    public real width (cairo_t cr) = 
 	Surface::width (get_target (cr));
     
-    public int height (cairo_t cr) = 
+    public real height (cairo_t cr) = 
 	Surface::height (get_target (cr));
     
     public file open_event (cairo_t cr) =
@@ -169,6 +169,18 @@ extend namespace Cairo {
 	}
     }
 
+    public rgb_color_t hsv_to_rgb (hsv_color_t hsv)
+    {
+	real[3] rgb = from_hsv (hsv.hue, hsv.saturation, hsv.value);
+	return (rgb_color_t) { red = rgb[0], green = rgb[1], blue = rgb[2] };
+    }
+    
+    public hsv_color_t rgb_to_hsv (rgb_color_t rgb)
+    {
+	real[3] hsv = to_hsv (rgb.red, rgb.green, rgb.blue);
+	return (hsv_color_t) { hue = hsv[0], saturation = hsv[1], value = hsv[2] };
+    }
+    
     public void set_source_hsv (cairo_t cr, real h, real s, real v)
 	/*
 	 * Set color using HSV specification
