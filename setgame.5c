@@ -153,12 +153,14 @@ draw_card (cairo_t cr, &card_t card, int cols, int rows) {
 	restore (cr);
 	enum switch (card.pat) {
 	case empty:
-	    set_color (cr, card.color);
 	    /* XXX work around bug in cairo 1.4.12 */
 	    set_tolerance (cr, 0.01);
 	    save (cr);
 	    scale (cr, 1, rows/cols);
 	    set_line_width (cr, 0.04);
+	    set_source_rgb (cr, 1, 1, 1);
+	    fill_preserve (cr);
+	    set_color (cr, card.color);
 	    stroke (cr);
 	    restore (cr);
 	    break;
@@ -175,8 +177,8 @@ draw_card (cairo_t cr, &card_t card, int cols, int rows) {
 					 rgb.red, rgb.green, rgb.blue);
 	    Pattern::add_color_stop_rgb (stripes, 0.48,
 					 rgb.red, rgb.green, rgb.blue);
-	    Pattern::add_color_stop_rgba (stripes, 0.50, 1, 1, 1, 0);
-	    Pattern::add_color_stop_rgba (stripes, 0.98, 1, 1, 1, 0);
+	    Pattern::add_color_stop_rgba (stripes, 0.50, 1, 1, 1, 1);
+	    Pattern::add_color_stop_rgba (stripes, 0.98, 1, 1, 1, 1);
 	    Pattern::add_color_stop_rgb (stripes, 1.0,
 					 rgb.red, rgb.green, rgb.blue);
 	    set_source (cr, stripes);
@@ -445,6 +447,15 @@ make_game ()
 }
 
 void
+new_game (&game_t game)
+{
+    game.deck = make_deck();
+    game.board = make_board ();
+    unhighlight (&game);
+    fill_board (&game.board, &game.deck);
+}
+
+void
 clear_selected (&game_t game)
 {
     int[2] d = dims (game.board);
@@ -643,9 +654,15 @@ void play () {
 						    reshuffle (&g);
 						    update_moves ();
 						   });
+    &button_t	    new = Chrome::Button::new (&ui, "New Game",
+					       void func (&widget_t widget, bool state) {
+						new_game (&g);
+						update_moves ();
+					       });
     &box_t	    menu = Chrome::Box::new (dir_t.horizontal,
 					     widget_item (&shuffle, 0),
 					     widget_item (&hint, 0),
+					     widget_item (&new, 0),
 					     widget_item (&quit, 0),
 					     glue_item (1),
 					     widget_item (&ngames, 0));
