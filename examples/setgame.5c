@@ -40,6 +40,11 @@
  
 autoimport Cairo;
 autoimport PRNG;
+autoload Chrome;
+autoload Chrome::Button;
+autoload Chrome::Box;
+autoload Chrome::Label;
+autoload Chrome::Toggle;
 
 dev_srandom (32);
 
@@ -130,16 +135,16 @@ set_transform (cairo_t cr, int n, &card_t card) {
 }
 
 void
-draw_card (cairo_t cr, &card_t card) {
+draw_card (cairo_t cr, &card_t card, int cols, int rows) {
     set_line_join (cr, line_join_t.MITER);
     set_miter_limit (cr, 100);
-    set_source_rgb (cr, 1, 1, 1);
-    rectangle (cr, 0, 0, 1, 1);
-    fill (cr);
     set_source_rgb (cr, 0, 0, 0);
     set_fill_rule (cr, fill_rule_t.EVEN_ODD);
     rectangle (cr, 0, 0, 1, 1);
-    rectangle (cr, .025, .025, .95, .95);
+
+    real x_inset = .025;
+    real y_inset = x_inset * rows / cols;
+    rectangle (cr, x_inset, y_inset, 1 - x_inset * 2, 1 - y_inset * 2);
     fill (cr);
     for (int n = 1; n <= card.number; n++) {
 	save (cr);
@@ -148,29 +153,43 @@ draw_card (cairo_t cr, &card_t card) {
 	restore (cr);
 	enum switch (card.pat) {
 	case empty:
-	    set_line_width (cr, 0.05);
-	    set_color (cr, card.color);
 	    /* XXX work around bug in cairo 1.4.12 */
 	    set_tolerance (cr, 0.01);
+	    save (cr);
+	    scale (cr, 1, rows/cols);
+	    set_line_width (cr, 0.04);
+	    set_source_rgb (cr, 1, 1, 1);
+	    fill_preserve (cr);
+	    set_color (cr, card.color);
 	    stroke (cr);
+	    restore (cr);
 	    break;
 	case solid:
 	    set_color (cr, card.color);
 	    fill (cr);
 	    break;
 	case striped:
-	    pattern_t stripes = Pattern::create_linear (0, 0, .05, .025);
-	    Pattern::add_color_stop_rgba (stripes, 0.0, 0, 0, 0, 0);
+	    pattern_t stripes = Pattern::create_linear (0, 0, .05, .05);
+	    rgb_color_t	rgb = rgb_colors[card.color];
 	    Pattern::set_extend (stripes, Pattern::extend_t.REPEAT);
 	    
-	    rgb_color_t	rgb = rgb_colors[card.color];
-	    Pattern::add_color_stop_rgb (stripes, 0.3,
+	    Pattern::add_color_stop_rgb (stripes, 0.0,
 					 rgb.red, rgb.green, rgb.blue);
-	    Pattern::add_color_stop_rgb (stripes, 0.7,
+	    Pattern::add_color_stop_rgb (stripes, 0.48,
 					 rgb.red, rgb.green, rgb.blue);
-	    Pattern::add_color_stop_rgba (stripes, 1.0, 0, 0, 0, 0);
+	    Pattern::add_color_stop_rgba (stripes, 0.50, 1, 1, 1, 1);
+	    Pattern::add_color_stop_rgba (stripes, 0.98, 1, 1, 1, 1);
+	    Pattern::add_color_stop_rgb (stripes, 1.0,
+					 rgb.red, rgb.green, rgb.blue);
 	    set_source (cr, stripes);
-	    fill (cr);
+	    fill_preserve (cr);
+	    save (cr);
+	    scale (cr, 1, rows/cols);
+	    set_line_width (cr, 0.01);
+	    set_source_rgb (cr, rgb.red, rgb.green, rgb.blue);
+	    set_tolerance (cr, 0.01);
+	    stroke (cr);
+	    restore (cr);
 	    break;
 	}
     }
@@ -201,7 +220,8 @@ make_deck () {
 
 typedef struct {
     card_t  card;
-    bool    highlight;
+    bool    selected;
+    pattern_t[...]	highlight;
 } board_card_t;
 
 typedef union {
@@ -223,24 +243,22 @@ fill_board (&board_t board, &deck_t deck)
 	    if (board[y,x] == board_spot_t.empty && dim(deck) > 0) {
 		board[y,x].card = (board_card_t) {
 		    card = deck[dim(deck)-1],
-		    highlight = false
+		    selected = false,
+		    highlight = {}
 		};
 		setdim (deck, dim(deck)-1);
 	    }
 }
 
 void
-draw_board (cairo_t cr, &board_t board)
+draw_board (cairo_t cr, &board_t board, real width, real height)
 {
     int[2] d = dims (board);
-    real xinc = width (cr) / d[0];
-    real yinc = height (cr) / d[1];
+    real xinc = width / d[1];
+    real yinc = height / d[0];
 
-    disable (cr);
-    set_source_rgb (cr, 1, 1, 1);
-    paint (cr);
     save (cr);
-    scale (cr, width(cr) / d[1], height(cr) / d[0]);
+    scale (cr, xinc, yinc);
     for (int y = 0; y < d[0]; y++)
 	for (int x = 0; x < d[1]; x++) {
 	    save (cr);
@@ -251,47 +269,105 @@ draw_board (cairo_t cr, &board_t board)
 	    case empty:
 		break;
 	    case card c:
-		draw_card (cr, &c.card);
-		if (c.highlight) {
-		    set_source_rgba (cr, 0, 0, .5, 0.25);
+		for (int h = 0; h < dim (c.highlight); h++)
+		{
+		    set_source (cr, c.highlight[h]);
 		    rectangle (cr, 0, 0, 1, 1);
 		    fill (cr);
 		}
+		draw_card (cr, &c.card, d[1], d[0]);
 		break;
 	    }
 	    restore (cr);
 	}
     restore (cr);
-    enable (cr);
 }
 
 int nset = 3;
 
 typedef struct {
-    cairo_t cr;
-    file    event;
-    board_t board;
-    deck_t  deck;
-    int	    nhighlight;
+    board_t		board;
+    deck_t		deck;
+    int			nselected;
+    void()		unhint;
 } game_t;
 
-void highlight (&game_t game, int x, int y)
+void add_highlight (&game_t game, int x, int y, pattern_t p)
 {
     enum switch (game.board[y,x]) {
     case card:
-	if (game.board[y,x].card.highlight) {
-	    game.board[y,x].card.highlight = false;
-	    --game.nhighlight;
+	&(pattern_t[...]) h = &game.board[y,x].card.highlight;
+	h[dim(h)] = p;
+	break;
+    case empty:
+	break;
+    }
+}
+
+void clear_highlight (&game_t game, int x, int y)
+{
+    setdim (game.board[y,x].card.highlight, 0);
+}
+
+void select (&game_t game, int x, int y)
+{
+    enum switch (game.board[y,x]) {
+    case card:
+	if (game.board[y,x].card.selected) {
+	    clear_highlight (&game, x, y);
+	    game.board[y,x].card.selected = false;
+	    --game.nselected;
 	} else {
-	    if (game.nhighlight == nset)
-		break;
-	    game.board[y,x].card.highlight = true;
-	    ++game.nhighlight;
+	    add_highlight (&game, x, y,
+			   Pattern::create_rgba (0, 0, 0.5, 0.25));
+	    game.board[y,x].card.selected = true;
+	    ++game.nselected;
 	}
 	break;
     case empty:
 	break;
     }
+}
+
+pattern_t
+highlight_pattern (int i)
+{
+    real    x0, y0, x1, y1;
+    real    angle = i * 2.8 / 4;
+    real    scale = 0.05;
+    real    c = cos(angle) * scale;
+    real    s = sin(angle) * scale;
+    rgb_color_t color = hsv_to_rgb ((hsv_color_t) {
+	hue = i / 6, saturation = 1, value = 0.8 });
+
+    pattern_t	pat = Pattern::create_linear (-c, -s, c, s);
+    Pattern::set_extend (pat, Pattern::extend_t.REPEAT);
+    Pattern::add_color_stop_rgba (pat, 0.0, 0, 0, 0, 0);
+    Pattern::add_color_stop_rgba (pat, 0.38, 0, 0, 0, 0);
+    Pattern::add_color_stop_rgba (pat, 0.4,
+				  color.red, color.green,
+				  color.blue, 1);
+    Pattern::add_color_stop_rgba (pat, 0.6,
+				  color.red, color.green,
+				  color.blue, 1);
+    Pattern::add_color_stop_rgba (pat, 0.62, 0, 0, 0, 0);
+    Pattern::add_color_stop_rgba (pat, 1.0, 0, 0, 0, 0);
+    return pat;
+}
+
+void unhighlight (&game_t game) {
+    int[2] d = dims(game.board);
+
+    for (int y = 0; y < d[0]; y++)
+	for (int x = 0; x < d[1]; x++)
+	    enum switch (game.board[y,x]) {
+	    case card:
+		clear_highlight (&game, x, y);
+		break;
+	    case empty:
+		break;
+	    }
+    game.nselected = 0;
 }
 
 (poly(card_t c))[*] getters = {
@@ -341,7 +417,7 @@ check_game (&game_t game)
 {
     card_t[3]  cards;
     
-    if (game.nhighlight != 3)
+    if (game.nselected != 3)
 	return false;
     int c = 0;
     int[2] d = dims(game.board);
@@ -349,7 +425,7 @@ check_game (&game_t game)
 	for (int x = 0; x < d[1]; x++)
 	    enum switch (game.board[y,x]) {
 	    case card:
-		if (game.board[y,x].card.highlight)
+		if (game.board[y,x].card.selected)
 		    cards[c++] = game.board[y,x].card.card;
 		break;
 	    case empty:
@@ -361,28 +437,34 @@ check_game (&game_t game)
 game_t
 make_game ()
 {
-    cairo_t cr = create (Surface::create_window ("Set", 0, 0));
     game_t game = {
-	cr = cr,
-	event = open_event (cr),
 	deck = make_deck (),
 	board = make_board (),
-	nhighlight = 0
+	nselected = 0
     };
     fill_board (&game.board, &game.deck);
     return game;
 }
 
 void
-clear_highlight (&game_t game)
+new_game (&game_t game)
+{
+    game.deck = make_deck();
+    game.board = make_board ();
+    unhighlight (&game);
+    fill_board (&game.board, &game.deck);
+}
+
+void
+clear_selected (&game_t game)
 {
     int[2] d = dims (game.board);
-    game.nhighlight = 0;
+    game.nselected = 0;
     for (int y = 0; y < d[0]; y++)
 	for (int x = 0; x < d[1]; x++)
 	    enum switch (game.board[y,x]) {
 	    case card:
-		if (game.board[y,x].card.highlight)
+		if (game.board[y,x].card.selected)
 		    game.board[y,x] = board_spot_t.empty;
 		break;
 	    case empty:
@@ -391,7 +473,7 @@ clear_highlight (&game_t game)
 }
 
 void
-new (&game_t game)
+reshuffle (&game_t game)
 {
     int[2] d = dims (game.board);
     for (int y = 0; y < d[0]; y++)
@@ -408,15 +490,13 @@ new (&game_t game)
     fill_board (&game.board, &game.deck);
 }
 
-void
-find_set (&game_t game)
-{
+typedef struct { int x, y; } card_pos_t;
+
+bool
+find_sets (&game_t game, bool (card_pos_t[3]) callback) {
     card_t[3]  cards;
     int[2] d = dims(game.board);
-    struct {
-	int x;
-	int y;
-    } [d[0]*d[1]] order = {
+    card_pos_t [d[0]*d[1]] order = {
 	[i] = { x = i // d[0], y = i % d[0] }
     };
     
@@ -430,19 +510,7 @@ find_set (&game_t game)
 	}
     }
     
-    void unhighlight () {
-	for (int y = 0; y < d[0]; y++)
-	    for (int x = 0; x < d[1]; x++)
-		enum switch (game.board[y,x]) {
-		case card:
-		    game.board[y,x].card.highlight = false;
-		    break;
-		case empty:
-		    break;
-		}
-	game.nhighlight = 0;
-    }
-    
+    bool ret = false;
     for (int i = 0; i < dim (order); i++) {
 	if (!get_card (i, 0))
 	    continue;
@@ -452,81 +520,158 @@ find_set (&game_t game)
 	    for (int k = j + 1; k < dim (order); k++) {
 		if (!get_card (k, 2))
 		    continue;
-		if (is_set (&cards))
-		{
-		    unhighlight ();
-		    highlight (&game, order[i].x, order[i].y);
-		    highlight (&game, order[j].x, order[j].y);
-		    highlight (&game, order[k].x, order[k].y);
-		    return;
+		if (is_set (&cards)) {
+		    ret = true;
+		    if (!callback ((card_pos_t[3]) {
+			{ x = order[i].x, y = order[i].y },
+			{ x = order[j].x, y = order[j].y },
+			{ x = order[k].x, y = order[k].y } }))
+		    {
+			return true;
+		    }
 		}
 	    }
 	}
     }
+	return ret;
+}
+
+int
+count_sets (&game_t game)
+{
+    int sets = 0;
+    find_sets (&game, bool func (card_pos_t[3] pos) { sets++; return true; });
+    return sets;
 }
 
 void
-play (&game_t game)
+find_set (&game_t game)
 {
-    bool redisplay = true;
-    
-    for (;;) {
-	if (redisplay) {
-	    draw_board (game.cr, &game.board);
-	    redisplay = false;
+    int	set = 0;
+    unhighlight (&game);
+    find_sets (&game, bool func (card_pos_t[3] pos) 
+	       {
+		pattern_t pat = highlight_pattern (set++);
+		for (int i = 0; i < 3; i++)
+		    add_highlight (&game, pos[i].x, pos[i].y, pat);
+		return true;
+	       });
+}
+
+extend namespace Chrome {
+    public namespace Setwidget {
+	public typedef widget_t + struct {
+	    &game_t game;
+	    void() deal;
+	} set_widget_t;
+
+	void draw (cairo_t cr, &set_widget_t widget) {
+	    draw_board (cr, &widget.game.board, widget.geometry.width,
+			widget.geometry.height);
 	}
-	if (File::end (game.event))
-	    break;
+
+	void outline (cairo_t cr, &set_widget_t widget)
+	{
+	    rectangle (cr, 0, 0, widget.geometry.width,
+		       widget.geometry.height);
+	}
+
+	void natural (cairo_t cr, &set_widget_t widget)
+	{
+	    rectangle (cr, 0, 0, 1, 1);
+	}
 	
-	int[2] d = dims (game.board);
-
-	string	line = File::fgets (game.event);
-	file	l = File::string_read (line);
-
-	int time = 0;
-	string name = "";
-	
-	if (File::fscanf (l, "%d %s", &time, &name) != 2)
-	    continue;
-
-	switch (name) {
-	case "press":
-	    File::fscanf (l, "%d %d %d",
-			  &(int button), &(real x), &(real y));
-	    switch (button) {
-	    case 1:
-		int x_i = floor (x * d[1] / width (game.cr));
-		int y_i = floor (y * d[0] / height (game.cr));
-		line = "";
-		highlight (&game, x_i, y_i);
+	void button (&set_widget_t widget, &button_event_t event) {
+	    &game_t game = &widget.game;
+	    if (event.type == button_type_t.press) {
+		int[2] d = dims(game.board);
+		int x_i = floor (event.x * d[1] / widget.geometry.width);
+		int y_i = floor (event.y * d[0] / widget.geometry.height);
+		if (!is_uninit (&game.unhint))
+		    game.unhint ();
+		select (&game, x_i, y_i);
 		if (check_game (&game)) {
-		    clear_highlight (&game);
+		    clear_selected (&game);
 		    fill_board (&game.board, &game.deck);
+		    widget.deal ();
 		}
-		redisplay = true;
-		break;
-	    case 2:
-		new (&game);
-		redisplay = true;
-		break;
-	    case 3:
-		find_set (&game);
-		redisplay = true;
-		break;
+		Widget::redraw (&widget);
 	    }
-	    break;
-	case "configure":
-	    redisplay = true;
-	    break;
-	case "motion":
-	    break;
-	case "delete":
-	    return;
-	default:
-	    break;
+	}
+
+	public *set_widget_t new (&chrome_t chrome, &game_t game, void () deal) {
+	    set_widget_t    widget;
+	    
+	    Widget::init (&chrome, &widget);
+	    widget.button = button;
+	    widget.draw = draw;
+	    widget.outline = outline;
+	    widget.natural = natural;
+	    widget.deal = deal;
+	    &widget.game = &game;
+	    return &widget;
 	}
     }
 }
 
-game_t g = make_game ();
-play (&g);
+import Chrome;
+import Button;
+import Widget;
+import Setwidget;
+import Box;
+import Label;
+import Toggle;
+
+void play () {
+    &chrome_t	    ui = Chrome::new ("Set", 400, 400);
+    game_t	    g = make_game ();
+    &label_t	    ngames = Chrome::Label::new (&ui, "Moves: 0");
+
+    &toggle_t	    hint = Chrome::Toggle::new (&ui, "Hint",
+						void func (&widget_t w, bool state) {
+						    if (state)
+							find_set (&g);
+						    else
+							unhighlight (&g);
+						});
+
+    g.unhint = void func () {
+	Chrome::Toggle::set (&hint, false);
+    };
+    void update_moves () {
+	Chrome::Label::relabel (&ngames, sprintf ("Moves: %d", count_sets (&g)));
+	Toggle::set (&hint, false);
+    }
+
+    &set_widget_t   widget = Chrome::Setwidget::new (&ui, &g, update_moves);
+	
+    &button_t	    quit = Chrome::Button::new (&ui, "Quit",
+						void func (&widget_t w, bool state) {
+						    w.chrome.running = false;
+						});
+    &button_t	    shuffle = Chrome::Button::new (&ui, "Shuffle",
+						   void func (&widget_t w, bool state) {
+						    reshuffle (&g);
+						    update_moves ();
+						   });
+    &button_t	    new = Chrome::Button::new (&ui, "New Game",
+					       void func (&widget_t widget, bool state) {
+						new_game (&g);
+						update_moves ();
+					       });
+    &box_t	    menu = Chrome::Box::new (dir_t.horizontal,
+					     widget_item (&shuffle, 0),
+					     widget_item (&hint, 0),
+					     widget_item (&new, 0),
+					     widget_item (&quit, 0),
+					     glue_item (1),
+					     widget_item (&ngames, 0));
+    &box_t	    box = Chrome::Box::new (dir_t.vertical,
+					    box_item (&menu),
+					    widget_item (&widget));
+    Chrome::set_box (&ui, &box);
+    update_moves ();
+    Chrome::main_loop (&ui);
+}
+
+play ();

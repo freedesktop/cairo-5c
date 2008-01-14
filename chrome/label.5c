@@ -1,0 +1,75 @@
+autoload Chrome;
+
+extend namespace Chrome {
+    public namespace Label {
+
+	public typedef void (&widget_t widget) callback_t;
+	
+	public typedef widget_t + struct {
+	    string  label;
+	    string  font;
+	} label_t;
+	
+	typedef struct {
+	    real x, y;
+	    real pad;
+	    real width, height;
+	    real preferred_width, preferred_height;
+	} metrics_t;
+	
+	metrics_t get_metrics (cr, &label_t widget) {
+	    set_font (cr, widget.font);
+	    text_extents_t text = text_extents (cr, widget.label);
+	    font_extents_t font = font_extents(cr);
+	    metrics_t metrics;
+	    
+	    real pad = font.height / 2;
+	    metrics.pad = pad;
+	    metrics.preferred_width = pad + text.width + pad;
+	    metrics.preferred_height = pad + font.height + pad;
+	    metrics.width = max (widget.geometry.width, metrics.preferred_width);
+	    metrics.height = max (widget.geometry.height, metrics.preferred_height);
+	    metrics.y = (metrics.height - font.height) / 2 + font.height;
+	    metrics.x = (metrics.width - text.width) / 2;
+	    
+	    return metrics;
+	}
+	
+	public void natural (cairo_t cr, &label_t widget) {
+	    metrics_t	metrics = get_metrics (cr, &widget);
+
+	    rectangle (cr, 0, 0, metrics.preferred_width, metrics.preferred_height);
+	}
+	
+	public void outline (cairo_t cr, &label_t widget) {
+	    metrics_t	metrics = get_metrics (cr, &widget);
+
+	    rectangle (cr, 0, 0, metrics.width, metrics.height);
+	}
+	
+	public void draw (cairo_t cr, &label_t widget) {
+	    metrics_t	metrics = get_metrics (cr, &widget);
+	    move_to (cr, metrics.x, metrics.y);
+	    set_source_rgb (cr, 0, 0, 0);
+	    show_text (cr, widget.label);
+	}
+	
+	public void relabel (&label_t widget, string label) {
+	    widget.label = label;
+	    Widget::redraw (&widget);
+	}
+
+	public *widget_t new (&chrome_t chrome,
+			      string label) {
+	    label_t	widget;
+
+	    Widget::init (&chrome, &widget);
+	    widget.label = label;
+	    widget.font = Widget::default_font;
+	    widget.draw = draw;
+	    widget.outline = outline;
+	    widget.natural = natural;
+	    return &widget;
+	}
+    }
+}
