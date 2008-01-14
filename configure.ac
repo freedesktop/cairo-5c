@@ -38,9 +38,14 @@ AC_LIBTOOL_WIN32_DLL
 AC_PROG_LIBTOOL
 AC_PROG_MAKE_SET
 
-NICKLE_LIBDIR=`nickle -e 'printf ("%s\n", Command::nickle_libdir);'`
 NICKLE_PATH=`nickle -e 'printf ("%s\n", Command::nickle_path);'`
+NICKLE_SYS_LIBDIR=`nickle -e 'printf ("%s\n", Command::nickle_libdir);'`
 
+
+AC_ARG_WITH(nickle-libdir, AS_HELP_STRING([--with-nickle-libdir=LIBDIR],
+				[Directory where nickle source files should be installed (default $NICKLE_SYS_LIBDIR)]),
+			   [ NICKLE_LIBDIR="$withval" ],
+			   [ NICKLE_LIBDIR="$NICKLE_SYS_LIBDIR" ])
 
 AC_SUBST(NICKLE_LIBDIR)
 AC_SUBST(NICKLE_PATH)
@@ -67,8 +72,9 @@ CPPFLAGS="${save_CPPFLAGS}"
 
 AC_CONFIG_FILES([Makefile
 		 src/Makefile
-		 examples/Makefile
+		 chrome/Makefile
 		 test/Makefile
+		 examples/Makefile
 		])
 		
 AC_OUTPUT

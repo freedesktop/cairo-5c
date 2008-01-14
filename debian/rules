@@ -8,7 +8,7 @@ export DH_VERBOSE=1
 configure: configure-stamp
 configure-stamp:
 	dh_testdir
-	./configure --prefix=/usr --mandir='$${prefix}/share/man'
+	./configure --with-nickle-libdir='$${datadir}/nickle' --prefix=/usr --mandir='$${prefix}/share/man'
 	touch configure-stamp
 
 build: configure-stamp build-stamp

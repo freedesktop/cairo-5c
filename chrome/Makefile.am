@@ -1,6 +1,5 @@
-#  $Id$
-# 
-#  Copyright © 2004 Keith Packard
+#
+#  Copyright © 2007 Keith Packard
 # 
 #  This library is free software; you can redistribute it and/or
 #  modify it either under the terms of the GNU Lesser General Public
@@ -25,7 +24,7 @@
 #  OF ANY KIND, either express or implied. See the LGPL or the MPL for
 #  the specific language governing rights and limitations.
 # 
-#  The Original Code is the cairo graphics library.
+#  The Original Code is the cairo-5c graphics library.
 # 
 #  The Initial Developer of the Original Code is Keith Packard
 # 
@@ -33,48 +32,16 @@
 #       Keith Packard <keithp@keithp.com>
 #
 
-SUBDIRS = src chrome test examples
+NICKLEFILES = \
+	chrome.5c \
+	chrome-box.5c \
+	chrome-button.5c \
+	chrome-label.5c \
+	chrome-toggle.5c
 
-BUILD_DATE=$(shell date +"%F")
-NICKLE_VERSION=$(shell nickle -e version | sed 's/"//g')
-
-NICKLEFILES= cairo.5c
-
-DEBIAN = debian/cairo-5c.install debian/libcairo5c-0.install \
-	 debian/changelog debian/compat \
-	 debian/control debian/copyright debian/docs \
-	 debian/rules
-
-EXTRA_DIST = $(NICKLEFILES) ChangeLog autogen.sh cairo-5c.3.in $(DEBIAN)
-
-DISTCHECK_CONFIGURE_FLAGS="--with-nickle-libdir='$${datadir}/nickle'"
+EXTRA_DIST = $(NICKLEFILES)
 
 nicklelibdir= $(NICKLE_LIBDIR)
 
 nicklelib_DATA = $(NICKLEFILES)
 
-man_MANS = cairo-5c.3
-
-cairo-5c.3: cairo-5c.3.in
-	sed -e 's,@''NICKLE_VERSION@,$(NICKLE_ERSION),' \
-	    -e 's,@''BUILD_DATE@,$(BUILD_DATE),' \
-	    -e 's,@''pkgdatadir@,$(pkgdatadir),' $(top_srcdir)/cairo-5c.3.in > $@
-	    
-TARFILE=$(PACKAGE)-$(VERSION).tar.gz
-DEBFILE=$(PACKAGE)_$(VERSION)-1_i386.deb
-LIBDEBFILE=libcairo5c_$(VERSION)-1_i386.deb
-
-RELEASE_FILES = $(TARFILE) $(DEBFILE) $(LIBDEBFILE)
-
-debuild: $(DEBFILE) $(LIBDEBFILE)
-
-$(LIBDEBFILE): $(DEBFILE)
-
-$(DEBFILE): $(TARFILE)
-	tar xzf $(TARFILE)
-	(cd $(distdir) && debuild)
-
-$(TARFILE): dist-gzip
-
-clean-local:
-	rm -f cairo-5c.3

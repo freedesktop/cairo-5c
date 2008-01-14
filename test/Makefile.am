@@ -32,7 +32,7 @@ REFPNG=\
 	text-extents-ref.png \
 	text-path-ref.png
 
-TESTS_ENVIRONMENT=SRCDIR="$(srcdir)" NICKLEPATH="$(top_srcdir):@NICKLE_PATH@" LD_LIBRARY_PATH=../src/.libs nickle
+TESTS_ENVIRONMENT=SRCDIR="$(srcdir)" NICKLEPATH="$(top_srcdir):$(top_srcdir)/chrome:@NICKLE_PATH@" LD_LIBRARY_PATH=../src/.libs nickle
 
 TESTS=test.5c
 
