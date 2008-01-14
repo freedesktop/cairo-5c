@@ -1,5 +1,4 @@
-#  $Id$
-# 
+#
 #  Copyright © 2004 Keith Packard
 # 
 #  This library is free software; you can redistribute it and/or
@@ -38,6 +37,10 @@ SUBDIRS = src chrome test examples
 BUILD_DATE=$(shell date +"%F")
 NICKLE_VERSION=$(shell nickle -e version | sed 's/"//g')
 
+RELEASE_UPLOAD_HOST =   cairographics.org
+RELEASE_UPLOAD_BASE =	/srv/cairo.freedesktop.org/www
+RELEASE_UPLOAD_DIR =	$(RELEASE_UPLOAD_BASE)/releases
+
 NICKLEFILES= cairo.5c
 
 DEBIAN = debian/cairo-5c.install debian/libcairo5c-0.install \
@@ -63,8 +66,10 @@ cairo-5c.3: cairo-5c.3.in
 TARFILE=$(PACKAGE)-$(VERSION).tar.gz
 DEBFILE=$(PACKAGE)_$(VERSION)-1_i386.deb
 LIBDEBFILE=libcairo5c_$(VERSION)-1_i386.deb
+SHA1_FILE=$(TARFILE).sha1
+GPG_FILE=$(SHA1_FILE).asc
 
-RELEASE_FILES = $(TARFILE) $(DEBFILE) $(LIBDEBFILE)
+RELEASE_FILES = $(TARFILE) $(SHA1_FILE) $(GPG_FILE) $(DEBFILE) $(LIBDEBFILE)
 
 debuild: $(DEBFILE) $(LIBDEBFILE)
 
@@ -78,3 +83,17 @@ $(TARFILE): dist-gzip
 
 clean-local:
 	rm -f cairo-5c.3
+
+$(SHA1_FILE): $(TAR_FILE)
+	sha1sum $^ > $@
+
+$(GPG_FILE): $(SHA1_FILE)
+	@echo "Please enter your GPG password to sign the checksum."
+	gpg --armor --sign $^ 
+
+release: $(RELEASE_FILES)
+
+release-upload: $(TARFILE) $(SHA1_FILE) $(GPG_FILE)
+	mkdir -p releases
+	scp $(TARFILE) $(SHA1_FILE) $(GPG_FILE) $(RELEASE_UPLOAD_HOST):$(RELEASE_UPLOAD_DIR) 
+	mv $(TARFILE) $(SHA1_FILE) $(GPG_FILE) releases
