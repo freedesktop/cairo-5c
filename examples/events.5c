@@ -1,0 +1,5 @@
+autoimport Cairo;
+cairo_t cr = new ();
+file f = open_event (cr);
+while (!File::end (f))
+    printf ("%s\n", File::fgets (f));
