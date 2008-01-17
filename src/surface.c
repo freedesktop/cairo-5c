@@ -113,7 +113,7 @@ cairo_5c_surface_mark (void *object)
 }
 
 static void
-cairo_5c_surface_destroy (cairo_5c_surface_t *c5s)
+cairo_5c_surface_destroy (cairo_5c_surface_t *c5s, int free_tool)
 {
 
     if (!c5s->surface)
@@ -142,7 +142,10 @@ cairo_5c_surface_destroy (cairo_5c_surface_t *c5s)
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
 #if HAVE_CAIRO_5C_WINDOW
-	cairo_5c_tool_destroy (c5s);
+	if (free_tool) {
+	    cairo_5c_tool_destroy (c5s);
+	    c5s->u.window.pixmap = None;
+	}
 #endif
 	break;
     case CAIRO_5C_IMAGE:
@@ -166,7 +169,7 @@ cairo_5c_surface_free (void *object)
 {
     cairo_5c_surface_t	*c5s = object;
 
-    cairo_5c_surface_destroy (c5s);
+    cairo_5c_surface_destroy (c5s, False);
     return 1;
 }
 
@@ -317,7 +320,7 @@ do_Cairo_Surface_destroy (Value sv)
 
     if (aborting)
 	RETURN (Void);
-    cairo_5c_surface_destroy (c5s);
+    cairo_5c_surface_destroy (c5s, True);
     RETURN(Void);
 }
 

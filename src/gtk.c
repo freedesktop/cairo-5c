@@ -40,8 +40,8 @@
 #include <pthread.h>
 
 typedef struct _gtk_global {
-    DataType	*data;
     Display	*dpy;
+    int		ref_count;
     pthread_t	gtk_thread;
 } gtk_global_t;
 
@@ -392,30 +392,25 @@ gtk_thread_main (void *closure)
 /*
  * Manage the gtk_global object, starting the thread and such
  */
-static void
-gtk_global_mark (void *object)
-{
-}
 
 static int
-gtk_global_free (void *object)
+gtk_global_unref (gtk_global_t *gg)
 {
-    gtk_global_t    *gg = object;
-
-    gdk_threads_enter ();
-    gtk_main_quit ();
-    if (gg == gtk_global)
-	gtk_global = NULL;
-    gdk_threads_leave ();
+    if (--gg->ref_count <= 0)
+    {
+	gdk_threads_enter ();
+	gtk_main_quit ();
+	if (gg == gtk_global)
+	    gtk_global = NULL;
+	gdk_threads_leave ();
+	free (gg);
+    }
     return 1;
 }
-
-static DataType	gtk_global_type = { gtk_global_mark, gtk_global_free, "GtkGlobal" };
 
 static gtk_global_t *
 create_gtk_global (void)
 {
-    ENTER ();
     static int	been_here = 0;
     static int	argc = 1;
     static char	*args[] = { "nickle", 0 };
@@ -437,18 +432,19 @@ create_gtk_global (void)
 	RaiseStandardException (exception_open_error,
 				"cannot open X display",
 				2, FileGetError (err), NewStrString (display_name_arg));
-	RETURN (Void);
+	return NULL;
     }
 	
-    gg = ALLOCATE (&gtk_global_type, sizeof (gtk_global_t));
+    gg = malloc (sizeof (gtk_global_t));
     
     gg->dpy = gdk_x11_get_default_xdisplay ();
+    gg->ref_count = 0;
     
     pthread_create (&gg->gtk_thread, 0, gtk_thread_main, gg);
     if (!gtk_global)
 	gtk_global = gg;
     gdk_threads_leave ();
-    RETURN (gg);
+    return gg;
 }
 
 /*
@@ -458,9 +454,6 @@ create_gtk_global (void)
 static void
 gtk_tool_mark (void *object)
 {
-    cairo_5c_tool_t *tool = object;
-
-    MemReference (tool->global);
 }
 
 /*
@@ -506,6 +499,7 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height
     
     gdk_threads_enter ();
     dpy = gg->dpy;
+    gg->ref_count++;
     
     tool->global = gg;
     tool->dirty = 0;
@@ -614,6 +608,7 @@ cairo_5c_tool_destroy (cairo_5c_surface_t *c5s)
 	XFreeGC (tool->global->dpy, c5s->u.window.gc);
 	c5s->u.window.gc = NULL;
     }
+    gtk_global_unref (tool->global);
     gdk_threads_leave ();
     /* let nickle allocator free it */
     return True;
