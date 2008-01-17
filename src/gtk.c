@@ -56,6 +56,49 @@ struct _cairo_5c_tool {
 
 static gtk_global_t *gtk_global;
 
+static void
+allocate_pixmap (cairo_5c_surface_t *c5s)
+{
+    Pixmap  pixmap;
+    cairo_5c_tool_t *tool = c5s->u.window.tool;
+    Display	    *dpy = tool->global->dpy;
+    GC		    gc = c5s->u.window.gc;
+    int		    width = c5s->u.window.new_width;
+    int		    height = c5s->u.window.new_height;
+    int		    depth = c5s->u.window.depth;
+
+    c5s->width = width;
+    c5s->height = height;
+
+    if (!width) width = 1;
+    if (!height) height = 1;
+
+    pixmap = XCreatePixmap (dpy, c5s->u.window.root, width, height, depth);
+    XFillRectangle (dpy, pixmap, gc, 0, 0, width, height);
+    if (c5s->u.window.pixmap)
+    {
+	XCopyArea (dpy, c5s->u.window.pixmap, pixmap, gc, 0, 0,
+		   width, height, 0, 0);
+	XFreePixmap (dpy, c5s->u.window.pixmap);
+    }
+    c5s->u.window.pixmap = pixmap;
+    if (c5s->surface)
+    {
+	cairo_xlib_surface_set_drawable (c5s->surface,
+					 pixmap,
+					 width,
+					 height);
+    }
+    else
+    {
+	c5s->surface = cairo_xlib_surface_create (dpy,
+						  pixmap,
+						  DefaultVisual (dpy, DefaultScreen (dpy)),
+						  width,
+						  height);
+    }
+}
+
 /*
  * This part runs in the gtk thread, so it must not refer to or use
  * any memory managed by nickle.  Called from signal handler with
@@ -64,30 +107,10 @@ static gtk_global_t *gtk_global;
 static gboolean
 configure_event (GtkWidget *widget, GdkEventConfigure *event)
 {
-    GdkPixmap		*pixmap;
     cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
 
-    c5s->width = widget->allocation.width;
-    c5s->height = widget->allocation.height;
-    pixmap = gdk_pixmap_new (widget->window,
-			     widget->allocation.width,
-			     widget->allocation.height,
-			     -1);
-    gdk_draw_rectangle (pixmap,
-			widget->style->white_gc,
-			TRUE,
-			0, 0,
-			widget->allocation.width,
-			widget->allocation.height);
-    if (c5s->u.window.pixmap)
-    {
-	gdk_draw_drawable (pixmap, widget->style->white_gc,
-			   c5s->u.window.pixmap, 0, 0, 0, 0, 
-			   widget->allocation.width,
-			   widget->allocation.height);
-	gdk_drawable_unref (c5s->u.window.pixmap);
-    }
-    c5s->u.window.pixmap = pixmap;
+    c5s->u.window.new_width = event->width;
+    c5s->u.window.new_height = event->height;
     if (c5s->u.window.send_events && event)
     {
 	gdk_threads_leave ();
@@ -106,14 +129,19 @@ static gboolean
 expose_event( GtkWidget *widget, GdkEventExpose *event )
 {
     cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
+    cairo_5c_tool_t	*tool = c5s->u.window.tool;
 
-    
-    gdk_draw_pixmap(widget->window,
-		    widget->style->fg_gc[GTK_WIDGET_STATE (widget)],
-		    c5s->u.window.pixmap,
-		    event->area.x, event->area.y,
-		    event->area.x, event->area.y,
-		    event->area.width, event->area.height);
+    if (tool->disable == 0) {
+	Display	    *dpy = tool->global->dpy;
+	Window	    xwin = GDK_WINDOW_XID (widget->window);
+	GC	    gc = c5s->u.window.gc;
+
+	XCopyArea (dpy, c5s->u.window.pixmap, xwin, gc,
+			event->area.x, event->area.y,
+			event->area.width, event->area.height,
+			event->area.x, event->area.y);
+	XFlush (dpy);
+    }
     return FALSE;
 }
 
@@ -135,12 +163,6 @@ delete_drawing_area (GtkWidget *widget, gpointer data)
     }
     tool->drawing_area = NULL;
     tool->window = NULL;
-    if (c5s->u.window.pixmap)
-    {
-	gdk_drawable_unref (c5s->u.window.pixmap);
-	c5s->u.window.pixmap = NULL;
-    }
-    c5s->u.window.pixmap = None;
 }
 
 /*
@@ -307,22 +329,32 @@ gtk_repaint (cairo_5c_surface_t *c5s, int x, int y, int w, int h)
 {
     cairo_5c_tool_t *tool = c5s->u.window.tool;
     GtkWidget	    *widget = tool->drawing_area;
-    GdkPixmap	    *pixmap = c5s->u.window.pixmap;
+    Pixmap	    pixmap;
+    GC		    gc;
     
-    if (widget && pixmap)
+    if (widget && 
+	(c5s->u.window.new_width != c5s->width ||
+	 c5s->u.window.new_height != c5s->height))
+    {
+	allocate_pixmap (c5s);
+    }
+    
+    pixmap = c5s->u.window.pixmap;
+    gc = c5s->u.window.gc;
+
+    if (widget && pixmap && gc)
     {
 	Window	    xwin = GDK_WINDOW_XID (widget->window);
-	Pixmap	    xpix = GDK_PIXMAP_XID (pixmap);
 	Display	    *dpy = tool->global->dpy;
-	GC	    xgc = GDK_GC_XGC(widget->style->white_gc);
     
-	if (xwin && xpix && xgc)
+	if (xwin)
 	{
 	    if (w == 0)
 		w = c5s->width - x;
 	    if (h == 0)
 		h = c5s->height - y;
-	    XCopyArea (dpy, xpix, xwin, xgc, x, y, w, h, x, y);
+	    tool->dirty = 0;
+	    XCopyArea (dpy, pixmap, xwin, gc, x, y, w, h, x, y);
 	    XFlush (dpy);
 	}
     }
@@ -339,9 +371,8 @@ gtk_repaint_timeout (gpointer data)
 	cairo_5c_surface_t	*c5s = data;
 	cairo_5c_tool_t	*tool = c5s->u.window.tool;
     
-	if (tool->disable == 0)
+	if (tool->disable == 0 && tool->dirty)
 	{
-	    tool->dirty = 0;
 	    gtk_repaint (c5s, 0, 0, 0, 0);
 	}
     }
@@ -464,6 +495,7 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height
     gtk_global_t    *gg = gtk_global ? gtk_global : create_gtk_global ();
     cairo_5c_tool_t *tool;
     Display	    *dpy;
+    XGCValues	    gcv;
     
     if (aborting)
     {
@@ -482,10 +514,10 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height
     c5s->dirty = False;
     c5s->recv_events = Void;
 
-    c5s->u.window.curpix = 0;
-    c5s->u.window.pixmap = 0;
+    c5s->u.window.pixmap = None;
     c5s->u.window.send_events = 0;
     c5s->u.window.tool = tool;
+    c5s->u.window.root = RootWindow (dpy, DefaultScreen (dpy));
     
     if (!width)
 	width = XDisplayWidth (dpy, DefaultScreen (dpy)) / 3;
@@ -526,6 +558,8 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height
     g_signal_connect (GTK_OBJECT (tool->drawing_area), "focus_out_event",
 		      (GtkSignalFunc) focus_out_event, NULL);
 
+    gtk_widget_set_double_buffered (tool->drawing_area, FALSE);
+    
     gtk_widget_set_events (tool->drawing_area, GDK_EXPOSURE_MASK
 			   | GDK_LEAVE_NOTIFY_MASK
 			   | GDK_BUTTON_PRESS_MASK
@@ -541,8 +575,19 @@ cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height
     gtk_widget_show (tool->drawing_area);
     gtk_widget_show (tool->window);
     gtk_widget_grab_focus (tool->drawing_area);
+    
+    gcv.foreground = 0xffffffff;
+    gcv.graphics_exposures = False;
+    c5s->u.window.gc = XCreateGC (dpy, 
+				  GDK_WINDOW_XID (tool->drawing_area->window),
+				  GCForeground | GCGraphicsExposures,
+				  &gcv);
+
     /* create the pixmap */
-    configure_event (tool->drawing_area, 0);
+    c5s->u.window.new_width = tool->drawing_area->allocation.width;
+    c5s->u.window.new_height = tool->drawing_area->allocation.height;
+    c5s->u.window.depth = gdk_drawable_get_depth (GDK_DRAWABLE (tool->drawing_area->window));
+    allocate_pixmap (c5s);
     
     gdk_threads_leave ();
     EXIT ();
@@ -561,8 +606,13 @@ cairo_5c_tool_destroy (cairo_5c_surface_t *c5s)
     gtk_widget_hide (tool->window);
     if (c5s->u.window.pixmap)
     {
-	gdk_drawable_unref (c5s->u.window.pixmap);
-	c5s->u.window.pixmap = NULL;
+	XFreePixmap (tool->global->dpy, c5s->u.window.pixmap);
+	c5s->u.window.pixmap = None;
+    }
+    if (c5s->u.window.gc)
+    {
+	XFreeGC (tool->global->dpy, c5s->u.window.gc);
+	c5s->u.window.gc = NULL;
     }
     gdk_threads_leave ();
     /* let nickle allocator free it */
@@ -580,14 +630,27 @@ cairo_5c_tool_dirty (cairo_5c_surface_t *c5s)
 {
     cairo_5c_tool_t *tool = c5s->u.window.tool;
     
+    gdk_threads_enter ();
     if (!tool->dirty)
     {
 	tool->dirty = 1;
 	if (tool->disable == 0)
-	{
 	    g_timeout_add (16, gtk_repaint_timeout, c5s);
-	}
     }
+    gdk_threads_leave ();
+}
+
+void
+cairo_5c_tool_check_size (cairo_5c_surface_t *c5s)
+{
+    cairo_5c_tool_t *tool = c5s->u.window.tool;
+    
+    gdk_threads_enter ();
+    if (tool->disable == 0 && 
+	(c5s->u.window.new_width != c5s->width ||
+	 c5s->u.window.new_height != c5s->height))
+	allocate_pixmap (c5s);
+    gdk_threads_leave ();
 }
 
 Bool
@@ -595,7 +658,9 @@ cairo_5c_tool_disable (cairo_5c_surface_t *c5s)
 {
     cairo_5c_tool_t *tool = c5s->u.window.tool;
 
+    gdk_threads_enter ();
     ++tool->disable;
+    gdk_threads_leave ();
     return True;
 }
 
@@ -607,13 +672,22 @@ Bool
 cairo_5c_tool_enable (cairo_5c_surface_t *c5s)
 {
     cairo_5c_tool_t *tool = c5s->u.window.tool;
+    Bool	    was_disabled;
 
-    if (!tool->disable)
-	return False;
-    --tool->disable;
-    if (!tool->disable && tool->dirty)
-	g_timeout_add (0, gtk_repaint_timeout, c5s);
-    return True;
+    gdk_threads_enter ();
+    was_disabled = tool->disable != 0;
+    if (was_disabled)
+    {
+	--tool->disable;
+	if (tool->disable == 0 && tool->dirty)
+	{
+	    gtk_repaint (c5s, 0, 0, 0, 0);
+	    tool->dirty = 0;
+//	    g_timeout_add (0, gtk_repaint_timeout, c5s);
+	}
+    }
+    gdk_threads_leave ();
+    return was_disabled;
 }
 
 Display *

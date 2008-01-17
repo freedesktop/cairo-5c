@@ -77,9 +77,13 @@ typedef struct _cairo_5c_tool	cairo_5c_tool_t;
 
 typedef struct _cairo_5c_window_t {
 #if HAVE_CAIRO_XLIB_H
-    GdkPixmap	    *pixmap;
-    GdkPixmap	    *curpix;
+    Pixmap	    pixmap;
+    GC		    gc;
+    Window	    root;
 #endif
+    int		    depth;
+    int		    new_width;
+    int		    new_height;
     cairo_5c_tool_t *tool;
     FILE	    *send_events;
 } cairo_5c_window_t;
@@ -634,6 +638,10 @@ cairo_5c_tool_display (cairo_5c_surface_t *c5s);
 
 void
 cairo_5c_tool_mark (cairo_5c_surface_t *c5s);
+
+void
+cairo_5c_tool_check_size (cairo_5c_surface_t *c5s);
+
 #endif
 
 #endif /* _CAIRO_5C_H_ */

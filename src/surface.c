@@ -37,43 +37,6 @@
 
 static char	CairoSurfaceId[] = "CairoSurface";
 
-#if HAVE_CAIRO_XLIB_H
-static Bool
-create_cairo_window (cairo_5c_surface_t *c5s)
-{
-    Display	*dpy = cairo_5c_tool_display (c5s);
-    Pixmap	pixmap;
-    
-    if (!c5s->u.window.pixmap)
-    {
-	RaiseStandardException (exception_invalid_argument,
-				"window destroyed",
-				2, NewInt (0), NewInt (0));
-	return False;
-    }
-
-    gdk_threads_enter ();
-    gdk_drawable_ref (c5s->u.window.pixmap);
-    if (c5s->u.window.curpix)
-	gdk_drawable_unref (c5s->u.window.curpix);
-    c5s->u.window.curpix = c5s->u.window.pixmap;
-    pixmap = GDK_PIXMAP_XID (GDK_DRAWABLE(c5s->u.window.curpix));
-    gdk_threads_leave ();
-    
-    if (c5s->surface)
-	cairo_xlib_surface_set_drawable (c5s->surface, pixmap,
-					 c5s->width,
-					 c5s->height);
-    else
-	c5s->surface = cairo_xlib_surface_create (dpy,
-						  pixmap,
-						  DefaultVisual (dpy, DefaultScreen (dpy)),
-						  c5s->width,
-						  c5s->height);
-    return True;
-}
-#endif
-
 cairo_5c_surface_t *
 cairo_5c_surface_get (Value av)
 {
@@ -103,10 +66,8 @@ cairo_5c_surface_get (Value av)
     }
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
-#if HAVE_CAIRO_5C_WINDOW
-	if (c5s->u.window.curpix != c5s->u.window.pixmap)
-	    if (!create_cairo_window (c5s))
-		return 0;
+#if HAVE_CAIRO_XLIB_H
+	cairo_5c_tool_check_size (c5s);
 #endif
 	break;
     case CAIRO_5C_IMAGE:
@@ -265,8 +226,6 @@ do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
 	RETURN (Void);
     }
     
-    create_cairo_window (c5s);
-
     ret = NewForeign (CairoSurfaceId, c5s, 
 		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
 
