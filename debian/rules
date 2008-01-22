@@ -41,7 +41,7 @@ binary-indep: build install
 binary-arch: build install
 	dh_testdir
 	dh_testroot
-	dh_installdocs -XCVS -X.cvsignore
+	dh_installdocs
 	dh_installexamples
 	dh_installmenu
 	dh_installcron
@@ -51,7 +51,7 @@ binary-arch: build install
 	dh_install
 	dh_link
 	dh_strip
-	dh_compress
+	dh_compress -X.5c
 	dh_fixperms
 	dh_makeshlibs -p libcairo5c-0
 	dh_installdeb
