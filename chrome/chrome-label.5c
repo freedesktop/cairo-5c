@@ -56,7 +56,7 @@ extend namespace Chrome {
 	
 	public void relabel (&label_t widget, string label) {
 	    widget.label = label;
-	    Widget::redraw (&widget);
+	    Widget::resize (&widget);
 	}
 
 	public *widget_t new (&chrome_t chrome,

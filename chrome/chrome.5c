@@ -1,3 +1,36 @@
+/*
+ * Copyright © 2008 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
 autoload Cairo;
 autoimport Mutex;
 
@@ -36,21 +69,35 @@ namespace Chrome {
     } key_event_t;
     
     public typedef chrome_t;
-
     public typedef widget_t;
+    public typedef container_t;
+    public typedef contained_t;
 
-    public typedef void(cairo_t cr, &widget_t widget) draw_t;
+    /*
+     * Containers, as seen by the toolkit
+     */
 
-    public typedef void(&chrome_t chrome) callback_t;
+    public typedef void(&container_t, &contained_t) resize_handler_t;
 
-    public typedef void(&widget_t, &button_event_t) button_handler_t;
-    public typedef void(&widget_t, &motion_event_t) motion_handler_t;
-    public typedef void(&widget_t, &key_event_t) key_handler_t;
+    public typedef struct {
+	resize_handler_t    resize;
+    } container_t;
+
+    public typedef struct {
+	&chrome_t	    chrome;
+	&container_t	    container;
+    } contained_t;
 
     /*
      * Widgets, as seen by the toolkit
      */
-    public typedef struct {
+
+    public typedef void(cairo_t cr, &widget_t widget) draw_t;
+    public typedef void(&widget_t, &button_event_t) button_handler_t;
+    public typedef void(&widget_t, &motion_event_t) motion_handler_t;
+    public typedef void(&widget_t, &key_event_t) key_handler_t;
+
+    public typedef contained_t + struct {
 	rect_t		    geometry;
 	rect_t		    extents;
 	draw_t		    outline;
@@ -59,8 +106,12 @@ namespace Chrome {
 	button_handler_t    button;
 	motion_handler_t    motion;
 	key_handler_t	    key;
-	&chrome_t	    chrome;
     } widget_t;
+
+    /*
+     * An application surface
+     */
+    public typedef void(&chrome_t chrome) callback_t;
 
     public typedef struct {
 	surface_t	    surface;
@@ -78,6 +129,8 @@ namespace Chrome {
 	cairo_t		    outline_cr;
 	&widget_t	    outline_widget;
 	bool		    running;
+	mutex		    drawing;
+	thread		    self;
     } chrome_t;
 
     public widget_t no_widget;
@@ -94,6 +147,15 @@ namespace Chrome {
 	chrome.draw = true;
     }
 
+    void draw (&chrome_t chrome);
+	
+    public void redraw (&chrome_t chrome) {
+        if (Thread::current() != chrome.self)
+	    draw (&chrome);
+	else
+	    chrome.draw = true;
+    }
+
     public namespace Widget {
 	public void init (&chrome_t chrome, &widget_t widget) {
 	    widget.geometry = (rect_t) {
@@ -104,9 +166,14 @@ namespace Chrome {
 	}
 	
 	public void redraw (&widget_t widget) {
-	    widget.chrome.draw = true;
+	    Chrome::redraw (&widget.chrome);
 	}
 	
+	public void resize (&widget_t widget) {
+	    if (!is_uninit (&widget.container))
+		widget.container.resize (&widget.container, &widget);
+	}
+
 	public bool in_widget (&widget_t widget, real x, real y)
 	{
 	    bool    in;
@@ -300,33 +367,45 @@ namespace Chrome {
     }
 
     void draw (&chrome_t chrome) {
-	chrome.draw = false;
-	cairo_t cr = cairo (&chrome);
-	int	i;
-
-	disable (cr);
-	set_source_rgba (cr, 1, 1, 1, 1);
-	paint (cr);
-	for (i = dim (chrome.widgets) - 1; i >= 0; i--)
+	twixt (Mutex::acquire (chrome.drawing);
+	       Mutex::release (chrome.drawing))
 	{
-	    &widget_t	widget = &chrome.widgets[i];
-	    if (!is_uninit (&widget.draw)) {
-		save (cr);
-		translate (cr, widget.geometry.x, widget.geometry.y);
-		widget.draw (cr, &widget);
-		restore (cr);
+	    if (chrome.resize) {
+		chrome.resize = false;
+		Cairo::destroy (chrome.outline_cr);
+		chrome.outline_cr = cairo (&chrome);
+		&chrome.outline_widget = &no_widget;
+		if (!is_uninit (&chrome.configure))
+		    chrome.configure (&chrome);
 	    }
-	    if (!is_uninit (&widget.outline)) {
-		save (cr);
-		translate (cr, widget.geometry.x, widget.geometry.y);
-		widget.outline (cr, &widget);
-		restore (cr);
-		widget.extents = fill_extents (cr);
-		new_path (cr);
+	    chrome.draw = false;
+	    cairo_t cr = cairo (&chrome);
+	    int	i;
+    
+	    disable (cr);
+	    set_source_rgba (cr, 1, 1, 1, 1);
+	    paint (cr);
+	    for (i = dim (chrome.widgets) - 1; i >= 0; i--)
+	    {
+		&widget_t	widget = &chrome.widgets[i];
+		if (!is_uninit (&widget.draw)) {
+		    save (cr);
+		    translate (cr, widget.geometry.x, widget.geometry.y);
+		    widget.draw (cr, &widget);
+		    restore (cr);
+		}
+		if (!is_uninit (&widget.outline)) {
+		    save (cr);
+		    translate (cr, widget.geometry.x, widget.geometry.y);
+		    widget.outline (cr, &widget);
+		    restore (cr);
+		    widget.extents = fill_extents (cr);
+		    new_path (cr);
+		}
 	    }
+	    enable (cr);
+	    destroy (cr);
 	}
-	enable (cr);
-	destroy (cr);
     }
     
     public void destroy (&chrome_t chrome) {
@@ -357,6 +436,7 @@ namespace Chrome {
 	&chrome.mouse_in = &no_widget;
 	&chrome.outline_widget = &no_widget;
 	chrome.outline_cr = cairo (&chrome);
+	chrome.drawing = Mutex::new ();
 	return &chrome;
     }
     
@@ -394,6 +474,7 @@ namespace Chrome {
     public void main_loop (&chrome_t chrome) {
 	
 	chrome.running = true;
+	chrome.self = Thread::current ();
 
 	string event_line;
 
@@ -416,14 +497,6 @@ namespace Chrome {
 		if (Semaphore::test (has_event))
 		    Semaphore::signal (has_event);
 		else {
-		    if (chrome.resize) {
-			chrome.resize = false;
-			Cairo::destroy (chrome.outline_cr);
-			chrome.outline_cr = cairo (&chrome);
-			&chrome.outline_widget = &no_widget;
-			if (!is_uninit (&chrome.configure))
-			    chrome.configure (&chrome);
-		    }
 		    draw (&chrome);
 		}
 	    }

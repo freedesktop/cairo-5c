@@ -464,8 +464,9 @@ clear_selected (&game_t game)
 	for (int x = 0; x < d[1]; x++)
 	    enum switch (game.board[y,x]) {
 	    case card:
-		if (game.board[y,x].card.selected)
+		if (game.board[y,x].card.selected) {
 		    game.board[y,x] = board_spot_t.empty;
+		}
 		break;
 	    case empty:
 		break;

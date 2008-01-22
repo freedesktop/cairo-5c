@@ -1,14 +1,53 @@
+/*
+ * Copyright © 2008 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
 autoload Chrome;
 
 extend namespace Chrome {
     public namespace Box {
 
 	public typedef enum { horizontal, vertical } dir_t;
-	
+
 	public typedef box_t;
-	
+
+	public typedef contained_t + struct {
+	} glue_t;
+
 	public exception unknown_widget (&box_t box, &widget_t widget);
 
+	/*
+	 * Each item in the layout has a natural size and stretch factor
+	 */
 	public typedef struct {
 	    real	width;
 	    real	height;
@@ -16,43 +55,72 @@ extend namespace Chrome {
 	    real	stretch_height;
 	} layout_t;
 
-	typedef union {
-	    &widget_t	    widget;
-	    &box_t	    box;
-	    void	    glue;
-	} member_t;
-	
+	typedef void (&contained_t item, &layout_t layout) query_t;
+
+	typedef void (&contained_t  item,
+		      layout_t	    layout,
+		      rect_t	    geometry) configure_t;
+
 	public typedef struct {
-	    layout_t	layout;
-	    member_t	item;
+	    &contained_t    contained;
+	    layout_t	    layout;
+	    query_t	    query;
+	    configure_t	    configure;
 	} item_t;
-	
-	public typedef layout_t + struct {
+
+	public typedef container_t + contained_t + struct {
 	    dir_t	    dir;
 	    item_t[...]	    items;
 	} box_t;
 
+	container_t no_container;
+
+	/*
+	 * contained layout has changed, get the new layout
+	 * and notify our container that our layout has also
+	 * changed
+	 */
+	void box_resize (&box_t box, &contained_t contained) {
+	    for (int i = 0; i < dim (box.items); i++) {
+		&item_t	item = &box.items[i];
+		if (&item.contained == &contained) {
+		    if (!is_uninit (&item.query))
+			item.query (&item.contained, &item.layout);
+		    break;
+		}
+	    }
+	    if (&box.container == &no_container)
+		box.chrome.resize = true;
+	    else
+		box.container.resize (&box.container, &box);
+	}
+
+	/*
+	 * Construct a new box, computing the layout of the inserted items
+	 */
 	public *box_t new (dir_t dir, item_t items...) {
-	    return &(box_t) {
+	    &box_t  box = &(box_t) {
+		container = &no_container,
+		resize = box_resize,
 		dir = dir,
 		items = items
 	    };
-	}
-	
-	rect_t widget_rect (&widget_t widget) {
-	    cairo_t cr = cairo (&widget.chrome);
-	    widget.natural (cr, &widget);
-	    rect_t r = fill_extents (cr);
-	    Cairo::destroy (cr);
-	    return r;
+	    for (int i = 0; i < dim (items); i++)
+	    {
+		&item_t	item = &box.items[i];
+		&item.contained.container = &box;
+		if (!is_uninit (&item.query))
+		    item.query (&item.contained, &item.layout);
+	    }
+	    return &box;
 	}
 
-	public item_t widget_item (&widget_t widget, real stretch...)
-	{
-	    rect_t  natural = widget_rect (&widget);
-	    real    stretch_width;
-	    real    stretch_height;
-
+	/*
+	 * Allow stretch to be specified as one or two numbers
+	 */
+	void get_stretches (&real[*] stretch,
+			    &real stretch_width,
+			    &real stretch_height) {
 	    switch (dim (stretch)) {
 	    case 0:
 		stretch_width = stretch_height = 1;
@@ -65,109 +133,69 @@ extend namespace Chrome {
 		stretch_height= stretch[1];
 		break;
 	    }
-	    
+	}
+
+	/*
+	 * Handle widgets inside of boxes
+	 */
+
+	/* find the natural bounding box of a widget */
+	rect_t widget_rect (&widget_t widget) {
+	    cairo_t cr = cairo (&widget.chrome);
+	    widget.natural (cr, &widget);
+	    rect_t r = fill_extents (cr);
+	    Cairo::destroy (cr);
+	    return r;
+	}
+
+	/*
+	 * Widget layout follows natural size
+	 */
+	void widget_query (&widget_t widget, &layout_t layout) {
+	    rect_t  natural = widget_rect (&widget);
+	    layout.width = natural.width;
+	    layout.height = natural.height;
+	}
+
+	/*
+	 * Set the geometry of the widget
+	 */
+	void widget_configure (&widget_t widget,
+			       layout_t layout, 
+			       rect_t geometry) 
+	{
+	    widget.geometry = geometry;
+	}
+
+	/*
+	 * Construct a new widget item for a box
+	 */
+	public item_t widget_item (&widget_t widget, real stretch...)
+	{
+	    get_stretches (&stretch,
+			   &(real stretch_width), &(real stretch_height));
 	    return (item_t) {
 		layout = {
-		    width = natural.width,
-		    height = natural.height,
 		    stretch_width = stretch_width,
 		    stretch_height = stretch_height
 		},
-		item = { widget = &widget },
+		query = widget_query,
+		configure = widget_configure,
+		contained = &widget
 	    };
 	}
 
-	public item_t box_item (&box_t box)
-	{
-	    return (item_t) {
-		item = { box = &box }
-	    };
-	}
-	
-	public item_t glue_item (real stretch)
-	{
-	    return (item_t) {
-		layout = {
-		    width = 0,
-		    height = 0,
-		    stretch_width = stretch,
-		    stretch_height = stretch
-		},
-		item = { glue = ◊ }
-	    };
-	}
-	
-	public void add_item (&box_t box, item_t item)
-	{
-	    union switch (item.item) {
-	    case glue:
-		if (box.dir == dir_t.horizontal)
-		    item.layout.stretch_height = 10000;
-		else
-		    item.layout.stretch_width = 10000;
-	    default:
-		break;
-	    }
-	    box.items[dim(box.items)] = item;
-	}
-	
-	public void add_widget (&box_t box,
-				&widget_t widget,
-				real stretch_width,
-				real stretch_height)
-	{
-	    add_item (&box,
-		      widget_item (&widget, stretch_width, stretch_height));
-	}
+	/*
+	 * Boxes inside of boxes
+	 */
 
-	public void add_box (&box_t box,
-			     &box_t add)
-	{
-	    add_item (&box, box_item (&add));
-	}
-
-	public void add_glue (&box_t box,
-			      real stretch)
-	{
-	    add_item (&box, glue_item (stretch));
-	}
-
-	public void set_layout (&box_t box,
-				&widget_t widget,
-				layout_t layout)
-	{
-	    member_t	find = { widget = &widget };
-	    
-	    for (int i = 0; i < dim (box.items); i++)
-		if (box.items[i].item == find) {
-		    box.items[i].layout = layout;
-		    return;
-		}
-	    raise unknown_widget (&box, &widget);
-	}
-	
-	public void set_size (&box_t box,
-			      &widget_t widget,
-			      real width,
-			      real height)
-	{
-	    member_t	find = { widget = &widget };
-	    
-	    for (int i = 0; i < dim (box.items); i++)
-		if (box.items[i].item == find) {
-		    box.items[i].layout.width = width;
-		    box.items[i].layout.height = height;
-		    return;
-		}
-	    raise unknown_widget (&box, &widget);
-	}
-	
-	public layout_t query (&box_t box) {
-	    layout_t	layout = {
-		width = 0,
-		height = 0
-	    };
-
+	/*
+	 * Compute the layout for this box by
+	 * walking through the items in the box
+	 */
+	public void query (&box_t box, &layout_t layout) {
+	    layout.width = 0;
+	    layout.height = 0;
 	    if (box.dir == dir_t.horizontal) {
 		layout.stretch_width = 0;
 		layout.stretch_height = 10000;
@@ -180,14 +208,6 @@ extend namespace Chrome {
 	    {
 		&layout_t child = &box.items[i].layout;
 
-		union switch (box.items[i].item) {
-		case box b:
-		    box.items[i].layout = query (&b);
-		    break;
-		case widget:
-		case glue:
-		    break;
-		}
 		if (box.dir == dir_t.horizontal) {
 		    layout.width += child.width;
 		    layout.stretch_width += child.stretch_width;
@@ -204,13 +224,12 @@ extend namespace Chrome {
 			layout.stretch_width = child.stretch_width;
 		}
 	    }
-	    return layout;
 	}
 
-	public void configure (&box_t box,
-			       rect_t geometry,
-			       layout_t layout)
-	{
+	/*
+	 * Configure a box
+	 */
+	public void configure (&box_t box, layout_t layout, rect_t geometry) {
 	    real    actual;
 	    real    stretch;
 	    real    pref;
@@ -228,22 +247,23 @@ extend namespace Chrome {
 		pos = geometry.y;
 	    }
 	    if (stretch == 0) stretch = 1;
-	    
+
 	    real delta = (real delta_remain) = actual - pref;
-	    
+
 	    for (int i = 0; i < dim (box.items); i++) {
-		real delta_this;
-		&layout_t child = &box.items[i].layout;
-		
+		&item_t	    item = &box.items[i];
+		&layout_t   child_layout = &item.layout;
+		real	    delta_this;
+
 		if (i == dim (box.items) - 1)
 		    delta_this = delta_remain;
 		else {
 		    real stretch_this;
 
 		    if (box.dir == dir_t.horizontal)
-			stretch_this = child.stretch_width;
+			stretch_this = child_layout.stretch_width;
 		    else
-			stretch_this = child.stretch_height;
+			stretch_this = child_layout.stretch_height;
 		    delta_this = delta * stretch_this / stretch;
 		}
 		if (delta_remain < 0) {
@@ -256,12 +276,12 @@ extend namespace Chrome {
 		delta_remain -= delta_this;
 
 		rect_t child_geometry;
-		
+
 		if (box.dir == dir_t.horizontal) {
 		    child_geometry = (rect_t) {
 			x = pos,
 			y = geometry.y,
-			width = child.width + delta_this,
+			width = child_layout.width + delta_this,
 			height = geometry.height
 		    };
 		    pos = pos + child_geometry.width;
@@ -270,49 +290,152 @@ extend namespace Chrome {
 			x = geometry.x,
 			y = pos,
 			width = geometry.width,
-			height = child.height + delta_this,
+			height = child_layout.height + delta_this,
 		    };
 		    pos = pos + child_geometry.height;
 		}
-		union switch (box.items[i].item) {
-		case box b:
-		    configure (&b, child_geometry, child);
-		    break;
-		case widget:
-		    box.items[i].item.widget.geometry = child_geometry;
-		    break;
-		case glue:
-		    break;
-		}
+
+		if (!is_uninit (&item.configure))
+		    item.configure (&item.contained,
+				    child_layout, child_geometry);
 	    }
+	}
+
+	public item_t box_item (&box_t box)
+	{
+	    return (item_t) {
+		contained = &box,
+		query = query,
+		configure = configure,
+	    };
+	}
+
+	/*
+	 * Glue in boxes
+	 */
+
+	/* 
+	 * Once the glue is placed in a box, reset the perpendicular
+	 * layout values to effectively ignore the glue in that
+	 * direction
+	 */
+	void glue_query (&glue_t glue, &layout_t layout) {
+	    &box_t  box = &glue.container;
+	    if (box.dir == dir_t.horizontal) {
+		layout.height = 0;
+		layout.stretch_height = 10000;
+	    } else {
+		layout.width = 0;
+		layout.stretch_width = 10000;
+	    }
+	}
+
+	/*
+	 * Allow applications to specify size and stretch, just stretch
+	 * or neither
+	 */
+	void get_glue (&real[*] param, &real size, &real stretch) {
+	    switch (dim (param)) {
+	    case 0:
+		size = 0;
+		stretch = 1;
+		break;
+	    case 1:
+		size = 0;
+		stretch = param[0];
+		break;
+	    default:
+		size = param[0];
+		stretch = param[1];
+		break;
+	    }
+	}
+
+	public item_t glue_item (real param...)
+	{
+	    get_glue (&param, &(real size), &(real stretch));
+	    return (item_t) {
+		contained = &(glue_t) { },
+		layout = {
+		    width = size,
+		    height = size,
+		    stretch_width = stretch,
+		    stretch_height = stretch
+		},
+		query = glue_query,
+	    };
+	}
+
+	/*
+	 * Add an arbitrary item to a box, filling
+	 * in the layout
+	 */
+	public void add_item (&box_t box, item_t item)
+	{
+	    &item_t new = &box.items[dim(box.items)];
+
+	    new = item;
+	    &new.contained.container = &box;
+	    if (!is_uninit (&new.query))
+		new.query (&new.contained, &new.layout);
+	    box.resize (&box, &new.contained);
+	}
+
+	public void add_widget (&box_t box,
+				&widget_t widget,
+				real stretch_width,
+				real stretch_height)
+	{
+	    add_item (&box,
+		      widget_item (&widget, stretch_width, stretch_height));
+	}
+
+	public void add_box (&box_t box,
+			     &box_t add)
+	{
+	    add_item (&box, box_item (&add));
+	}
+
+	public void add_glue (&box_t box,
+			      real param ...)
+	{
+	    get_glue (&param, &(real size), &(real stretch));
+	    add_item (&box, glue_item (size, stretch));
 	}
     }
 
-    public void configure (&chrome_t chrome, &Box::box_t box)
+    /*
+     * When the top level geometry manager is a box,
+     * set the chrome configure function to relayout
+     * the box
+     */
+    void configure (&chrome_t chrome, &Box::box_t box)
     {
 	cairo_t cr = cairo (&chrome);
-	
+
 	rect_t	geometry = {
 	    x = 0,
 	    y = 0,
 	    width = width (cr),
 	    height = height (cr)
 	};
+	Cairo::destroy (cr);
 
 	/*
 	 * Get box preferred size
 	 */
-	Box::layout_t    layout = Box::query (&box);
+	Box::layout_t	layout;
+	Box::query (&box, &layout);
 
 	/*
 	 * Layout box
 	 */
-	Box::configure (&box, geometry, layout);
-	Cairo::destroy (cr);
+	Box::configure (&box, layout, geometry);
     }
 
     public void set_box (&chrome_t chrome, &Box::box_t box)
     {
+	&box.chrome = &chrome;
 	Chrome::configure (&chrome, &box);
 	chrome.configure = void func (&chrome_t chrome) {
 	    Chrome::configure (&chrome, &box);

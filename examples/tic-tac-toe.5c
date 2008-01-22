@@ -36,15 +36,21 @@
  * tic-tac-toe, three in a row.
  */
 
+autoload Mutex;
 autoimport Cairo;
 autoimport PRNG;
+autoimport Chrome;
+autoload Chrome::Button;
+autoload Chrome::Label;
+autoload Chrome::Box;
 
-/* Check nickle version; need 2.64 to work */
-File::sscanf (version, "%f", &(real rversion));
-if (rversion < 2.64)
-    File::fprintf (stderr, "Nickle version %s too old\n", version);
+import Widget;
+import Chrome;
+import Button;
+import Box;
+import Label;
 
-srandom (time());
+dev_srandom (32);
 
 typedef int piece_t;
 
@@ -73,38 +79,18 @@ typedef union {
     } finished;
 } status_t;
 
-/*
- * Provide some simple UI buttons
- */
-typedef widget_t;
-
-typedef struct {
-    real width, height;
-} dimension_t;
-
-typedef struct {
-    real	    position;
-    real	    width;
-    bool	    pressed;
-    dimension_t(cairo_t, &widget_t)
-		    dimension;
-    void(cairo_t, &widget_t)
-		    draw;
-    void(&widget_t) activate;
-    poly	    data;
-} widget_t;
-
+typedef status_t game_status_t;
 /*
  * Game state
  */
 typedef struct {
-    cairo_t	    cr;
+    mutex	    lock;
+    bool	    quiting;
+    semaphore	    waiter;
     board_t	    board;
     status_t	    status;
     piece_t	    turn;
     piece_t	    computer;
-    file	    event;
-    widget_t[...]   widgets;
 } game_t;
 
 void
@@ -123,137 +109,12 @@ set_color (cairo_t cr, piece_t piece)
 }
 
 /*
- * use 90% of the application height for the game
- * board, and 10% for the widgets
- */
-real game_part = .9;
-
-/*
  * Set up cr to draw the game board
  */
 void
 scale_board (cairo_t cr)
 {
-    translate (cr, 0, (1 - game_part) * height (cr));
-    scale (cr, width (cr), height (cr) * game_part);
-}
-
-void
-start_draw (cairo_t cr)
-{
-    set_source_rgba (cr, 1, 1, 1, 1);
-    paint (cr);
-    
-    save (cr);
-    scale_board (cr);
-    set_line_width (cr, 0.05);
-    set_line_cap (cr, line_cap_t.ROUND);
-}
-
-string widget_font = "Bitstream Vera Sans-0.07:Bold";
-
-void
-start_widgets (cairo_t cr)
-{
-    save (cr);
     scale (cr, width (cr), height (cr));
-    set_font (cr, widget_font);
-}
-
-void
-end_widgets (cairo_t cr)
-{
-    restore (cr);
-}
-
-void
-end_draw (cairo_t cr)
-{
-    restore (cr);
-}
-
-/*
- * Widgets know how to size, draw and activate themselves
- */
-widget_t
-create_widget (poly data,
-	       dimension_t (cairo_t, &widget_t) dimension,
-	       void (cairo_t, &widget_t) draw,
-	       void (&widget_t) activate)
-{
-    return (widget_t) {
-	pressed = false,
-	dimension = dimension,
-	draw = draw,
-	activate = activate,
-	data = data
-    };
-}
-
-/*
- * Text widgets just paint a simple string label
- */
-widget_t
-create_text_widget (string label, void(&widget_t) activate)
-{
-    return create_widget 
-    (label,
-     dimension_t func (cairo_t cr, &widget_t widget) {
-	text_extents_t text = text_extents (cr, widget.data);
-	font_extents_t font = font_extents (cr);
-	return (dimension_t) {
-	    width = text.width,
-	    height = font.height
-	};
-     },
-     void func (cairo_t cr, &widget_t widget) {
-	text_extents_t text = text_extents (cr, widget.data);
-	font_extents_t font = font_extents (cr);
-	set_source_rgba (cr, 0, 0, 0, 1);
-	move_to (cr, -text.x_bearing, font.height);
-	show_text (cr, widget.data);
-     },
-     activate);
-}
-
-void
-draw_widget (cairo_t cr, &widget_t widget)
-{
-    save (cr);
-    translate (cr, widget.position, 0);
-    
-    dimension_t	dimension = widget.dimension (cr, &widget);
-    
-    real height = 1 - game_part;
-    real pad = (height - dimension.height) / 2;
-    
-    widget.width = pad + dimension.width + pad;
-    
-    /*
-     * Draw a light blue background when pressed
-     */
-    if (widget.pressed) {
-	rectangle (cr, 0, 0, widget.width, height);
-	set_source_rgba (cr, 0, 0, .5, .25);
-	fill (cr);
-    }
-    translate (cr, pad, pad);
-    widget.draw (cr, &widget);
-    restore (cr);
-}
-
-void
-draw_widgets (cairo_t cr, &game_t game)
-{
-    real    space = 0.02;
-    real    x = space;
-    
-    for (int i = 0; i < dim (game.widgets); i++)
-    {
-	game.widgets[i].position = x;
-	draw_widget (cr, &game.widgets[i]);
-	x += game.widgets[i].width + space * 2;
-    }
 }
 
 void
@@ -346,29 +207,6 @@ draw_win_line (cairo_t cr, &status_t status)
     case playing:
 	break;
     }
-}
-
-/*
- * Draw the current state of the game
- */
-void
-draw (&game_t game)
-{
-    cairo_t cr = game.cr;
-    
-    disable (cr);
-
-    start_draw (cr);
-    draw_grid (cr);
-    draw_pieces (cr, &game.board);
-    draw_win_line (cr, &game.status);
-    end_draw (cr);
-
-    start_widgets (cr);
-    draw_widgets (cr, &game);
-    end_widgets (cr);
-    
-    enable (cr);
 }
 
 /*
@@ -477,10 +315,6 @@ void reset_stats () {
     rands = 0;
 }
 
-void show_stats () {
-    printf ("%d moves %d memos %d rands\n", moves, memos, rands);
-}
-    
 bool pick_random () {
     ++rands;
     return randbits(1) != 0;
@@ -551,188 +385,169 @@ void reset_game (&game_t game)
     game.status.playing = ◊;
     game.turn = piece_x;
     memo = (move_t[board_t]) {};
+    Semaphore::signal (game.waiter);
 }
 
-/*
- * Given an X position in the widget row, locate
- * the widget containing it
- */
-int
-find_widget (cairo_t cr, &game_t game, real x)
+bool make_move (&game_t game, int x, int y)
 {
-    save (cr);
-    scale (cr, width (cr), height (cr));
-    point_t a = device_to_user (cr, (point_t) { x = x, y = 0 });
-    restore (cr);
-    x = a.x;
-    for (int w = 0; w < dim (game.widgets); w++)
-	if (game.widgets[w].position <= x && x < game.widgets[w].position +
-	    game.widgets[w].width)
+    if (move (&game.board, x, y, game.turn))
+    {
+	game.turn = other_player (game.turn);
+	game.status = get_status (&game.board);
+        Semaphore::signal (game.waiter);
+	return true;
+    }
+    return false;
+}
+
+void computer_player (&game_t game, &label_t label)
+{
+    Mutex::acquire (game.lock);
+    while (!game.quiting) {
+	Mutex::release (game.lock);
+	Semaphore::wait (game.waiter);
+	Mutex::acquire (game.lock);
+	if (game.status == game_status_t.playing &&
+	    game.turn == game.computer) 
 	{
-	    return w;
+	    Label::relabel (&label, "thinking...");
+	    Widget::redraw (&label);
+	    move_t computer = best_move (&game.board, game.turn);
+	    assert (computer.position.x != -1, "no move");
+	    make_move (&game, computer.position.x, computer.position.y);
+	    Label::relabel (&label, "");
+	    Widget::redraw (&label);
 	}
-    return -1;
+    }
+    Mutex::release (game.lock);
 }
 
-void
-press_widget (cairo_t cr, &game_t game, real x)
+void set_computer (&game_t game, piece_t player)
 {
-    int	w = find_widget (cr, &game, x);
-    if (w >= 0)
-	game.widgets[w].pressed = true;
+    twixt (Mutex::acquire (game.lock); Mutex::release (game.lock)) {
+	game.computer = player;
+        Semaphore::signal (game.waiter);
+    }
 }
 
-void
-release_widget (cairo_t cr, &game_t game, real x)
-{
-    int	w = find_widget (cr, &game, x);
-    if (w >= 0 && game.widgets[w].pressed)
-	game.widgets[w].activate (&game.widgets[w]);
-    for (w = 0; w < dim (game.widgets); w++)
-	game.widgets[w].pressed = false;
+extend namespace Chrome {
+    public namespace Gridwidget {
+	public typedef widget_t + struct {
+	    int down_x, down_y;
+	    &game_t game;
+	} grid_widget_t;
+
+	/*
+	 * Draw the current state of the game
+	 */
+
+	void draw (cairo_t cr, &grid_widget_t widget) {
+	    scale (cr, widget.geometry.width, widget.geometry.height);
+	    set_line_width (cr, 0.05);
+	    set_line_cap (cr, line_cap_t.ROUND);
+	    draw_grid (cr);
+	    draw_pieces (cr, &widget.game.board);
+	    draw_win_line (cr, &widget.game.status);
+	}
+
+	void outline (cairo_t cr, &grid_widget_t widget) {
+	    rectangle (cr, 0, 0, widget.geometry.width,
+		       widget.geometry.height);
+	}
+	    
+	void natural (cairo_t cr, &grid_widget_t widget)
+	{
+	    rectangle (cr, 0, 0, 1, 1);
+	}
+	
+	void button (&grid_widget_t widget, &button_event_t event) {
+	    &game_t game = &widget.game;
+	    int x_i = floor (event.x * 3 / widget.geometry.width);
+	    int y_i = floor (event.y * 3 / widget.geometry.height);
+	    if (event.type == button_type_t.press) {
+		widget.down_x = x_i;
+		widget.down_y = y_i;
+	    } else {
+		Mutex::acquire (game.lock);
+		if (widget.game.status == game_status_t.playing &&
+		    widget.game.turn != widget.game.computer &&
+		    x_i == widget.down_x &&
+		    y_i == widget.down_y)
+		{
+		    if (make_move (&widget.game, x_i, y_i))
+			Widget::redraw (&widget);
+		}
+		Mutex::release (game.lock);
+	    }
+	}
+	
+	public *grid_widget_t new (&chrome_t chrome, &game_t game) {
+	    grid_widget_t    widget;
+	    
+	    Widget::init (&chrome, &widget);
+	    widget.button = button;
+	    widget.draw = draw;
+	    widget.outline = outline;
+	    widget.natural = natural;
+	    &widget.game = &game;
+	    return &widget;
+	}
+    }
 }
+
+import Chrome::Gridwidget;
 
 /*
  * Play tic tac toe
  */
-void play (cairo_t cr)
+void play ()
 {
+    &chrome_t	    chrome = Chrome::new ("Tic-Tac-Toe", 400, 400);
     game_t  game = {
-	cr = cr,
+	lock = Mutex::new (),
+	waiter = Semaphore::new (),
+	quiting = false,
 	board = { { piece__ ... } ... },
 	status = { playing = ◊ },
 	turn = piece_x,
 	computer = piece_o,
-	event = open_event (cr),
-	widgets = {
-	    create_text_widget ("new",
-				void func (&widget_t widget) {
-				    reset_game (&game);
-				}),
-	    create_text_widget ("quit",
-				void func (&widget_t widget) {
-				    exit (0);
-				}),
-	    create_widget ("computer: ",
-			   dimension_t func (cairo_t cr, &widget_t widget) {
-			    text_extents_t text = text_extents (cr, 
-								widget.data);
-			    font_extents_t font = font_extents (cr);
-			    return (dimension_t) {
-				width = text.x_advance + font.height,
-				height = font.height
-			    };
-			   },
-			   void func (cairo_t cr, &widget_t widget) {
-			    text_extents_t text = text_extents (cr, 
-								widget.data);
-			    font_extents_t font = font_extents (cr);
-			    set_source_rgba (cr, 0, 0, 0, 1);
-			    move_to (cr, 0, font.height);
-			    show_text (cr, widget.data);
-			    save (cr);
-			    translate (cr, 
-				       text.x_advance + font.height/2,
-				       font.height/2);
-			    scale (cr, font.height, font.height);
-			    draw_piece (cr, game.computer);
-			    restore (cr);
-			   },
-			   void func (&widget_t widget) {
-			    game.computer = other_player (game.computer);
-			   })
-	}
     };
-
-    void find_square (cairo_t cr, real x, real y, *int sxp, *int syp) {
-	save (cr);
-	scale_board (cr);
-	point_t a = device_to_user (cr, (point_t) {x = x, y = y});
-    	*sxp = floor (a.x * size);
-    	*syp = floor (a.y * size);
-	restore (cr);
-    }
     
-    draw (&game);
+    &button_t	    quit = Chrome::Button::new (&chrome, "Quit",
+						void func (&widget_t w, bool state) {
+						    w.chrome.running = false;
+						});
 
-    for (;;) {
-	if (game.turn != game.computer || game.status != status_t.playing) {
-	    if (File::end (game.event))
-		break;
-	    string	line = File::fgets (game.event);
-	    file	l = File::string_read (line);
-	    int	down_x, down_y;
-	    int	up_x, up_y;
-
-	    File::fscanf (l, "%d %s", &(int time), &(string name));
-
-	    switch (name) {
-	    case "press":
-		File::fscanf (l, "%d %d %d",
-			      &(int button), &(real x), &(real y));
-		switch (button) {
-		case 1:
-		    find_square (cr, x, y, &down_x, &down_y);
-		    break;
-		}
-		if (down_y < 0) {
-		    press_widget (cr, &game, x);
-		    draw (&game);
-		}
-		break;
-	    case "release":
-		File::fscanf (l, "%d %d %d",
-			      &(int button), &(real x), &(real y));
-		find_square (cr, x, y, &up_x, &up_y);
-		if (up_y < 0)
-		{
-		    release_widget (cr, &game, x);
-		}
-		else 
-		{
-		    release_widget (cr, &game, -1);
-		    if (game.status == status_t.playing && 
-			down_x == up_x && down_y == up_y)
-		    {
-			if (move (&game.board, up_x, up_y, game.turn)) {
-			    game.turn = other_player (game.turn);
-			    game.status = get_status (&game.board);
-			}
-		    }
-		}
-		draw (&game);
-		break;
-	    case "delete":
-		exit (0);
-		break;
-	    case "configure":
-		draw (&game);
-		break;
-	    default:
-		break;
-	    }
-	} else {
-	    printf ("thinking...\n");
-	    reset_stats ();
-	    move_t computer = best_move (&game.board, game.turn);
-	    assert (computer.position.x != -1, "no move");
-	    show_stats ();
-	    printf ("best move %d,%d score %d\n",
-		    computer.position.x, computer.position.y,
-		    computer.score);
-	    if (move (&game.board, computer.position.x, computer.position.y,
-		      game.turn)) 
-	    {
-		game.turn = other_player (game.turn);
-		game.status = get_status (&game.board);
-		draw (&game);
-	    }
-	}
-    }
+    &button_t	    new = Chrome::Button::new (&chrome, "New",
+					       void func (&widget_t w, bool state) {
+						    reset_game (&game);
+					       });
+    &button_t	    computer = Chrome::Button::new (&chrome, "Computer: o",
+						   void func (&widget_t w,
+							      bool state) 
+						   {
+						    set_computer (&game,
+								  other_player (game.computer));
+						    Button::relabel (&computer,
+								     "Computer: " + 
+								     (game.computer == piece_x ? "x" : "o"));
+						   });
+    &label_t	    thinking = Chrome::Label::new (&chrome, "");
+    
+    &grid_widget_t   widget = Chrome::Gridwidget::new (&chrome, &game);
+	
+    &box_t	    menu = Chrome::Box::new (dir_t.horizontal,
+					     widget_item (&new, 0),
+					     widget_item (&quit, 0),
+					     widget_item (&computer, 0),
+					     glue_item (1),
+					     widget_item (&thinking, 0));
+    &box_t	    box = Chrome::Box::new (dir_t.vertical,
+					    box_item (&menu),
+					    widget_item (&widget));
+    Chrome::set_box (&chrome, &box);
+    fork computer_player (&game, &thinking);
+    Chrome::main_loop (&chrome);
 }
 
-int size = 200;
-
-play (create (Surface::create_window ("Tic Tac Toe",
-				      size,
-				      floor (size / game_part + 0.5))));
+play ();
