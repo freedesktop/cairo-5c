@@ -412,7 +412,8 @@ void computer_player (&game_t game, &label_t label)
 	{
 	    Label::relabel (&label, "thinking...");
 	    Widget::redraw (&label);
-	    move_t computer = best_move (&game.board, game.turn);
+	    board_t best_board = game.board;
+	    move_t computer = best_move (&best_board, game.turn);
 	    assert (computer.position.x != -1, "no move");
 	    make_move (&game, computer.position.x, computer.position.y);
 	    Label::relabel (&label, "");
