@@ -257,7 +257,7 @@ do_Cairo_status (Value cv)
     cairo_5c_t	*c5c = cairo_5c_get (cv);
 
     if (aborting)
-	return Void;
+	RETURN(Void);
     RETURN(IntToEnum (typeCairoStatus, cairo_status (c5c->cr)));
 }
 

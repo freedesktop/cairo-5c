@@ -258,10 +258,13 @@ Value
 do_Cairo_Surface_write_to_png_file (Value sv, Value fv);
 
 Value
-do_Cairo_Surface_create_similar (Value sv, Value wv, Value hv);
+do_Cairo_Surface_create_similar (Value sv, Value cv, Value wv, Value hv);
 
 Value
 do_Cairo_Surface_finish (Value sv);
+
+Value
+do_Cairo_Surface_status (Value sv);
 
 Value
 do_Cairo_Surface_destroy (Value sv);

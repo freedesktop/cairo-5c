@@ -269,12 +269,17 @@ do_Cairo_Surface_set_device_offset (Value sv, Value xv, Value yv)
     RETURN (Void);
 }
 
+static cairo_content_t cairo_contents[] = {
+    CAIRO_CONTENT_COLOR, CAIRO_CONTENT_ALPHA, CAIRO_CONTENT_COLOR_ALPHA
+};
+
 Value
-do_Cairo_Surface_create_similar (Value sv, Value wv, Value hv)
+do_Cairo_Surface_create_similar (Value sv, Value cv, Value wv, Value hv)
 {
     ENTER ();
     cairo_5c_surface_t	*c5s;
     cairo_5c_surface_t	*c5os = cairo_5c_surface_get (sv);
+    cairo_content_t	content = cairo_contents[EnumIntPart (cv, "invalid content_t")];
     int			width = IntPart (wv, "invalid width");
     int			height = IntPart (hv, "invalid height");
     Value		ret;
@@ -292,7 +297,7 @@ do_Cairo_Surface_create_similar (Value sv, Value wv, Value hv)
     c5s->recv_events = Void;
     
     c5s->surface = cairo_surface_create_similar (c5os->surface,
-						 CAIRO_FORMAT_ARGB32,
+						 content,
 						 width, height);
 						 
     ret = NewForeign (CairoSurfaceId, c5s, 
@@ -310,6 +315,17 @@ do_Cairo_Surface_finish (Value sv)
     if (!aborting)
 	cairo_surface_finish (c5s->surface);
     RETURN (Void);
+}
+
+Value
+do_Cairo_Surface_status (Value sv)
+{
+    ENTER ();
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
+
+    if (aborting)
+	RETURN(Void);
+    RETURN(IntToEnum (typeCairoStatus, cairo_surface_status (c5s->surface)));
 }
 
 Value

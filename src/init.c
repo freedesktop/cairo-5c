@@ -63,6 +63,7 @@ Type		*typeCairoPath;
 Type		*typeCairoCurveTo;
 Type		*typeCairoScaledFont;
 Type		*typeCairoFontFace;
+Type		*typeCairoContent;
 
 Type		*typeCairoPatternExtend;
 Type		*typeCairoPatternFilter;
@@ -110,6 +111,8 @@ Type		*typeCairoImageFormat;
 #define SCALED_FONT_S	"22"
 #define FONT_FACE_I	23
 #define FONT_FACE_S	"23"
+#define CONTENT_I	24
+#define CONTENT_S	"24"
 
 #define EXTEND_I	30
 #define EXTEND_S	"30"
@@ -338,6 +341,16 @@ init_types (void)
 				     PATTERN_I,
 				     NULL,
 				     typePrim[rep_foreign]);
+
+    typeCairoContent = make_typedef ("content_t",
+				     CairoNamespace,
+				     publish_public,
+				     CONTENT_I,
+				     NULL,
+				     BuildEnumType (3,
+						    "COLOR",
+						    "ALPHA",
+						    "COLOR_ALPHA"));
 
     /*
      * Path data structures
@@ -864,6 +877,10 @@ nickle_init (void)
 	    " file open_event (surface_t surface)\n"
 	    "\n"
 	    " Returns a file which will receive events\n" },
+	{ do_Cairo_Surface_status, "status", STATUS_S, SURFACE_S, "\n"
+	    " status_t status (surface_t surface)\n"
+	    "\n"
+	    " Return status associated with surface.\n" },
 	{ 0 }
     };
 
@@ -886,14 +903,18 @@ nickle_init (void)
 	    "\n"
 	    " Create a window and return a surface pointer for it\n" },
 #endif
-	{ do_Cairo_Surface_create_similar, "create_similar", SURFACE_S, SURFACE_S "nn", "\n"
-	    " surface_t create_similar (surface_t related, real width, real height)\n"
-	    "\n"
-	    " Create a similar surface related to another surface\n" },
 	{ do_Cairo_Surface_set_device_offset, "set_device_offset", "v", SURFACE_S "nn", "\n"
 	    " void set_device_offset (surface_t surface, real x, real y)\n"
 	    "\n"
 	    " Sets the device offset for surface to x,y\n" },
+	{ 0 }
+    };
+
+    static const struct fbuiltin_4 surfuncs_4[] = {
+	{ do_Cairo_Surface_create_similar, "create_similar", SURFACE_S, SURFACE_S CONTENT_S "ii", "\n"
+	    " surface_t create_similar (surface_t related, content_t content, int width, int height)\n"
+	    "\n"
+	    " Create a similar surface related to another surface\n" },
 	{ 0 }
     };
 
@@ -1060,6 +1081,7 @@ nickle_init (void)
     BuiltinFuncs1 (&CairoSurfaceNamespace, surfuncs_1);
     BuiltinFuncs2 (&CairoSurfaceNamespace, surfuncs_2);
     BuiltinFuncs3 (&CairoSurfaceNamespace, surfuncs_3);
+    BuiltinFuncs4 (&CairoSurfaceNamespace, surfuncs_4);
     
     BuiltinFuncs1 (&CairoPatternNamespace, patfuncs_1);
     BuiltinFuncs2 (&CairoPatternNamespace, patfuncs_2);
