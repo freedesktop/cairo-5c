@@ -73,7 +73,7 @@ extend namespace Chrome {
 	
 	public void relabel (&button_t widget, string label) {
 	    widget.label = label;
-	    Widget::redraw (&widget);
+	    Widget::resize (&widget);
 	}
 
 	public void button (&button_t widget, &button_event_t event) {
