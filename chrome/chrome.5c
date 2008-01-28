@@ -79,6 +79,8 @@ namespace Chrome {
 
     public typedef void(&container_t, &contained_t) resize_handler_t;
 
+    public typedef void(&contained_t, rect_t) configure_handler_t;
+
     public typedef struct {
 	resize_handler_t    resize;
     } container_t;
@@ -86,6 +88,7 @@ namespace Chrome {
     public typedef struct {
 	&chrome_t	    chrome;
 	&container_t	    container;
+	configure_handler_t configure;
     } contained_t;
 
     /*
@@ -157,11 +160,16 @@ namespace Chrome {
     }
 
     public namespace Widget {
+	public void configure (&widget_t widget, rect_t geometry) {
+	    widget.geometry = geometry;
+	}
+
 	public void init (&chrome_t chrome, &widget_t widget) {
 	    widget.geometry = (rect_t) {
 		x = 0, y = 0, width = 0, height = 0
 	    };
 	    &widget.chrome = &chrome;
+	    widget.configure = configure;
 	    Chrome::add (&chrome, &widget);
 	}
 	
