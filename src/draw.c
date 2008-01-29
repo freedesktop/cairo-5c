@@ -370,6 +370,8 @@ do_extents (Value cv, void (*extents) (cairo_t *,
     
     if (aborting)
 	RETURN(Void);
+    /* XXX cairo doesn't initialize these on error */
+    x1 = y1 = x2 = y2 = 0;
     (*extents) (c5c->cr, &x1, &y1, &x2, &y2);
     ret = NewStruct (TypeCanon (typeCairoRect)->structs.structs, False);
     box = ret->structs.values;
