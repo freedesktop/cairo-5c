@@ -258,6 +258,7 @@ do_Cairo_font_extents (Value cv)
 
     if (aborting)
 	return Void;
+    memset (&extents, '\0', sizeof (extents));
     cairo_font_extents (c5c->cr, &extents);
     ret = NewStruct (TypeCanon (typeCairoFontExtents)->structs.structs, False);
     box = ret->structs.values;
@@ -306,6 +307,7 @@ do_Cairo_text_extents (Value cv, Value uv)
 
     if (aborting)
 	return Void;
+    memset (&extents, '\0', sizeof (extents));
     cairo_text_extents (c5c->cr, utf8, &extents);
     ret = NewStruct (TypeCanon (typeCairoTextExtents)->structs.structs, False);
     box = ret->structs.values;
