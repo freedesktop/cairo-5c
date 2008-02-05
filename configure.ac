@@ -61,7 +61,7 @@ if test "x$GCC" = "xyes"; then
 fi
 AC_SUBST(WARN_CFLAGS)
 
-CAIRO_5C_PC_MODULES="cairo fontconfig gtk+-2.0 gthread-2.0"
+CAIRO_5C_PC_MODULES="cairo cairo-ft fontconfig gtk+-2.0 gthread-2.0"
 
 PKG_CHECK_MODULES(CAIRO_5C, $CAIRO_5C_PC_MODULES)
 
