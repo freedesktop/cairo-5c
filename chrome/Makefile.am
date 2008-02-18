@@ -37,6 +37,7 @@ NICKLEFILES = \
 	chrome-box.5c \
 	chrome-button.5c \
 	chrome-label.5c \
+	chrome-lozenge.5c \
 	chrome-toggle.5c
 
 EXTRA_DIST = $(NICKLEFILES)
