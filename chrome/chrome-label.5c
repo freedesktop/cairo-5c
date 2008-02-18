@@ -20,16 +20,17 @@ extend namespace Chrome {
 	metrics_t get_metrics (cr, &label_t widget) {
 	    set_font (cr, widget.font);
 	    text_extents_t text = text_extents (cr, widget.label);
+	    text_extents_t m = text_extents (cr, "M");
 	    font_extents_t font = font_extents(cr);
 	    metrics_t metrics;
 	    
-	    real pad = font.height / 2;
+	    real pad = m.height / 2;
 	    metrics.pad = pad;
 	    metrics.preferred_width = pad + text.width + pad;
-	    metrics.preferred_height = pad + font.height + pad;
+	    metrics.preferred_height = pad + m.height + pad;
 	    metrics.width = max (widget.geometry.width, metrics.preferred_width);
 	    metrics.height = max (widget.geometry.height, metrics.preferred_height);
-	    metrics.y = (metrics.height - font.height) / 2 + font.height;
+	    metrics.y = (metrics.height - m.height) / 2 + m.height;
 	    metrics.x = (metrics.width - text.width) / 2;
 	    
 	    return metrics;
