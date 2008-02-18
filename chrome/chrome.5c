@@ -401,6 +401,9 @@ namespace Chrome {
 		    translate (cr, widget.geometry.x, widget.geometry.y);
 		    widget.draw (cr, &widget);
 		    restore (cr);
+		    if (status (cr) != status_t.SUCCESS)
+			printf ("draw status %g for %g\n",
+				status (cr), &widget);
 		}
 		if (!is_uninit (&widget.outline)) {
 		    save (cr);
@@ -409,6 +412,9 @@ namespace Chrome {
 		    restore (cr);
 		    widget.extents = fill_extents (cr);
 		    new_path (cr);
+		    if (status (cr) != status_t.SUCCESS)
+			printf ("draw status %g for %g\n",
+				status (cr), &widget);
 		}
 	    }
 	    enable (cr);
