@@ -67,7 +67,7 @@ cairo_5c_surface_get (Value av)
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
 #if HAVE_CAIRO_XLIB_H
-	cairo_5c_tool_check_size (c5s);
+	cairo_5c_gui_check_size (c5s);
 #endif
 	break;
     case CAIRO_5C_IMAGE:
@@ -93,9 +93,6 @@ cairo_5c_surface_mark (void *object)
     MemReference (c5s->recv_events);
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
-#if HAVE_CAIRO_5C_WINDOW
-	cairo_5c_tool_mark (c5s);
-#endif
 	break;
     case CAIRO_5C_IMAGE:
     case CAIRO_5C_SCRATCH:
@@ -113,7 +110,7 @@ cairo_5c_surface_mark (void *object)
 }
 
 static void
-cairo_5c_surface_destroy (cairo_5c_surface_t *c5s, int free_tool)
+cairo_5c_surface_destroy (cairo_5c_surface_t *c5s)
 {
 
     if (!c5s->surface)
@@ -141,12 +138,8 @@ cairo_5c_surface_destroy (cairo_5c_surface_t *c5s, int free_tool)
     
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
-#if HAVE_CAIRO_5C_WINDOW
-	if (free_tool) {
-	    cairo_5c_tool_destroy (c5s);
-	    c5s->u.window.pixmap = None;
-	}
-#endif
+	cairo_5c_gui_destroy (c5s);
+	c5s->u.window.gui = NULL;
 	break;
     case CAIRO_5C_IMAGE:
 	break;
@@ -169,7 +162,7 @@ cairo_5c_surface_free (void *object)
 {
     cairo_5c_surface_t	*c5s = object;
 
-    cairo_5c_surface_destroy (c5s, False);
+    cairo_5c_surface_destroy (c5s);
     return 1;
 }
 
@@ -219,8 +212,9 @@ do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
     c5s->dirty = False;
     c5s->copied = False;
     c5s->recv_events = Void;
+    c5s->u.window.gui = NULL;
     
-    if (!cairo_5c_tool_create (c5s, name, width, height))
+    if (!cairo_5c_gui_create (c5s, name, width, height))
     {
 	int err = errno;
 	RaiseStandardException (exception_open_error,
@@ -336,7 +330,7 @@ do_Cairo_Surface_destroy (Value sv)
 
     if (aborting)
 	RETURN (Void);
-    cairo_5c_surface_destroy (c5s, True);
+    cairo_5c_surface_destroy (c5s);
     RETURN(Void);
 }
 

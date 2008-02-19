@@ -50,7 +50,11 @@ AC_ARG_WITH(nickle-libdir, AS_HELP_STRING([--with-nickle-libdir=LIBDIR],
 AC_SUBST(NICKLE_LIBDIR)
 AC_SUBST(NICKLE_PATH)
 
-AC_CHECK_LIB(pthread, pthread_create)
+AC_SEARCH_LIBS(pthread_create, pthread)
+
+AC_SEARCH_LIBS(clock_gettime, rt)
+
+AC_CHECK_FUNCS(clock_gettime)
 
 WARN_CFLAGS=""
 
@@ -61,7 +65,7 @@ if test "x$GCC" = "xyes"; then
 fi
 AC_SUBST(WARN_CFLAGS)
 
-CAIRO_5C_PC_MODULES="cairo cairo-ft fontconfig gtk+-2.0 gthread-2.0"
+CAIRO_5C_PC_MODULES="cairo cairo-ft cairo-xlib x11 fontconfig"
 
 PKG_CHECK_MODULES(CAIRO_5C, $CAIRO_5C_PC_MODULES)
 

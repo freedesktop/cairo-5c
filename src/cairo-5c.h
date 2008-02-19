@@ -60,9 +60,6 @@
 #define Atom XAtom
 #define HAVE_CAIRO_5C_WINDOW 1
 #include <cairo-xlib.h>
-#define GTK_DISABLE_DEPRECATED
-#include <gtk/gtk.h>
-#include <gdk/gdkx.h>
 #undef Atom
 #undef True
 #undef False
@@ -73,19 +70,10 @@
 
 typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_IMAGE, CAIRO_5C_PDF, CAIRO_5C_SVG, CAIRO_5C_PS, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
 
-typedef struct _cairo_5c_tool	cairo_5c_tool_t;
+typedef struct _cairo_5c_gui	cairo_5c_gui_t;
 
 typedef struct _cairo_5c_window_t {
-#if HAVE_CAIRO_XLIB_H
-    Pixmap	    pixmap;
-    GC		    gc;
-    Window	    root;
-#endif
-    int		    depth;
-    int		    new_width;
-    int		    new_height;
-    cairo_5c_tool_t *tool;
-    FILE	    *send_events;
+    cairo_5c_gui_t  *gui;
 } cairo_5c_window_t;
 
 typedef struct _cairo_5c_pdf_t {
@@ -622,28 +610,25 @@ do_Cairo_scaled_text_extents (Value sfv, Value uv);
 
 #if HAVE_CAIRO_XLIB_H
 Bool
-cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height);
-
-Bool
-cairo_5c_tool_destroy (cairo_5c_surface_t *c5s);
+cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height);
 
 void
-cairo_5c_tool_dirty (cairo_5c_surface_t *c5s);
-
-Bool
-cairo_5c_tool_disable (cairo_5c_surface_t *c5s);
-
-Bool
-cairo_5c_tool_enable (cairo_5c_surface_t *c5s);
-
-Display *
-cairo_5c_tool_display (cairo_5c_surface_t *c5s);
+cairo_5c_gui_destroy (cairo_5c_surface_t *c5s);
 
 void
-cairo_5c_tool_mark (cairo_5c_surface_t *c5s);
+cairo_5c_gui_dirty (cairo_5c_surface_t *c5s);
+
+Bool
+cairo_5c_gui_disable (cairo_5c_surface_t *c5s);
+
+Bool
+cairo_5c_gui_enable (cairo_5c_surface_t *c5s);
 
 void
-cairo_5c_tool_check_size (cairo_5c_surface_t *c5s);
+cairo_5c_gui_check_size (cairo_5c_surface_t *c5s);
+
+Value
+cairo_5c_gui_open_event (cairo_5c_surface_t *c5s);
 
 #endif
 

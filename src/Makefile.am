@@ -40,7 +40,7 @@ libcairo_5c_la_SOURCES = \
 	draw.c \
 	event.c \
 	gstate.c \
-	gtk.c \
+	xlib.c \
 	matrix.c \
 	pattern.c \
 	surface.c \

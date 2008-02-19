@@ -42,8 +42,6 @@ do_Cairo_Surface_open_event (Value sv)
     ENTER ();
     cairo_5c_surface_t	*c5s = cairo_5c_surface_get (sv);
     Value		read = Void;
-    int			fd[2];
-    FILE		*write;
     int			err;
 
     if (aborting)
@@ -53,19 +51,7 @@ do_Cairo_Surface_open_event (Value sv)
     {
 	switch (c5s->kind) {
 	case CAIRO_5C_WINDOW:
-	    if (pipe (fd) < 0)
-	    {
-		err = errno;
-		RaiseStandardException (exception_open_error,
-					FileGetErrorMessage (err),
-					2, FileGetError (err), Void);
-		RETURN (Void);
-	    }
-	    read = FileCreate (fd[0], FileReadable);
-	    if (aborting)
-		RETURN(Void);
-	    write = fdopen (fd[1], "w");
-	    c5s->u.window.send_events = write;
+	    read = cairo_5c_gui_open_event (c5s);
 	    break;
 	case CAIRO_5C_IMAGE:
 	case CAIRO_5C_PDF:
@@ -73,7 +59,7 @@ do_Cairo_Surface_open_event (Value sv)
 	case CAIRO_5C_PS:
 	case CAIRO_5C_SCRATCH:
 	    read = FileFopen ("/dev/null", "r", &err);
-	    if (!c5s->recv_events)
+	    if (!read)
 	    {
 		RaiseStandardException (exception_open_error,
 					FileGetErrorMessage (err),

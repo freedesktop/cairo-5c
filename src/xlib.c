@@ -1,5 +1,4 @@
-/* $Id$
- *
+/*
  * Copyright © 2004 Keith Packard
  *
  * This library is free software; you can redistribute it and/or
@@ -37,35 +36,56 @@
 
 #if HAVE_CAIRO_XLIB_H
 
+#include <poll.h>
 #include <pthread.h>
+#include <sys/time.h>
+#include <time.h>
+#include <X11/Xutil.h>
 
-typedef struct _gtk_global {
+typedef struct _x_repaint {
+    struct _x_repaint	*next;
+    int			when;
+    cairo_5c_surface_t	*c5s;
+} x_repaint_t;
+
+typedef struct _x_global {
     Display	*dpy;
     int		ref_count;
-    pthread_t	gtk_thread;
-} gtk_global_t;
+    int		running;
+    int		pipe[2];
+    pthread_t	x_thread;
+    XContext	context;
+    x_repaint_t	*repaint;
+    XAtom	wm_delete_window;
+    XAtom	wm_protocols;
+} x_global_t;
 
-struct _cairo_5c_tool {
-    DataType		*data;
-    gtk_global_t	*global;
-    int			dirty;
-    int			disable;
-    GtkWidget		*window;
-    GtkWidget		*drawing_area;
+struct _cairo_5c_gui {
+    x_global_t	    *global;
+    Pixmap	    pixmap;
+    Window	    window;
+    GC		    gc;
+    Window	    root;
+    int		    dirty;
+    int		    disable;
+    int		    depth;
+    int		    new_width;
+    int		    new_height;
+    FILE	    *send_events;
 };
 
-static gtk_global_t *gtk_global;
+static x_global_t *x_global;
 
 static void
 allocate_pixmap (cairo_5c_surface_t *c5s)
 {
     Pixmap  pixmap;
-    cairo_5c_tool_t *tool = c5s->u.window.tool;
-    Display	    *dpy = tool->global->dpy;
-    GC		    gc = c5s->u.window.gc;
-    int		    width = c5s->u.window.new_width;
-    int		    height = c5s->u.window.new_height;
-    int		    depth = c5s->u.window.depth;
+    cairo_5c_gui_t *gui = c5s->u.window.gui;
+    Display	    *dpy = gui->global->dpy;
+    GC		    gc = gui->gc;
+    int		    width = gui->new_width;
+    int		    height = gui->new_height;
+    int		    depth = gui->depth;
 
     c5s->width = width;
     c5s->height = height;
@@ -73,15 +93,15 @@ allocate_pixmap (cairo_5c_surface_t *c5s)
     if (!width) width = 1;
     if (!height) height = 1;
 
-    pixmap = XCreatePixmap (dpy, c5s->u.window.root, width, height, depth);
+    pixmap = XCreatePixmap (dpy, gui->root, width, height, depth);
     XFillRectangle (dpy, pixmap, gc, 0, 0, width, height);
-    if (c5s->u.window.pixmap)
+    if (gui->pixmap)
     {
-	XCopyArea (dpy, c5s->u.window.pixmap, pixmap, gc, 0, 0,
+	XCopyArea (dpy, gui->pixmap, pixmap, gc, 0, 0,
 		   width, height, 0, 0);
-	XFreePixmap (dpy, c5s->u.window.pixmap);
+	XFreePixmap (dpy, gui->pixmap);
     }
-    c5s->u.window.pixmap = pixmap;
+    gui->pixmap = pixmap;
     if (c5s->surface)
     {
 	cairo_xlib_surface_set_drawable (c5s->surface,
@@ -99,563 +119,568 @@ allocate_pixmap (cairo_5c_surface_t *c5s)
     }
 }
 
-/*
- * This part runs in the gtk thread, so it must not refer to or use
- * any memory managed by nickle.  Called from signal handler with
- * gdk lock held.
- */
-static gboolean
-configure_event (GtkWidget *widget, GdkEventConfigure *event)
+static cairo_5c_surface_t *
+get_window_surface (x_global_t *xg, Window wid)
 {
-    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
+    XPointer	pointer;
+    if (XFindContext (xg->dpy, wid, xg->context, &pointer) == 0)
+	return (cairo_5c_surface_t *) pointer;
+    return NULL;
+}
 
-    c5s->u.window.new_width = event->width;
-    c5s->u.window.new_height = event->height;
-    if (c5s->u.window.send_events && event)
+static void
+set_window_surface (x_global_t *xg, Window wid, cairo_5c_surface_t *c5s)
+{
+    if (c5s == NULL)
+	XDeleteContext (xg->dpy, wid, xg->context);
+    else
+	XSaveContext (xg->dpy, wid, xg->context, (XPointer) c5s);
+}
+
+/*
+ * This part runs in the X thread, so it must not refer to or use
+ * any memory managed by nickle.
+ */
+static void
+configure_event (x_global_t *xg, XConfigureEvent *event)
+{
+    cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window); 
+    cairo_5c_gui_t	*gui;
+
+    if (!c5s)
+	return;
+    gui = c5s->u.window.gui;
+    gui->new_width = event->width;
+    gui->new_height = event->height;
+    if (gui->send_events)
     {
-	gdk_threads_leave ();
-	fprintf (c5s->u.window.send_events, "%d configure %d %d %d %d\n",
+	fprintf (gui->send_events, "%d configure %d %d %d %d\n",
 		 0, event->x, event->y, event->width, event->height);
-	fflush (c5s->u.window.send_events);
-	gdk_threads_enter ();
+	fflush (gui->send_events);
     }
-    return TRUE;
 }
 
 /*
  * Called from signal handler with gdk lock held
  */
-static gboolean
-expose_event( GtkWidget *widget, GdkEventExpose *event )
+static void
+expose_event (x_global_t *xg, XExposeEvent *event)
 {
-    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
-    cairo_5c_tool_t	*tool = c5s->u.window.tool;
+    cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
+    cairo_5c_gui_t	*gui;
+    
+    if (!c5s)
+	return;
+    gui = c5s->u.window.gui;
 
-    if (tool->disable == 0) {
-	Display	    *dpy = tool->global->dpy;
-	Window	    xwin = GDK_WINDOW_XID (widget->window);
-	GC	    gc = c5s->u.window.gc;
+    if (gui->disable == 0) {
+	Display	    *dpy = gui->global->dpy;
 
-	XCopyArea (dpy, c5s->u.window.pixmap, xwin, gc,
-			event->area.x, event->area.y,
-			event->area.width, event->area.height,
-			event->area.x, event->area.y);
+	XCopyArea (dpy, gui->pixmap, gui->window,
+		   gui->gc,
+		   event->x, event->y,
+		   event->width, event->height,
+		   event->x, event->y);
 	XFlush (dpy);
     }
-    return FALSE;
 }
 
 /*
  * Called from delete_event with gdk lock held
  */
 static void
-delete_drawing_area (GtkWidget *widget, gpointer data)
+delete_drawing_area (x_global_t *xg, cairo_5c_surface_t *c5s)
 {			   
-    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
-    cairo_5c_tool_t	*tool = c5s->u.window.tool;
-    
-    if (c5s->u.window.send_events)
+    cairo_5c_gui_t	*gui = c5s->u.window.gui;
+    if (gui->send_events)
     {
-	gdk_threads_leave ();
-	fprintf (c5s->u.window.send_events, "%d delete\n", 0);
-	fflush (c5s->u.window.send_events);
-	gdk_threads_enter ();
+	fprintf (gui->send_events, "%d delete\n", 0);
+	fflush (gui->send_events);
     }
-    tool->drawing_area = NULL;
-    tool->window = NULL;
 }
 
-/*
- * Called from signal handler with lock held
- */
-static gboolean
-delete_event( GtkWidget *widget, GdkEventAny *event )
+static void
+client_message_event (x_global_t *xg, XClientMessageEvent *event)
 {
-    gtk_container_foreach (GTK_CONTAINER(widget), delete_drawing_area, NULL);
-    return FALSE;
-}
-
-/*
- * Called from signal handler with lock held
- */
-static gboolean
-motion_notify_event( GtkWidget *widget, GdkEventMotion *event )
-{
-    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
+    cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
     
-    if (c5s->u.window.send_events)
+    if (!c5s)
+	return;
+    if (event->message_type == xg->wm_protocols && event->format == 32)
     {
-	gdk_threads_leave ();
-	fprintf (c5s->u.window.send_events, "%d motion %g %g\n",
-		 event->time, event->x, event->y);
-	fflush (c5s->u.window.send_events);
-	gdk_threads_enter ();
+	if (event->data.l[0] == xg->wm_delete_window)
+	    delete_drawing_area (xg, c5s);
     }
-    return FALSE;
-}
-
-
-/*
- * Called from signal handler with lock held
- */
-static gboolean
-button_press_event( GtkWidget *widget, GdkEventButton *event )
-{
-    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
-    
-    if (c5s->u.window.send_events)
-    {
-	char	*extended_type;
-
-	switch (event->type) {
-	case GDK_2BUTTON_PRESS:
-	    extended_type = "double-";
-	    break;
-	case GDK_3BUTTON_PRESS:
-	    extended_type = "triple-";
-	    break;
-	default:
-	    extended_type = "";
-	    break;
-	}
-	gdk_threads_leave ();
-	fprintf (c5s->u.window.send_events, "%d %spress %d %g %g\n",
-		 event->time, extended_type,
-		 event->button, event->x, event->y);
-	fflush (c5s->u.window.send_events);
-	gdk_threads_enter ();
-    }
-    return FALSE;
-}
-
-/*
- * Called from signal handler with lock held
- */
-static gboolean
-button_release_event( GtkWidget *widget, GdkEventButton *event )
-{
-    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
-    
-    if (c5s->u.window.send_events)
-    {
-	gdk_threads_leave ();
-	fprintf (c5s->u.window.send_events, "%d release %d %g %g\n",
-		 event->time, event->button, event->x, event->y);
-	fflush (c5s->u.window.send_events);
-	gdk_threads_enter ();
-    }
-    return FALSE;
-}
-
-static gboolean
-key_press_event( GtkWidget *widget, GdkEventKey *event )
-{
-    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
-    
-    if (c5s->u.window.send_events)
-    {
-	gchar	*string = event->string;
-	int	n = event->length;
-	gdk_threads_leave ();
-	fprintf (c5s->u.window.send_events, "%d key-down %s ",
-		 event->time, gdk_keyval_name (event->keyval));
-	while (n--)
-	    fprintf (c5s->u.window.send_events, "%02x", *string++);
-        fprintf (c5s->u.window.send_events, "\n");
-	fflush (c5s->u.window.send_events);
-	gdk_threads_enter ();
-    }
-    return FALSE;
-}
-
-static gboolean
-key_release_event( GtkWidget *widget, GdkEventKey *event )
-{
-    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
-    
-    if (c5s->u.window.send_events)
-    {
-	gchar	*string = event->string;
-	int	n = event->length;
-	gdk_threads_leave ();
-	fprintf (c5s->u.window.send_events, "%d key-up %s ",
-		 event->time, gdk_keyval_name (event->keyval));
-	while (n--)
-	    fprintf (c5s->u.window.send_events, "%02x", *string++);
-        fprintf (c5s->u.window.send_events, "\n");
-	fflush (c5s->u.window.send_events);
-	gdk_threads_enter ();
-    }
-    return FALSE;
-}
-
-static gboolean
-focus_in_event ( GtkWidget *widget, GdkEventFocus *event )
-{
-    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
-    
-    if (c5s->u.window.send_events)
-    {
-	gdk_threads_leave ();
-	fprintf (c5s->u.window.send_events, "%d focus-in\n",
-		 0);
-	fflush (c5s->u.window.send_events);
-	gdk_threads_enter ();
-    }
-    return FALSE;
-}
-
-static gboolean
-focus_out_event ( GtkWidget *widget, GdkEventFocus *event )
-{
-    cairo_5c_surface_t	*c5s = GTK_DRAWING_AREA (widget)->draw_data;
-    
-    if (c5s->u.window.send_events)
-    {
-	gdk_threads_leave ();
-	fprintf (c5s->u.window.send_events, "%d focus-out\n",
-		 0);
-	fflush (c5s->u.window.send_events);
-	gdk_threads_enter ();
-    }
-    return FALSE;
 }
 
 /*
  * Called from signal handler with lock held
  */
 static void
-gtk_repaint (cairo_5c_surface_t *c5s, int x, int y, int w, int h)
+motion_notify_event (x_global_t *xg, XMotionEvent *event)
 {
-    cairo_5c_tool_t *tool = c5s->u.window.tool;
-    GtkWidget	    *widget = tool->drawing_area;
-    Pixmap	    pixmap;
-    GC		    gc;
+    cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
+    cairo_5c_gui_t	*gui;
     
-    if (widget && 
-	(c5s->u.window.new_width != c5s->width ||
-	 c5s->u.window.new_height != c5s->height))
+    if (!c5s)
+	return;
+    gui = c5s->u.window.gui;
+    if (gui->send_events)
+    {
+	fprintf (gui->send_events, "%d motion %d %d\n",
+		 (int) event->time, event->x, event->y);
+	fflush (gui->send_events);
+    }
+}
+
+
+/*
+ * Called from signal handler with lock held
+ */
+static void
+button_event (x_global_t *xg, XButtonEvent *event)
+{
+    cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
+    cairo_5c_gui_t	*gui;
+    
+    if (!c5s)
+	return;
+    gui = c5s->u.window.gui;
+    if (gui->send_events)
+    {
+	char	*type = event->type == ButtonPress ? "press" : "release";
+	char	*extended_type = "";
+
+	fprintf (gui->send_events, "%d %s%s %d %d %d\n",
+		 (int) event->time, extended_type, type,
+		 event->button, event->x, event->y);
+	fflush (gui->send_events);
+    }
+}
+
+static void
+key_event (x_global_t *xg, XKeyEvent *event)
+{
+    cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
+    cairo_5c_gui_t	*gui;
+    
+    if (!c5s)
+	return;
+    gui = c5s->u.window.gui;
+    if (gui->send_events)
+    {
+	char	*type = event->type == KeyPress ? "down" : "up";
+	char	buffer[128];
+	int	n, i;
+	KeySym	sym;
+
+	n = XLookupString (event, buffer, sizeof (buffer), &sym, NULL);
+	fprintf (gui->send_events, "%d key-%s %s ",
+		 (int) event->time, type, XKeysymToString (sym));
+	for (i = 0; i < n; i++)
+	    fprintf (gui->send_events, "%02x", buffer[i]);
+        fprintf (gui->send_events, "\n");
+	fflush (gui->send_events);
+    }
+}
+
+static void
+focus_change_event (x_global_t *xg, XFocusChangeEvent *event)
+{
+    cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
+    cairo_5c_gui_t	*gui;
+    
+    if (!c5s)
+	return;
+    gui = c5s->u.window.gui;
+    if (gui->send_events)
+    {
+	char	*type = event->type == FocusIn ? "in" : "out";
+	fprintf (gui->send_events, "%d focus-%s\n",
+		 0, type);
+	fflush (gui->send_events);
+    }
+}
+
+/*
+ * Called from signal handler with lock held
+ */
+static void
+repaint (cairo_5c_surface_t *c5s, int x, int y, int w, int h)
+{
+    cairo_5c_gui_t  *gui = c5s->u.window.gui;
+    if (gui->window && 
+	(gui->new_width != c5s->width ||
+	 gui->new_height != c5s->height))
     {
 	allocate_pixmap (c5s);
     }
     
-    pixmap = c5s->u.window.pixmap;
-    gc = c5s->u.window.gc;
-
-    if (widget && pixmap && gc)
+    if (gui->window && gui->pixmap && gui->gc)
     {
-	Window	    xwin = GDK_WINDOW_XID (widget->window);
-	Display	    *dpy = tool->global->dpy;
+	Display	    *dpy = gui->global->dpy;
     
-	if (xwin)
-	{
-	    if (w == 0)
-		w = c5s->width - x;
-	    if (h == 0)
-		h = c5s->height - y;
-	    tool->dirty = 0;
-	    XCopyArea (dpy, pixmap, xwin, gc, x, y, w, h, x, y);
-	    XFlush (dpy);
-	}
+	if (w == 0)
+	    w = c5s->width - x;
+	if (h == 0)
+	    h = c5s->height - y;
+	gui->dirty = 0;
+	XCopyArea (dpy, gui->pixmap, gui->window, gui->gc,
+		   x, y, w, h, x, y);
+	XFlush (dpy);
     }
 }
 
-/*
- * Called from timeout with gdk lock not held
- */
-static gboolean
-gtk_repaint_timeout (gpointer data)
+static void
+repaint_timeout (x_global_t *xg, int when)
 {
-    gdk_threads_enter ();
-    {
-	cairo_5c_surface_t	*c5s = data;
-	cairo_5c_tool_t	*tool = c5s->u.window.tool;
+    x_repaint_t	*xr;
     
-	if (tool->disable == 0 && tool->dirty)
-	{
-	    gtk_repaint (c5s, 0, 0, 0, 0);
-	}
+    while ((xr = xg->repaint) && xr->when - when <= 0)
+    {
+	cairo_5c_surface_t  *c5s = xr->c5s;
+	cairo_5c_gui_t	    *gui = c5s->u.window.gui;
+	if (gui->disable == 0 && gui->dirty)
+	    repaint (c5s, 0, 0, 0, 0);
+	xg->repaint = xr->next;
+	free (xr);
     }
-    gdk_threads_leave ();
-    return FALSE;
+}
+
+static int
+now (void)
+{
+#if HAVE_CLOCK_GETTIME
+    struct timespec tp;
+
+    clock_gettime (CLOCK_MONOTONIC, &tp);
+    return (int) (tp.tv_sec * 1000 + tp.tv_nsec / 1000000);
+#else
+    struct timeval  tv;
+
+    gettimeofday (&tv, NULL);
+    return (int) (tv.tv_sec * 1000 + tv.tv_usec / 1000);
+#endif
 }
 
 static void *
-gtk_thread_main (void *closure)
+x_thread_main (void *closure)
 {
-    gdk_threads_enter ();
-    gtk_main ();
-    gdk_threads_leave ();
+    x_global_t	    *xg = closure;
+    XEvent	    event;
+    struct pollfd   fds[2];
+    int		    timeout;
+    
+    fds[0].fd = ConnectionNumber (xg->dpy);
+    fds[0].events = POLLIN;
+    fds[1].fd = xg->pipe[0];
+    fds[1].events = POLLIN;
+    while (xg->running) {
+	while (XPending (xg->dpy))
+	{
+	    XNextEvent (xg->dpy, &event);
+	    switch (event.type) {
+	    case ConfigureNotify:
+		configure_event (xg, &event.xconfigure);
+		break;
+	    case Expose:
+		expose_event (xg, &event.xexpose);
+		break;
+	    case MotionNotify:
+		motion_notify_event (xg, &event.xmotion);
+		break;
+	    case ButtonPress:
+	    case ButtonRelease:
+		button_event (xg, &event.xbutton);
+		break;
+	    case KeyPress:
+	    case KeyRelease:
+		key_event (xg, &event.xkey);
+		break;
+	    case ClientMessage:
+		client_message_event (xg, &event.xclient);
+		break;
+	    case FocusIn:
+	    case FocusOut:
+		focus_change_event (xg, &event.xfocus);
+		break;
+	    }
+	}
+	timeout = -1;
+	while (xg->repaint)
+	{
+	    int when = now ();
+	    timeout = xg->repaint->when - when;
+	    if (timeout > 0)
+		break;
+	    timeout = -1;
+	    repaint_timeout (xg, when);
+	}
+	poll (fds, 2, timeout);
+	if (fds[1].revents & POLLIN) {
+	    char    stuffed[128];
+	    read (fds[1].fd, stuffed, sizeof (stuffed));
+	}
+    }
+    free (xg);
     return 0;
 }
 
+static void
+x_thread_wakeup (x_global_t *xg)
+{
+    write (xg->pipe[1], "\n", 1);
+}
+
+static void
+x_schedule_repaint (cairo_5c_surface_t *c5s, int delta)
+{
+    cairo_5c_gui_t  *gui = c5s->u.window.gui;
+    x_global_t	    *xg = gui->global;
+    x_repaint_t	    *xr, **prev;
+
+    for (xr = xg->repaint; xr; xr = xr->next)
+	if (xr->c5s == c5s)
+	    return;
+    
+    xr = malloc (sizeof (x_repaint_t));
+    xr->when = now () + delta;
+    xr->c5s = c5s;
+    for (prev = &xg->repaint; (*prev); prev = &(*prev)->next)
+    {
+	if ((*prev)->when > xr->when)
+	    break;
+    }
+    xr->next = *prev;
+    *prev = xr;
+    x_thread_wakeup (xg);
+}
+
 /*
- * Manage the gtk_global object, starting the thread and such
+ * Manage the x_global object, starting the thread and such
  */
 
 static int
-gtk_global_unref (gtk_global_t *gg)
+x_global_unref (x_global_t *xg)
 {
-    if (--gg->ref_count <= 0)
+    if (--xg->ref_count <= 0)
     {
-	gdk_threads_enter ();
-	gtk_main_quit ();
-	if (gg == gtk_global)
-	    gtk_global = NULL;
-	gdk_threads_leave ();
-	free (gg);
+	xg->running = 0;
+	x_thread_wakeup (xg);
+	if (xg == x_global)
+	    x_global = NULL;
     }
     return 1;
 }
 
-static gtk_global_t *
-create_gtk_global (void)
+static x_global_t *
+x_global_create (void)
 {
     static int	been_here = 0;
-    static int	argc = 1;
-    static char	*args[] = { "nickle", 0 };
-    static char **argv = args;
-    gtk_global_t    *gg;
+    Display	*dpy;
+    x_global_t	*xg;
 
     if (!been_here)
     {
 	XInitThreads ();
-	g_thread_init (NULL);
-	gdk_threads_init ();
 	been_here = 1;
     }
-    gdk_threads_enter ();
-    if (!gtk_init_check (&argc, &argv))
+    
+    if (x_global)
+	return x_global;
+
+    dpy = XOpenDisplay (NULL);
+    
+    if (!dpy)
     {
 	int err = errno;
-	const char *display_name_arg = gdk_get_display_arg_name ();
+	const char *display_name_arg = XDisplayName (NULL);
 	RaiseStandardException (exception_open_error,
 				"cannot open X display",
 				2, FileGetError (err), NewStrString (display_name_arg));
 	return NULL;
     }
 	
-    gg = malloc (sizeof (gtk_global_t));
+    xg = malloc (sizeof (x_global_t));
     
-    gg->dpy = gdk_x11_get_default_xdisplay ();
-    gg->ref_count = 0;
+    xg->ref_count = 0;
+    xg->dpy = dpy;
+    xg->running = 1;
+    xg->repaint = NULL;
+    pipe (xg->pipe);
     
-    pthread_create (&gg->gtk_thread, 0, gtk_thread_main, gg);
-    if (!gtk_global)
-	gtk_global = gg;
-    gdk_threads_leave ();
-    return gg;
+    pthread_create (&xg->x_thread, 0, x_thread_main, xg);
+    x_global = xg;
+    return xg;
 }
 
 /*
- * manage a the gtk piece of an xlib surface
- */
-
-static void
-gtk_tool_mark (void *object)
-{
-}
-
-/*
- * Called from nickle with gdk lock not held
- */
-static int
-gtk_tool_free (void *object)
-{
-    cairo_5c_tool_t *tool = object;
-
-    gdk_threads_enter ();
-    if (tool->window)
-    {
-	gtk_widget_destroy (tool->window);
-	tool->window = NULL;
-	tool->drawing_area = NULL;
-    }
-    gdk_threads_leave ();
-    return 1;
-}
-
-static DataType gtk_tool_type = { gtk_tool_mark, gtk_tool_free, "GtkTool" };
-
-/*
- * Called from nickle with gdk lock not held
+ * create the underlying gui object for a window surface
  */
 
 Bool
-cairo_5c_tool_create (cairo_5c_surface_t *c5s, char *name, int width, int height)
+cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height)
 {
     ENTER ();
-    gtk_global_t    *gg = gtk_global ? gtk_global : create_gtk_global ();
-    cairo_5c_tool_t *tool;
-    Display	    *dpy;
-    XGCValues	    gcv;
+    x_global_t		    *xg;
+    cairo_5c_gui_t	    *gui;
+    Display		    *dpy;
+    XGCValues		    gcv;
+    int			    screen;
+    XSizeHints		    sizeHints;
+    XWMHints		    wmHints;
+    XClassHint		    classHints;
+    XSetWindowAttributes    attr;
     
+    xg = x_global_create ();
+
     if (aborting)
     {
 	EXIT ();
 	return False;
     }
-    tool = ALLOCATE (&gtk_tool_type, sizeof (cairo_5c_tool_t));
-    
-    gdk_threads_enter ();
-    dpy = gg->dpy;
-    gg->ref_count++;
-    
-    tool->global = gg;
-    tool->dirty = 0;
-    tool->disable = 0;
-    
-    c5s->dirty = False;
-    c5s->recv_events = Void;
 
-    c5s->u.window.pixmap = None;
-    c5s->u.window.send_events = 0;
-    c5s->u.window.tool = tool;
-    c5s->u.window.root = RootWindow (dpy, DefaultScreen (dpy));
+    dpy = xg->dpy;
+    screen = DefaultScreen (dpy);
     
     if (!width)
-	width = XDisplayWidth (dpy, DefaultScreen (dpy)) / 3;
+	width = XDisplayWidth (dpy, screen) / 3;
     if (!height)
-	height = XDisplayWidth (dpy, DefaultScreen (dpy)) / 3;
-    
-    tool->window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_default_size (GTK_WINDOW(tool->window),
-				 width, height);
-    gtk_window_set_title (GTK_WINDOW (tool->window), name);
-    
-    tool->drawing_area = gtk_drawing_area_new ();
-    
-    GTK_WIDGET_SET_FLAGS (tool->drawing_area, GTK_CAN_FOCUS);
-    
-    GTK_DRAWING_AREA (tool->drawing_area)->draw_data = c5s;
-    
-    gtk_container_add (GTK_CONTAINER(tool->window), tool->drawing_area);
-    
-    g_signal_connect (GTK_OBJECT (tool->drawing_area), "expose_event",
-		      (GtkSignalFunc) expose_event, NULL);
-    g_signal_connect (GTK_OBJECT(tool->drawing_area),"configure_event",
-		      (GtkSignalFunc) configure_event, NULL);
-    g_signal_connect (GTK_OBJECT (tool->window), "delete_event",
-		      (GtkSignalFunc) delete_event, NULL);
-    g_signal_connect (GTK_OBJECT (tool->drawing_area), "motion_notify_event",
-		      (GtkSignalFunc) motion_notify_event, NULL);
-    g_signal_connect (GTK_OBJECT (tool->drawing_area), "button_press_event",
-		      (GtkSignalFunc) button_press_event, NULL);
-    g_signal_connect (GTK_OBJECT (tool->drawing_area), "button_release_event",
-		      (GtkSignalFunc) button_release_event, NULL);
-    g_signal_connect (GTK_OBJECT (tool->drawing_area), "key_press_event",
-		      (GtkSignalFunc) key_press_event, NULL);
-    g_signal_connect (GTK_OBJECT (tool->drawing_area), "key_release_event",
-		      (GtkSignalFunc) key_release_event, NULL);
-    g_signal_connect (GTK_OBJECT (tool->drawing_area), "focus_in_event",
-		      (GtkSignalFunc) focus_in_event, NULL);
-    g_signal_connect (GTK_OBJECT (tool->drawing_area), "focus_out_event",
-		      (GtkSignalFunc) focus_out_event, NULL);
+	height = XDisplayWidth (dpy, screen) / 3;
 
-    gtk_widget_set_double_buffered (tool->drawing_area, FALSE);
+    gui = malloc (sizeof (cairo_5c_gui_t));
     
-    gtk_widget_set_events (tool->drawing_area, GDK_EXPOSURE_MASK
-			   | GDK_LEAVE_NOTIFY_MASK
-			   | GDK_BUTTON_PRESS_MASK
-			   | GDK_BUTTON_RELEASE_MASK
-			   | GDK_POINTER_MOTION_MASK
-			   | GDK_KEY_PRESS_MASK
-			   | GDK_KEY_RELEASE_MASK 
-			   | GDK_FOCUS_CHANGE_MASK );
+    xg->ref_count++;
+    gui->global = xg;
+    gui->pixmap = None;
 
-    gtk_widget_realize (tool->window);
-    gtk_widget_realize (tool->drawing_area);
-    gdk_window_set_back_pixmap (GTK_WIDGET(tool->drawing_area)->window, NULL, FALSE);
-    gtk_widget_show (tool->drawing_area);
-    gtk_widget_show (tool->window);
-    gtk_widget_grab_focus (tool->drawing_area);
+    gui->root = RootWindow (dpy, screen);
+    gui->dirty = 0;
+    gui->disable = 0;
+    gui->depth = DefaultDepth (dpy, screen);
     
+    gui->new_width = width;
+    gui->new_height = height;
+    
+    gui->send_events = NULL;
+    
+    attr.background_pixmap = None;
+    attr.event_mask = (KeyPressMask|
+		       KeyReleaseMask|
+		       ButtonPressMask|
+		       ButtonReleaseMask|
+		       PointerMotionMask|
+		       EnterWindowMask|
+		       LeaveWindowMask|
+		       ExposureMask|
+		       StructureNotifyMask|
+		       FocusChangeMask);
+    
+    gui->window = XCreateWindow (dpy, gui->root,
+				 0, 0, gui->new_width, gui->new_height, 0,
+				 gui->depth,
+				 InputOutput, CopyFromParent,
+				 CWEventMask|CWBackPixmap, &attr);
+
     gcv.foreground = 0xffffffff;
     gcv.graphics_exposures = False;
-    c5s->u.window.gc = XCreateGC (dpy, 
-				  GDK_WINDOW_XID (tool->drawing_area->window),
-				  GCForeground | GCGraphicsExposures,
-				  &gcv);
+    gui->gc = XCreateGC (dpy, gui->window,
+			 GCForeground | GCGraphicsExposures,
+			 &gcv);
+    
+    set_window_surface (xg, gui->window, c5s);
+    
+    sizeHints.flags = 0;
+    wmHints.flags = InputHint;
+    wmHints.input = True;
+    classHints.res_name = name;
+    classHints.res_class = name;
+    
+    xg->wm_delete_window = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
+    xg->wm_protocols = XInternAtom (dpy, "WM_PROTOCOLS", False);
 
+    Xutf8SetWMProperties (dpy, gui->window, name, name,
+			  NULL, 0, &sizeHints, &wmHints, &classHints);
+    XSetWMProtocols (dpy, gui->window, &xg->wm_delete_window, 1);
+			  
+    XMapWindow (dpy, gui->window);
+
+    c5s->u.window.gui = gui;
+    
     /* create the pixmap */
-    c5s->u.window.new_width = tool->drawing_area->allocation.width;
-    c5s->u.window.new_height = tool->drawing_area->allocation.height;
-    c5s->u.window.depth = gdk_drawable_get_depth (GDK_DRAWABLE (tool->drawing_area->window));
     allocate_pixmap (c5s);
     
-    gdk_threads_leave ();
     EXIT ();
     return True;
 }
 
 /*
- * called from nickle with the gdk lock not held
+ * called when the client destroys a gui surface
  */
-Bool
-cairo_5c_tool_destroy (cairo_5c_surface_t *c5s)
+void
+cairo_5c_gui_destroy (cairo_5c_surface_t *c5s)
 {
-    cairo_5c_tool_t *tool = c5s->u.window.tool;
-    
-    gdk_threads_enter ();
-    gtk_widget_hide (tool->window);
-    if (c5s->u.window.pixmap)
+    cairo_5c_gui_t *gui = c5s->u.window.gui;
+
+    if (!gui)
+	return;
+
+    if (gui->window)
     {
-	XFreePixmap (tool->global->dpy, c5s->u.window.pixmap);
-	c5s->u.window.pixmap = None;
+	Window	wid = gui->window;
+	gui->window = None;
+	XDestroyWindow (gui->global->dpy, wid);
     }
-    if (c5s->u.window.gc)
+    if (gui->pixmap)
     {
-	XFreeGC (tool->global->dpy, c5s->u.window.gc);
-	c5s->u.window.gc = NULL;
+	Pixmap pid = gui->pixmap;
+	gui->pixmap = None;
+	XFreePixmap (gui->global->dpy, pid);
     }
-    gtk_global_unref (tool->global);
-    gdk_threads_leave ();
-    /* let nickle allocator free it */
-    return True;
+    if (gui->gc)
+    {
+	GC  gc = gui->gc;
+	gui->gc = NULL;
+	XFreeGC (gui->global->dpy, gc);
+    }
+    if (gui->global)
+    {
+	x_global_unref (gui->global);
+	gui->global = NULL;
+    }
+    free (gui);
 }
 
 void
-cairo_5c_tool_mark (cairo_5c_surface_t *c5s)
+cairo_5c_gui_dirty (cairo_5c_surface_t *c5s)
 {
-    MemReference (c5s->u.window.tool);
-}
+    cairo_5c_gui_t  *gui = c5s->u.window.gui;
 
-void
-cairo_5c_tool_dirty (cairo_5c_surface_t *c5s)
-{
-    cairo_5c_tool_t *tool = c5s->u.window.tool;
-    
-    gdk_threads_enter ();
-    if (!tool->dirty)
+    if (!gui->dirty)
     {
-	tool->dirty = 1;
-	if (tool->disable == 0)
-	    g_timeout_add (16, gtk_repaint_timeout, c5s);
+	gui->dirty = 1;
+	if (gui->disable == 0)
+	    x_schedule_repaint (c5s, 16);
     }
-    gdk_threads_leave ();
 }
 
 void
-cairo_5c_tool_check_size (cairo_5c_surface_t *c5s)
+cairo_5c_gui_check_size (cairo_5c_surface_t *c5s)
 {
-    cairo_5c_tool_t *tool = c5s->u.window.tool;
+    cairo_5c_gui_t *gui = c5s->u.window.gui;
     
-    gdk_threads_enter ();
-    if (tool->disable == 0 && 
-	(c5s->u.window.new_width != c5s->width ||
-	 c5s->u.window.new_height != c5s->height))
+    if (gui->disable == 0 && 
+	(gui->new_width != c5s->width ||
+	 gui->new_height != c5s->height))
 	allocate_pixmap (c5s);
-    gdk_threads_leave ();
 }
 
 Bool
-cairo_5c_tool_disable (cairo_5c_surface_t *c5s)
+cairo_5c_gui_disable (cairo_5c_surface_t *c5s)
 {
-    cairo_5c_tool_t *tool = c5s->u.window.tool;
+    cairo_5c_gui_t *gui = c5s->u.window.gui;
 
-    gdk_threads_enter ();
-    ++tool->disable;
-    gdk_threads_leave ();
+    ++gui->disable;
     return True;
 }
 
@@ -664,33 +689,47 @@ cairo_5c_tool_disable (cairo_5c_surface_t *c5s)
  * functions are called, I don't think we need to grab it.
  */
 Bool
-cairo_5c_tool_enable (cairo_5c_surface_t *c5s)
+cairo_5c_gui_enable (cairo_5c_surface_t *c5s)
 {
-    cairo_5c_tool_t *tool = c5s->u.window.tool;
+    cairo_5c_gui_t *gui = c5s->u.window.gui;
     Bool	    was_disabled;
 
-    gdk_threads_enter ();
-    was_disabled = tool->disable != 0;
+    was_disabled = gui->disable != 0;
     if (was_disabled)
     {
-	--tool->disable;
-	if (tool->disable == 0 && tool->dirty)
+	--gui->disable;
+	if (gui->disable == 0 && gui->dirty)
 	{
-	    gtk_repaint (c5s, 0, 0, 0, 0);
-	    tool->dirty = 0;
+	    repaint (c5s, 0, 0, 0, 0);
+	    gui->dirty = 0;
 //	    g_timeout_add (0, gtk_repaint_timeout, c5s);
 	}
     }
-    gdk_threads_leave ();
     return was_disabled;
 }
 
-Display *
-cairo_5c_tool_display (cairo_5c_surface_t *c5s)
+Value
+cairo_5c_gui_open_event (cairo_5c_surface_t *c5s)
 {
-    cairo_5c_tool_t *tool = c5s->u.window.tool;
-    
-    return tool->global->dpy;
+    ENTER ();
+    cairo_5c_gui_t *gui = c5s->u.window.gui;
+    int		    fd[2];
+    Value	    read;
+    int		    err;
+
+    if (pipe (fd) < 0)
+    {
+	err = errno;
+	RaiseStandardException (exception_open_error,
+				FileGetErrorMessage (err),
+				2, FileGetError (err), Void);
+	RETURN (Void);
+    }
+    read = FileCreate (fd[0], FileReadable);
+    if (aborting)
+	RETURN(Void);
+    gui->send_events = fdopen (fd[1], "w");
+    RETURN(read);
 }
 
 #endif /* HAVE_CAIRO_XLIB_H */
