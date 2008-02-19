@@ -88,6 +88,7 @@ typedef union {
 event_t
 read_event (file f, cairo_t cr)
 {
+    for (;;) {
     event_t	e;
     string	line = File::fgets (f);
     file	l = File::string_read (line);
@@ -119,8 +120,10 @@ read_event (file f, cairo_t cr)
 	return (event_t) { motion = {
 	    time = time, x = x, y = y
 	}};
+    case "delete":
+	exit (0);
     }
-    exit (0);
+    }
 }
 
 void animate (cairo_t cr)
