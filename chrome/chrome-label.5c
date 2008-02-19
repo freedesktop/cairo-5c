@@ -8,6 +8,7 @@ extend namespace Chrome {
 	public typedef widget_t + struct {
 	    string  label;
 	    string  font;
+	    rgba_color_t    color;
 	} label_t;
 	
 	typedef struct {
@@ -45,13 +46,14 @@ extend namespace Chrome {
 	public void outline (cairo_t cr, &label_t widget) {
 	    metrics_t	metrics = get_metrics (cr, &widget);
 
-	    rectangle (cr, 0, 0, metrics.width, metrics.height);
+	    rectangle (cr, 0, 0, 0, 0);
 	}
 	
 	public void draw (cairo_t cr, &label_t widget) {
 	    metrics_t	metrics = get_metrics (cr, &widget);
 	    move_to (cr, metrics.x, metrics.y);
-	    set_source_rgb (cr, 0, 0, 0);
+	    set_source_rgba (cr, widget.color.red, widget.color.green,
+			     widget.color.blue, widget.color.alpha);
 	    show_text (cr, widget.label);
 	}
 	
@@ -60,16 +62,23 @@ extend namespace Chrome {
 	    Widget::resize (&widget);
 	}
 
-	public *widget_t new (&chrome_t chrome,
-			      string label) {
-	    label_t	widget;
-
+	public void init (&label_t widget, &chrome_t chrome, string label) {
 	    Widget::init (&chrome, &widget);
 	    widget.label = label;
 	    widget.font = Widget::default_font;
 	    widget.draw = draw;
 	    widget.outline = outline;
 	    widget.natural = natural;
+	    widget.color = (rgba_color_t) {
+		red = 0, green = 0, blue = 0, alpha = 1
+	    };
+	}
+	
+	public *widget_t new (&chrome_t chrome,
+			      string label) {
+	    label_t	widget;
+
+	    init (&widget, &chrome, label);
 	    return &widget;
 	}
     }
