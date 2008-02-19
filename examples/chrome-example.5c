@@ -35,11 +35,11 @@
 autoimport Chrome;
 autoload Chrome::Box;
 autoload Chrome::Label;
-autoload Chrome::Button;
+autoload Chrome::Lozenge;
 
 import Chrome::Box;
 import Chrome::Label;
-import Chrome::Button;
+import Chrome::Lozenge;
 
 void main () {
     &chrome_t	chrome = Chrome::new ("Chrome Example", 400, 400);
@@ -52,7 +52,7 @@ void main () {
 	    Chrome::Label::relabel (&label, "hi");
     }
     
-    &button_t	button = Chrome::Button::new (&chrome, "Push Me",
+    &widget_t	button = Chrome::Lozenge::new (&chrome, "Push Me",
 					      button_callback);
     &box_t	hbox = Chrome::Box::new (dir_t.horizontal,
 					glue_item (100, 0),

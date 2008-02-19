@@ -40,12 +40,14 @@ autoload Mutex;
 autoimport Cairo;
 autoimport PRNG;
 autoimport Chrome;
+autoload Chrome::Lozenge;
 autoload Chrome::Button;
 autoload Chrome::Label;
 autoload Chrome::Box;
 
 import Widget;
 import Chrome;
+import Lozenge;
 import Button;
 import Box;
 import Label;
@@ -514,16 +516,16 @@ void play ()
 	computer = piece_o,
     };
     
-    &button_t	    quit = Chrome::Button::new (&chrome, "Quit",
+    &lozenge_t	    quit = Chrome::Lozenge::new (&chrome, "Quit",
 						void func (&widget_t w, bool state) {
 						    w.chrome.running = false;
 						});
 
-    &button_t	    new = Chrome::Button::new (&chrome, "New",
+    &lozenge_t	    new = Chrome::Lozenge::new (&chrome, "New",
 					       void func (&widget_t w, bool state) {
 						    reset_game (&game);
 					       });
-    &button_t	    computer = Chrome::Button::new (&chrome, "Computer: o",
+    &lozenge_t	    computer = Chrome::Button::new (&chrome, "Computer: o",
 						   void func (&widget_t w,
 							      bool state) 
 						   {
