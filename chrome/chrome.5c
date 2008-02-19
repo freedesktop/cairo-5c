@@ -179,7 +179,11 @@ namespace Chrome {
 	
 	public void resize (&widget_t widget) {
 	    if (!is_uninit (&widget.container))
-		widget.container.resize (&widget.container, &widget);
+		twixt (Mutex::acquire (widget.chrome.drawing);
+		       Mutex::release (widget.chrome.drawing))
+		    widget.container.resize (&widget.container, &widget);
+	    else
+		redraw (&widget);
 	}
 
 	public bool in_widget (&widget_t widget, real x, real y)
