@@ -40,34 +40,43 @@ extend namespace Chrome {
 	
 	public import Button;
 
-	void lozenge (cairo_t cr, int width, int height, rgba_color_t color,
-		      int highlight)
-	{
-	    save (cr);
-	    rgba_color_t illum (rgba_color_t c, real add) {
-		return (rgba_color_t) {
-		    red = max (min (c.red + add, 1), 0),
-		    green = max (min (c.green + add, 1), 0),
-		    blue = max (min (c.blue + add, 1), 0),
-		    alpha = c.alpha };
-	    }
+	rgba_color_t illum (rgba_color_t c, real add) {
+	    return (rgba_color_t) {
+		red = max (min (c.red + add, 1), 0),
+		green = max (min (c.green + add, 1), 0),
+		blue = max (min (c.blue + add, 1), 0),
+		alpha = c.alpha };
+	}
 
-	    rgba_color_t interp (rgba_color_t l, rgba_color_t r, real ratio)
-	    {
-		return (rgba_color_t) {
-		    red = l.red * (1-ratio) + r.red * ratio,
-		    green = l.green * (1-ratio) + r.green * ratio,
-		    blue = l.blue * (1-ratio) + r.blue * ratio,
-		    alpha = l.alpha * (1-ratio) + r.alpha * ratio };
-	    }
+	rgba_color_t interp (rgba_color_t l, rgba_color_t r, real ratio)
+	{
+	    return (rgba_color_t) {
+		red = l.red * (1-ratio) + r.red * ratio,
+		green = l.green * (1-ratio) + r.green * ratio,
+		blue = l.blue * (1-ratio) + r.blue * ratio,
+		alpha = l.alpha * (1-ratio) + r.alpha * ratio };
+	}
+
+	void lozenge_outline (cairo_t cr, int width, int height)
+	{
 	    height = height & ~1;
 	    int    radius = height / 2;
-	    real    add = .3;
 	    move_to (cr, radius, height);
 	    arc (cr, radius, radius, radius, pi/2, -pi/2);
 	    line_to (cr, width - radius, 0);
 	    arc (cr, width - radius, radius, radius, -pi/2, pi/2);
 	    close_path (cr);
+	}
+	
+	void lozenge (cairo_t cr, int width, int height, rgba_color_t color,
+		      int highlight)
+	{
+	    real    add = .3;
+	    
+	    save (cr);
+	    height = height & ~1;
+	    int    radius = height / 2;
+	    lozenge_outline (cr, width, height);
 	    clip (cr);
 
 	    rgba_color_t light = color;
@@ -133,7 +142,9 @@ extend namespace Chrome {
 	    restore (cr);
 	}
 	
-	public typedef button_t lozenge_t;
+	public typedef button_t + struct {
+	    rgba_color_t    text_color;
+	} lozenge_t;
 	
 	public metrics_t get_metrics (cairo_t cr, &lozenge_t widget) {
 	    set_font (cr, widget.font);
@@ -154,11 +165,21 @@ extend namespace Chrome {
 	    return metrics;
 	}
 	
+	public void outline (cairo_t cr, &button_t widget) {
+	    metrics_t	metrics = widget.get_metrics (cr, &widget);
+
+	    save (cr);
+	    translate (cr, floor (metrics.pad/2), floor (metrics.pad/2));
+	    lozenge_outline (cr, floor (metrics.width - metrics.pad),
+			     floor (metrics.height - metrics.pad));
+	    restore (cr);
+	}
+	
 	public void draw (cairo_t cr, &lozenge_t widget) {
 	    metrics_t	metrics = widget.get_metrics (cr, &widget);
 	    real    highlight = -floor (metrics.height/20);
 
-	    if (widget.pressed)
+	    if (widget.pressed && widget.inside)
 		highlight = -highlight;
 
 	    save (cr);
@@ -169,11 +190,27 @@ extend namespace Chrome {
 	    restore (cr);
 	    real text_x = metrics.x + highlight/2;
 	    real text_y = metrics.y + highlight/2;
-	    move_to (cr, text_x + 1, text_y + 1);
-	    set_source_rgb (cr, .8, .8, .8);
-	    show_text (cr, widget.label);
+	    
+	    int    offset = floor (min (metrics.preferred_height,
+					metrics.preferred_width) / 120 +
+				   0.5);
+	    if (offset > 0)
+	    {
+		rgba_color_t darker = illum (widget.text_color, -0.2);
+		rgba_color_t lighter = illum (widget.text_color, 0.2);
+		move_to (cr, text_x - offset, text_y - offset);
+		set_source_rgba (cr, darker.red, darker.green,
+				 darker.blue, darker.alpha);
+		show_text (cr, widget.label);
+		
+		move_to (cr, text_x + offset, text_y + offset);
+		set_source_rgba (cr, lighter.red, lighter.green,
+				 lighter.blue, lighter.alpha);
+		show_text (cr, widget.label);
+	    }
 	    move_to (cr, text_x, text_y);
-	    set_source_rgb (cr, 0, 0, 0);
+	    set_source_rgba (cr, widget.text_color.red, widget.text_color.green,
+			     widget.text_color.blue, widget.text_color.alpha);
 	    show_text (cr, widget.label);
 	}
 
@@ -183,7 +220,11 @@ extend namespace Chrome {
 			  callback_t callback) {
 	    Button::init (&widget, &chrome, label, callback);
 	    widget.draw = draw;
+	    widget.outline = outline;
 	    widget.get_metrics = get_metrics;
+	    widget.text_color = (rgba_color_t) {
+		red = .4, green = .4, blue = .4, alpha = 1
+	    };
 	}
 	
 	public *widget_t new (&chrome_t chrome,
