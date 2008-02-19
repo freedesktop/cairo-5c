@@ -370,6 +370,14 @@ x_thread_main (void *closure)
     XEvent	    event;
     struct pollfd   fds[2];
     int		    timeout;
+    sigset_t	    mask;
+
+    sigemptyset (&mask);
+    sigaddset (&mask, SIGALRM);
+    sigaddset (&mask, SIGIO);
+    sigaddset (&mask, SIGCHLD);
+    sigaddset (&mask, SIGINT);
+    pthread_sigmask (SIG_BLOCK, &mask, NULL);
     
     fds[0].fd = ConnectionNumber (xg->dpy);
     fds[0].events = POLLIN;
