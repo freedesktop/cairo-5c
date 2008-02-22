@@ -36,19 +36,19 @@ autoload Chrome;
 extend namespace Chrome {
     public namespace Box {
 
-	public typedef enum { horizontal, vertical } dir_t;
+	protected typedef enum { horizontal, vertical } dir_t;
 
 	public typedef box_t;
 
-	public typedef contained_t + struct {
+	protected typedef contained_t + struct {
 	} glue_t;
 
-	public exception unknown_widget (&box_t box, &widget_t widget);
+	protected exception unknown_widget (&box_t box, &widget_t widget);
 
 	/*
 	 * Each item in the layout has a natural size and stretch factor
 	 */
-	public typedef struct {
+	protected typedef struct {
 	    real	natural_width;
 	    real	natural_height;
 	    real	stretch_width;
@@ -61,7 +61,7 @@ extend namespace Chrome {
 		      layout_t	    layout,
 		      rect_t	    geometry) configure_t;
 
-	public typedef struct {
+	protected typedef struct {
 	    &contained_t    contained;
 	    layout_t	    layout;
 	    query_t	    query;
@@ -98,7 +98,7 @@ extend namespace Chrome {
 	/*
 	 * Construct a new box, computing the layout of the inserted items
 	 */
-	public *box_t new (dir_t dir, item_t items...) {
+	protected *box_t new (dir_t dir, item_t items...) {
 	    &box_t  box = &(box_t) {
 		container = &no_container,
 		resize = box_resize,
@@ -170,7 +170,7 @@ extend namespace Chrome {
 	/*
 	 * Construct a new widget item for a box
 	 */
-	public item_t widget_item (&widget_t widget, real stretch...)
+	protected item_t widget_item (&widget_t widget, real stretch...)
 	{
 	    get_stretches (&stretch,
 			   &(real stretch_width), &(real stretch_height));
@@ -193,7 +193,7 @@ extend namespace Chrome {
 	 * Compute the layout for this box by
 	 * walking through the items in the box
 	 */
-	public void query (&box_t box, &layout_t layout) {
+	protected void query (&box_t box, &layout_t layout) {
 	    layout.natural_width = 0;
 	    layout.natural_height = 0;
 	    if (box.dir == dir_t.horizontal) {
@@ -229,7 +229,7 @@ extend namespace Chrome {
 	/*
 	 * Configure a box
 	 */
-	public void configure (&box_t box, layout_t layout, rect_t geometry) {
+	protected void configure (&box_t box, layout_t layout, rect_t geometry) {
 	    real    actual;
 	    real    stretch;
 	    real    pref;
@@ -301,7 +301,7 @@ extend namespace Chrome {
 	    }
 	}
 
-	public item_t box_item (&box_t box)
+	protected item_t box_item (&box_t box)
 	{
 	    return (item_t) {
 		contained = &box,
@@ -351,7 +351,7 @@ extend namespace Chrome {
 	    }
 	}
 
-	public item_t glue_item (real param...)
+	protected item_t glue_item (real param...)
 	{
 	    get_glue (&param, &(real size), &(real stretch));
 	    return (item_t) {
@@ -370,7 +370,7 @@ extend namespace Chrome {
 	 * Add an arbitrary item to a box, filling
 	 * in the layout
 	 */
-	public void add_item (&box_t box, item_t item)
+	protected void add_item (&box_t box, item_t item)
 	{
 	    &item_t new = &box.items[dim(box.items)];
 
@@ -381,7 +381,7 @@ extend namespace Chrome {
 	    box.resize (&box, &new.contained);
 	}
 
-	public void add_widget (&box_t box,
+	protected void add_widget (&box_t box,
 				&widget_t widget,
 				real stretch_width,
 				real stretch_height)
@@ -390,13 +390,13 @@ extend namespace Chrome {
 		      widget_item (&widget, stretch_width, stretch_height));
 	}
 
-	public void add_box (&box_t box,
+	protected void add_box (&box_t box,
 			     &box_t add)
 	{
 	    add_item (&box, box_item (&add));
 	}
 
-	public void add_glue (&box_t box,
+	protected void add_glue (&box_t box,
 			      real param ...)
 	{
 	    get_glue (&param, &(real size), &(real stretch));

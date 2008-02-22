@@ -43,20 +43,20 @@ namespace Chrome {
     public typedef enum { press, release, double, triple } button_type_t;
     
     public typedef struct {
-	button_type_t	type;
 	int		time;
-	int		button;
 	real		x;
 	real		y;
+    } pos_event_t;
+
+    public typedef pos_event_t + struct {
+	button_type_t	type;
+	int		button;
     } button_event_t;
 
     public typedef enum { inside, outside, entering, leaving } motion_type_t;
     
-    public typedef struct {
+    public typedef pos_event_t + struct {
 	motion_type_t	type;
-	int		time;
-	real		x;
-	real		y;
     } motion_event_t;
     
     public typedef enum { press, release } key_type_t;
@@ -153,6 +153,8 @@ namespace Chrome {
     void draw (&chrome_t chrome);
 	
     public void redraw (&chrome_t chrome) {
+	if (is_uninit (&chrome.self))
+	    return;
         if (Thread::current() != chrome.self)
 	    draw (&chrome);
 	else
@@ -160,11 +162,11 @@ namespace Chrome {
     }
 
     public namespace Widget {
-	public void configure (&widget_t widget, rect_t geometry) {
+	protected void configure (&widget_t widget, rect_t geometry) {
 	    widget.geometry = geometry;
 	}
 
-	public void init (&chrome_t chrome, &widget_t widget) {
+	protected void init (&chrome_t chrome, &widget_t widget) {
 	    widget.geometry = (rect_t) {
 		x = 0, y = 0, width = 0, height = 0
 	    };
@@ -173,11 +175,11 @@ namespace Chrome {
 	    Chrome::add (&chrome, &widget);
 	}
 	
-	public void redraw (&widget_t widget) {
+	protected void redraw (&widget_t widget) {
 	    Chrome::redraw (&widget.chrome);
 	}
 	
-	public void resize (&widget_t widget) {
+	protected void resize (&widget_t widget) {
 	    if (!is_uninit (&widget.container))
 		twixt (Mutex::acquire (widget.chrome.drawing);
 		       Mutex::release (widget.chrome.drawing))
@@ -186,7 +188,7 @@ namespace Chrome {
 		redraw (&widget);
 	}
 
-	public bool in_widget (&widget_t widget, real x, real y)
+	protected bool in_widget (&widget_t widget, real x, real y)
 	{
 	    bool    in;
 
@@ -212,7 +214,11 @@ namespace Chrome {
 	    return in;
 	}
 	
-	public string default_font = "sans-12";
+	protected string default_font = "sans-12";
+	protected rgba_color_t default_color = {
+	    red = 0.7, green = 0.7,
+	    blue = 0.7, alpha = 0.7
+	};
     }
 
     public *widget_t xy_to_widget (&chrome_t chrome, real x, real y) {
@@ -272,10 +278,17 @@ namespace Chrome {
 		return;
 	}
 
-	if (event.type == button_type_t.press)
-	{
+	enum switch (event.type) {
+	case press:
 	    &chrome.mouse_grab = &widget;
 	    chrome.button_down |= 1 << event.button;
+	    break;
+	case release:
+	    if (&chrome.mouse_grab == &no_widget)
+		return;
+	    break;
+	default:
+	    break;
 	}
 	
 	deliver_button (&widget, event);
@@ -427,7 +440,8 @@ namespace Chrome {
     }
     
     public void destroy (&chrome_t chrome) {
-	exit (0);
+	Cairo::Surface::destroy (chrome.surface);
+	chrome.running = false;
     }
     
     public *chrome_t new (string name, real size ...) {

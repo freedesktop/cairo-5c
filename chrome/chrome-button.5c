@@ -168,10 +168,7 @@ extend namespace Chrome {
 	    widget.natural = natural;
 	    widget.get_metrics = get_metrics;
 	    widget.pad_ratio = 1;
-	    widget.color = (rgba_color_t) {
-		red = 0.7, green = 0.7,
-		blue = 0.7, alpha = 0.7
-	    };
+	    widget.color = Widget::default_color;
 	}
 	
 	public *widget_t new (&chrome_t chrome,
