@@ -23,10 +23,13 @@ config.status
 config.sub
 configure
 configure-stamp
-
 depcomp
 install-sh
 libtool
 ltmain.sh
 missing
 stamp-h1
+tags
+releases
+cairo-5c-*.*
+cairo-5c_*.*.upload
