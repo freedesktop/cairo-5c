@@ -430,6 +430,9 @@ x_thread_main (void *closure)
 	    read (fds[1].fd, stuffed, sizeof (stuffed));
 	}
     }
+    close (xg->pipe[0]);
+    close (xg->pipe[1]);
+    XCloseDisplay (xg->dpy);
     free (xg);
     return 0;
 }
@@ -638,7 +641,22 @@ cairo_5c_gui_destroy (cairo_5c_surface_t *c5s)
 	Window	wid = gui->window;
 	gui->window = None;
 	XDestroyWindow (gui->global->dpy, wid);
+	XFlush (gui->global->dpy);
     }
+}
+
+/*
+ * Called when a gui surface is freed
+ */
+
+void
+cairo_5c_gui_free (cairo_5c_surface_t *c5s)
+{
+    cairo_5c_gui_t *gui = c5s->u.window.gui;
+    cairo_5c_gui_destroy (c5s);
+
+    if (!gui)
+	return;
     if (gui->pixmap)
     {
 	Pixmap pid = gui->pixmap;
@@ -655,6 +673,11 @@ cairo_5c_gui_destroy (cairo_5c_surface_t *c5s)
     {
 	x_global_unref (gui->global);
 	gui->global = NULL;
+    }
+    if (gui->send_events)
+    {
+	fclose (gui->send_events);
+	gui->send_events = NULL;
     }
     free (gui);
 }

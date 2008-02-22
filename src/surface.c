@@ -139,7 +139,6 @@ cairo_5c_surface_destroy (cairo_5c_surface_t *c5s)
     switch (c5s->kind) {
     case CAIRO_5C_WINDOW:
 	cairo_5c_gui_destroy (c5s);
-	c5s->u.window.gui = NULL;
 	break;
     case CAIRO_5C_IMAGE:
 	break;
@@ -163,6 +162,8 @@ cairo_5c_surface_free (void *object)
     cairo_5c_surface_t	*c5s = object;
 
     cairo_5c_surface_destroy (c5s);
+    if (c5s->kind == CAIRO_5C_WINDOW)
+	cairo_5c_gui_free (c5s);
     return 1;
 }
 

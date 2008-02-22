@@ -616,6 +616,9 @@ void
 cairo_5c_gui_destroy (cairo_5c_surface_t *c5s);
 
 void
+cairo_5c_gui_free (cairo_5c_surface_t *c5s);
+
+void
 cairo_5c_gui_dirty (cairo_5c_surface_t *c5s);
 
 Bool
