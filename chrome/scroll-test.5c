@@ -1,0 +1,44 @@
+load "chrome.5c"
+load "chrome-box.5c"
+load "chrome-label.5c"
+load "chrome-scrollbar.5c"
+
+import Chrome;
+import Chrome::Box;
+import Chrome::Scrollbar;
+import Chrome::Label;
+
+void
+main ()
+{
+    &chrome_t	    chrome = Chrome::new ("Scrollbar Test", 400, 400);
+
+    &label_t	    label = Label::new (&chrome, "hello, world");
+
+    void scrollbar_callback (&scrollbar_t widget, Scrollbar::action_t action)
+    {
+	union switch (action) {
+	case drag pos:
+	    Label::relabel (&label, sprintf ("%g\n", pos));
+	    Scrollbar::set (&widget, pos, .1 + pos / 10);
+	    break;
+	case pos pos:
+	    Label::relabel (&label, sprintf ("%g\n", pos));
+	    Scrollbar::set (&widget, pos, .1 + pos / 10);
+	    break;
+	default:
+	    break;
+	}
+    }
+
+    &scrollbar_t scrollbar = Scrollbar::new (&chrome,
+					  Scrollbar::dir_t.vertical,
+					  scrollbar_callback);
+
+    &box_t	    hbox = Box::new (Box::dir_t.horizontal,
+				     Box::widget_item (&label, 1),
+				     Box::widget_item (&scrollbar, 0));
+    Scrollbar::set (&scrollbar, 0, .1);
+    Chrome::set_box (&chrome, &hbox);
+    Chrome::main_loop (&chrome);
+}

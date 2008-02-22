@@ -1,0 +1,204 @@
+/*
+ * Copyright © 2008 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
+
+autoload Chrome;
+
+extend namespace Chrome {
+    public namespace Scrollbar {
+	protected typedef void (&widget_t widget) callback_t;
+	
+	protected typedef enum { horizontal, vertical } dir_t;
+
+	protected typedef union {
+	    void    up;
+	    void    above;
+	    real    drag;
+	    real    pos;
+	    void    below;
+	    void    down;
+	} action_t;
+
+	protected typedef union {
+	    void    up;
+	    struct {
+		real	delta;
+	    }	    drag;
+	} state_t;
+
+	protected typedef void (&widget_t widget, action_t action) callback_t;
+
+	public typedef widget_t + struct {
+	    dir_t	    dir;
+	    real	    thickness;
+	    real	    pos, size;
+	    callback_t	    callback;
+	    rgba_color_t    color;
+	    state_t	    state;
+	} scrollbar_t;
+
+	protected void natural (cairo_t cr, &scrollbar_t scrollbar) {
+	    real    w, h;
+
+	    if (scrollbar.dir == dir_t.horizontal) {
+		w = 1;
+		h = scrollbar.thickness;
+	    }
+	    if (scrollbar.dir == dir_t.vertical) {
+		w = scrollbar.thickness;
+		h = 1;
+	    }
+	    rectangle (cr, 0, 0, w, h);
+	}
+
+	protected void outline (cairo_t cr, &scrollbar_t scrollbar) {
+	    rectangle (cr, 0, 0, scrollbar.geometry.width,
+		       scrollbar.geometry.height);
+	}
+
+	public void draw (cairo_t cr, &scrollbar_t scrollbar) {
+	    real    x, y, w, h;
+	    real    left = scrollbar.pos;
+	    real    right = left + scrollbar.size;
+
+	    enum switch (scrollbar.dir) {
+	    case horizontal:
+		x = left * scrollbar.geometry.width;
+		w = right * scrollbar.geometry.width - x;
+		y = 0;
+		h = scrollbar.geometry.height;
+		break;
+	    case vertical:
+		x = 0;
+		w = scrollbar.geometry.width;
+		y = left * scrollbar.geometry.height;
+		h = right * scrollbar.geometry.height - y;
+		break;
+	    }
+	    set_source_rgba (cr,
+			     scrollbar.color.red, scrollbar.color.green,
+			     scrollbar.color.blue, scrollbar.color.alpha);
+	    rectangle (cr, x, y, w, h);
+	    fill (cr);
+	}
+
+	real bound_pos (real pos, real size) = max (min (pos, 1-size), 0);
+
+	real event_pos (&scrollbar_t widget, &pos_event_t event)
+	{
+	    real    pos;
+	    enum switch (widget.dir) {
+	    case horizontal:
+		pos = event.x / widget.geometry.width;
+		break;
+	    case vertical:
+		pos = event.y / widget.geometry.height;
+		break;
+	    }
+	    return bound_pos (pos, 0);
+	}
+
+	protected void set (&scrollbar_t widget, real pos, real size) {
+	    size = bound_pos (size, 0);
+	    pos = bound_pos (pos, size);
+	    widget.pos = pos;
+	    widget.size = size;
+	    Widget::redraw (&widget);
+	}
+
+	real drag_pos (&scrollbar_t widget, real pos) {
+	    pos = pos - widget.state.drag.delta;
+	    return bound_pos (pos, widget.size);
+	}
+
+	protected void button (&scrollbar_t widget, &button_event_t event) {
+	    enum switch (event.type) {
+	    case press:
+		real pos = event_pos (&widget, &event);
+		widget.state = (state_t) { drag = { delta = pos - widget.pos }};
+		Widget::redraw (&widget);
+		break;
+	    case release:
+		real	pos = drag_pos (&widget, event_pos (&widget, &event));
+		widget.state = state_t.up;
+		widget.pos = pos;
+		widget.callback (&widget, (action_t) { pos = pos });
+		Widget::redraw (&widget);
+		break;
+	    default:
+		break;
+	    }
+	}
+	
+	protected void motion (&scrollbar_t widget, &motion_event_t event) {
+	    union switch (widget.state) {
+	    case drag:
+		real pos = drag_pos (&widget, event_pos (&widget, &event));
+		widget.pos = pos;
+		widget.callback (&widget, (action_t) { drag = pos });
+		Widget::redraw (&widget);
+		break;
+	    default:
+		break;
+	    }
+	}
+
+	public void init (&scrollbar_t widget,
+			  &chrome_t chrome,
+			  dir_t dir,
+			  callback_t callback) {
+	    Widget::init (&chrome, &widget);
+	    widget.draw = draw;
+	    widget.button = button;
+	    widget.motion = motion;
+	    widget.callback = callback;
+	    widget.outline = outline;
+	    widget.natural = natural;
+	    widget.state = state_t.up;
+	    widget.color = Widget::default_color;
+	    widget.dir = dir;
+	    widget.pos = 0;
+	    widget.size = .1;
+	    widget.thickness = 10;
+	}
+	
+	public *widget_t new (&chrome_t chrome,
+			      dir_t dir,
+			      callback_t callback) {
+	    scrollbar_t	widget;
+
+	    init (&widget, &chrome, dir, callback);
+	    return &widget;
+	}
+    }
+}
