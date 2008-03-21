@@ -43,7 +43,8 @@ extend namespace Chrome {
 	protected typedef contained_t + struct {
 	} glue_t;
 
-	protected exception unknown_widget (&box_t box, &widget_t widget);
+	protected exception unknown_contained (&box_t box,
+					       &contained_t contained);
 
 	/*
 	 * Each item in the layout has a natural size and stretch factor
@@ -136,13 +137,13 @@ extend namespace Chrome {
 	}
 
 	/*
-	 * Handle widgets inside of boxes
+	 * Handle containeds inside of boxes
 	 */
 
-	/* find the natural bounding box of a widget */
-	rect_t widget_rect (&widget_t widget) {
-	    cairo_t cr = cairo (&widget.chrome);
-	    widget.natural (cr, &widget);
+	/* find the natural bounding box of a contained */
+	rect_t contained_rect (&contained_t contained) {
+	    cairo_t cr = cairo (&contained.chrome);
+	    contained.natural (cr, &contained);
 	    rect_t r = fill_extents (cr);
 	    Cairo::destroy (cr);
 	    return r;
@@ -151,26 +152,26 @@ extend namespace Chrome {
 	/*
 	 * Widget layout follows natural size
 	 */
-	void widget_query (&widget_t widget, &layout_t layout) {
-	    rect_t  natural = widget_rect (&widget);
+	void contained_query (&contained_t contained, &layout_t layout) {
+	    rect_t  natural = contained_rect (&contained);
 	    layout.natural_width = natural.width;
 	    layout.natural_height = natural.height;
 	}
 
 	/*
-	 * Set the geometry of the widget
+	 * Set the geometry of the contained
 	 */
-	void widget_configure (&widget_t widget,
-			       layout_t layout, 
-			       rect_t geometry) 
+	void contained_configure (&contained_t contained,
+				  layout_t layout,
+				  rect_t geometry)
 	{
-	    widget.configure (&widget, geometry);
+	    contained.configure (&contained, geometry);
 	}
 
 	/*
-	 * Construct a new widget item for a box
+	 * Construct a new contained item for a box
 	 */
-	protected item_t widget_item (&widget_t widget, real stretch...)
+	protected item_t contained_item (&contained_t contained, real stretch...)
 	{
 	    get_stretches (&stretch,
 			   &(real stretch_width), &(real stretch_height));
@@ -179,10 +180,13 @@ extend namespace Chrome {
 		    stretch_width = stretch_width,
 		    stretch_height = stretch_height
 		},
-		query = widget_query,
-		configure = widget_configure,
-		contained = &widget
+		query = contained_query,
+		configure = contained_configure,
+		contained = &contained
 	    };
+	}
+	protected item_t widget_item (&contained_t contained, real stretch...){
+	    return contained_item (&contained, stretch...);
 	}
 
 	/*
@@ -381,13 +385,13 @@ extend namespace Chrome {
 	    box.resize (&box, &new.contained);
 	}
 
-	protected void add_widget (&box_t box,
-				&widget_t widget,
+	protected void add_contained (&box_t box,
+				&contained_t contained,
 				real stretch_width,
 				real stretch_height)
 	{
 	    add_item (&box,
-		      widget_item (&widget, stretch_width, stretch_height));
+		      contained_item (&contained, stretch_width, stretch_height));
 	}
 
 	protected void add_box (&box_t box,

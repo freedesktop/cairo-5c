@@ -85,26 +85,26 @@ namespace Chrome {
 	resize_handler_t    resize;
     } container_t;
 
+    public typedef void(cairo_t cr, &widget_t widget) draw_t;
+    public typedef void(&widget_t, &button_event_t) button_handler_t;
+    public typedef void(&widget_t, &motion_event_t) motion_handler_t;
+    public typedef void(&widget_t, &key_event_t) key_handler_t;
+
     public typedef struct {
 	&chrome_t	    chrome;
 	&container_t	    container;
 	configure_handler_t configure;
+	draw_t		    natural;
     } contained_t;
 
     /*
      * Widgets, as seen by the toolkit
      */
 
-    public typedef void(cairo_t cr, &widget_t widget) draw_t;
-    public typedef void(&widget_t, &button_event_t) button_handler_t;
-    public typedef void(&widget_t, &motion_event_t) motion_handler_t;
-    public typedef void(&widget_t, &key_event_t) key_handler_t;
-
     public typedef contained_t + struct {
 	rect_t		    geometry;
 	rect_t		    extents;
 	draw_t		    outline;
-	draw_t		    natural;
 	draw_t		    draw;
 	button_handler_t    button;
 	motion_handler_t    motion;
@@ -166,12 +166,17 @@ namespace Chrome {
 	    widget.geometry = geometry;
 	}
 
+	protected void natural (cairo_t cr, &widget_t widget) = ◊;
+
 	protected void init (&chrome_t chrome, &widget_t widget) {
 	    widget.geometry = (rect_t) {
 		x = 0, y = 0, width = 0, height = 0
 	    };
 	    &widget.chrome = &chrome;
 	    widget.configure = configure;
+	    widget.natural = natural;
+	    widget.outline = natural;
+	    widget.draw = natural;
 	    Chrome::add (&chrome, &widget);
 	}
 	
@@ -186,6 +191,11 @@ namespace Chrome {
 		    widget.container.resize (&widget.container, &widget);
 	    else
 		redraw (&widget);
+	}
+
+	protected void reoutline (&widget_t widget) {
+	    if (&widget.chrome.outline_widget == &widget)
+		&widget.chrome.outline_widget = &no_widget;
 	}
 
 	protected bool in_widget (&widget_t widget, real x, real y)
