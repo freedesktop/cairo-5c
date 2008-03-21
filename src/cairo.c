@@ -45,17 +45,17 @@ cairo_5c_get (Value av)
     
     if (av->foreign.id != CairoId)
     {
-	RaiseStandardException (exception_invalid_argument,
-				"not a cairo_t",
-				2, NewInt(0), av);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("not a cairo_t"),
+				NewInt(0), av);
 	return 0;
     }
     c5c = av->foreign.data;
     if (!c5c)
     {
-	RaiseStandardException (exception_invalid_argument,
-				"cairo destroyed",
-				2, NewInt(0), av);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("cairo destroyed"),
+				NewInt(0), av);
 	return 0;
     }
     if (c5c->surface != Void)
@@ -131,9 +131,9 @@ do_Cairo_create (Value sv)
     cr = cairo_create (c5s->surface);
     if (!cr)
     {
-	RaiseStandardException (exception_invalid_argument,
-				"can't create cairo object",
-				2, Void, sv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("can't create cairo object"),
+				Void, sv);
 	RETURN (Void);
     }
     c5c = ALLOCATE (&Cairo5cType, sizeof (cairo_5c_t));
@@ -281,9 +281,9 @@ do_Cairo_enable (Value cv)
 	return Void;
     if (!cairo_5c_enable (c5c))
     {
-	RaiseStandardException (exception_invalid_argument,
-				"already enabled",
-				2, NewInt(0), cv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("already enabled"),
+				NewInt(0), cv);
     }
     return Void;
 }
@@ -297,9 +297,9 @@ do_Cairo_disable (Value cv)
 	return Void;
     if (!cairo_5c_disable (c5c))
     {
-	RaiseStandardException (exception_invalid_argument,
-				"can't disable",
-				2, NewInt(0), cv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("can't disable"),
+				NewInt(0), cv);
     }
     return Void;
 }

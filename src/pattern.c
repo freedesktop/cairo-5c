@@ -44,9 +44,9 @@ get_cairo_pattern (Value pv)
 {
     if (pv->foreign.id != CairoPatternId)
     {
-	RaiseStandardException (exception_invalid_argument,
-				"not a pattern_t",
-				2, NewInt(0), pv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("not a pattern_t"),
+				NewInt(0), pv);
 	return 0;
     }
     return (cairo_pattern_t *) (pv->foreign.data);

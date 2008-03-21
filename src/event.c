@@ -61,9 +61,10 @@ do_Cairo_Surface_open_event (Value sv)
 	    read = FileFopen ("/dev/null", "r", &err);
 	    if (!read)
 	    {
-		RaiseStandardException (exception_open_error,
+		RaiseStandardException (exception_open_error, 3,
 					FileGetErrorMessage (err),
-					2, FileGetError (err), Void);
+					FileGetError (err),
+					NewStrString ("/dev/null"));
 		RETURN (Void);
 	    }
 	    break;

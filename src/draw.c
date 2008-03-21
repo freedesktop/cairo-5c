@@ -433,11 +433,9 @@ path_array (Value cv, cairo_path_t* (*copy_path) (cairo_t *cr))
     path = (*copy_path) (c5c->cr);
     if (!path)
     {
-	RaiseStandardException (exception_invalid_argument,
-				"Can't copy path",
-				2, cv,
-				IntToEnum (typeCairoStatus, 
-					   cairo_status (c5c->cr)));
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString("Can't copy path"),
+				NewInt (0), cv);
 	RETURN (Void);
     }
     pv = NewArray (False, True, typeCairoPath, 1, &zero);
@@ -551,8 +549,9 @@ do_Cairo_append_path (Value cv, Value pv)
 	}
 	else
 	{
-	    RaiseStandardException (exception_invalid_argument,
-				    "Bad path component", 1, pv);
+	    RaiseStandardException (exception_invalid_argument, 3,
+				    NewStrString ("Bad path component"),
+				    NewInt (1), pv);
 	    break;
 	}
 	pd->header.length = ncoord + 1;

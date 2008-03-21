@@ -506,9 +506,9 @@ x_global_create (void)
     {
 	int err = errno;
 	const char *display_name_arg = XDisplayName (NULL);
-	RaiseStandardException (exception_open_error,
-				"cannot open X display",
-				2, FileGetError (err), NewStrString (display_name_arg));
+	RaiseStandardException (exception_open_error, 3,
+				NewStrString ("cannot open X display"),
+				FileGetError (err), NewStrString (display_name_arg));
 	return NULL;
     }
 	
@@ -751,9 +751,10 @@ cairo_5c_gui_open_event (cairo_5c_surface_t *c5s)
     if (pipe (fd) < 0)
     {
 	err = errno;
-	RaiseStandardException (exception_open_error,
+	RaiseStandardException (exception_open_error, 3,
 				FileGetErrorMessage (err),
-				2, FileGetError (err), Void);
+				FileGetError (err), 
+				NewStrString ("event"));
 	RETURN (Void);
     }
     read = FileCreate (fd[0], FileReadable);

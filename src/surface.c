@@ -44,24 +44,24 @@ cairo_5c_surface_get (Value av)
 
     if (av == Void)
     {
-	RaiseStandardException (exception_invalid_argument,
-				"context not bound to surface",
-				2, NewInt(0), av);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("context not bound to surface"),
+				NewInt(0), av);
 	return 0;
     }
     if (av->foreign.id != CairoSurfaceId)
     {
-	RaiseStandardException (exception_invalid_argument,
-				"not a surface_t",
-				2, NewInt(0), av);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("not a surface_t"),
+				NewInt(0), av);
 	return 0;
     }
     c5s = av->foreign.data;
     if (!c5s)
     {
-	RaiseStandardException (exception_invalid_argument,
-				"surface destroyed",
-				2, NewInt(0), av);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("surface destroyed"),
+				NewInt(0), av);
 	return 0;
     }
     switch (c5s->kind) {
@@ -218,9 +218,9 @@ do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
     if (!cairo_5c_gui_create (c5s, name, width, height))
     {
 	int err = errno;
-	RaiseStandardException (exception_open_error,
-				"Can't create window",
-				2, FileGetError (err), name);
+	RaiseStandardException (exception_open_error, 3,
+				NewStrString ("Can't create window"),
+				FileGetError (err), namev);
 	RETURN (Void);
     }
     
@@ -408,9 +408,9 @@ do_Cairo_Image_surface_create_from_png (Value filenamev)
 	
 	if (image)
 	    cairo_surface_destroy (image);
-	RaiseStandardException (exception_open_error,
+	RaiseStandardException (exception_open_error, 3,
 				FileGetErrorMessage (err),
-				2, FileGetError (err), filenamev);
+				FileGetError (err), filenamev);
 	RETURN (Void);
     }
 
@@ -452,19 +452,19 @@ do_Cairo_Image_get_pixel (Value sv, Value xv, Value yv)
     uint32_t		pixel;
 
     if (c5s->kind != CAIRO_5C_IMAGE)
-	RaiseStandardException (exception_invalid_argument,
-				"not an image surface_t",
-				2, NewInt(0), sv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("not an image surface_t"),
+				NewInt(0), sv);
     width = cairo_image_surface_get_width (c5s->surface);
     height = cairo_image_surface_get_height (c5s->surface);
     if (x < 0 || width <= x)
-	RaiseStandardException (exception_invalid_argument,
-				"x out of range",
-				2, NewInt(width), xv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("x out of range"),
+				NewInt(1), xv);
     if (y < 0 || height <= y)
-	RaiseStandardException (exception_invalid_argument,
-				"y out of range",
-				2, NewInt(height), yv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("y out of range"),
+				NewInt(2), yv);
     if (aborting)
 	RETURN (Void);
 
@@ -502,21 +502,21 @@ do_Cairo_Image_put_pixel (Value sv, Value xv, Value yv, Value pv)
     if (aborting)
 	RETURN (Void);
     if (c5s->kind != CAIRO_5C_IMAGE)
-	RaiseStandardException (exception_invalid_argument,
-				"not an image surface_t",
-				2, NewInt(0), sv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("not an image surface_t"),
+				NewInt(0), sv);
     if (aborting)
 	RETURN (Void);
     width = cairo_image_surface_get_width (c5s->surface);
     height = cairo_image_surface_get_height (c5s->surface);
     if (x < 0 || width <= x)
-	RaiseStandardException (exception_invalid_argument,
-				"x out of range",
-				2, NewInt(width), xv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("x out of range"),
+				NewInt(1), xv);
     if (y < 0 || height <= y)
-	RaiseStandardException (exception_invalid_argument,
-				"y out of range",
-				2, NewInt(height), yv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("y out of range"),
+				NewInt(2), yv);
 
     switch (cairo_image_surface_get_format (c5s->surface)) {
     case CAIRO_FORMAT_ARGB32:
@@ -536,9 +536,9 @@ do_Cairo_Image_put_pixel (Value sv, Value xv, Value yv, Value pv)
     if (Negativep (pv) || 
 	TrueVal == Greater (pv, NewInteger (Positive,
 					    NewDoubleDigitNatural (max))))
-	RaiseStandardException (exception_invalid_argument,
-				"pixel out of range",
-				2, NewInt(3), pv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("pixel out of range"),
+				NewInt(3), pv);
     if (aborting)
 	RETURN (Void);
 
@@ -553,9 +553,9 @@ do_Cairo_Image_put_pixel (Value sv, Value xv, Value yv, Value pv)
 	    pixel = NaturalDigits(n)[0];
 	break;
     default:
-	RaiseStandardException (exception_invalid_argument,
-				"Invalid pixel",
-				2, NewInt(3), pv);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("Invalid pixel"),
+				NewInt(3), pv);
 	pixel = 0;
 	break;
     }

@@ -453,9 +453,9 @@ EnumIntPart (Value ev, char *err)
     for (i = 0; i < st->nelements; i++)
 	if (StructTypeAtoms(st)[i] == u->tag)
 	    return i;
-    RaiseStandardException (exception_invalid_argument,
-			    err,
-			    2, 0, ev);
+    RaiseStandardException (exception_invalid_argument, 3,
+			    NewStrString (err),
+			    NewInt (0), ev);
     return -1;
 }
 
@@ -469,9 +469,9 @@ IntToEnum (Type *type, int i)
 
     if (i < 0 || st->nelements <= i)
     {
-	RaiseStandardException (exception_invalid_argument,
-				"invalid enum index",
-				2, NewInt (i), v);
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("invalid enum index"),
+				NewInt (i), v);
 	RETURN (Void);
     }
     

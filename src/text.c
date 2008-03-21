@@ -128,9 +128,9 @@ cairo_5c_font_create (Value name)
     FcPatternDestroy (pat);
     if (!match)
     {
-	RaiseStandardException (exception_open_error,
-				"can't open font",
-				2, FileGetError (ENOENT), name);
+	RaiseStandardException (exception_open_error, 3,
+				NewStrString ("can't open font"),
+				FileGetError (ENOENT), name);
 	RETURN (NULL);
     }
 
@@ -140,9 +140,9 @@ cairo_5c_font_create (Value name)
     FcPatternDestroy (match);
     if (!font_face)
     {
-	RaiseStandardException (exception_open_error,
-				"can't open font",
-				2, FileGetError (ENOENT), name);
+	RaiseStandardException (exception_open_error, 3,
+				NewStrString ("can't open font"),
+				FileGetError (ENOENT), name);
 	RETURN (NULL);
     }
     c5f = ALLOCATE (&Cairo5cFontType, sizeof (cairo_5c_font_t));
