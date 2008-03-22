@@ -76,7 +76,7 @@ CPPFLAGS="${save_CPPFLAGS}"
 
 AC_CONFIG_FILES([Makefile
 		 src/Makefile
-		 chrome/Makefile
+		 nichrome/Makefile
 		 test/Makefile
 		 examples/Makefile
 		])

@@ -40,11 +40,11 @@
  
 autoimport Cairo;
 autoimport PRNG;
-autoload Chrome;
-autoload Chrome::Button;
-autoload Chrome::Box;
-autoload Chrome::Label;
-autoload Chrome::Toggle;
+autoload Nichrome;
+autoload Nichrome::Button;
+autoload Nichrome::Box;
+autoload Nichrome::Label;
+autoload Nichrome::Toggle;
 
 dev_srandom (32);
 
@@ -559,7 +559,7 @@ find_set (&game_t game)
 	       });
 }
 
-extend namespace Chrome {
+extend namespace Nichrome {
     public namespace Setwidget {
 	public typedef widget_t + struct {
 	    &game_t game;
@@ -600,10 +600,10 @@ extend namespace Chrome {
 	    }
 	}
 
-	public *set_widget_t new (&chrome_t chrome, &game_t game, void () deal) {
+	public *set_widget_t new (&nichrome_t nichrome, &game_t game, void () deal) {
 	    set_widget_t    widget;
 	    
-	    Widget::init (&chrome, &widget);
+	    Widget::init (&nichrome, &widget);
 	    widget.button = button;
 	    widget.draw = draw;
 	    widget.outline = outline;
@@ -615,7 +615,7 @@ extend namespace Chrome {
     }
 }
 
-import Chrome;
+import Nichrome;
 import Button;
 import Widget;
 import Setwidget;
@@ -624,7 +624,8 @@ import Label;
 import Toggle;
 
 void play () {
-    &chrome_t	    ui = Chrome::new ("Set", 400, 400);
+    Widget::default_font = "sans-14:bold:italic";
+    &nichrome_t	    ui = Nichrome::new ("Set", 400, 400);
     game_t	    g = make_game ();
     &label_t	    ngames = Label::new (&ui, "Moves: 0");
 
@@ -648,7 +649,7 @@ void play () {
 
     &button_t	    quit = Button::new (&ui, "Quit",
 					void func (&widget_t w, bool state) {
-					    w.chrome.running = false;
+					    w.nichrome.running = false;
 					});
     &button_t	    shuffle = Button::new (&ui, "Shuffle",
 					   void func (&widget_t w, bool state) {
@@ -670,9 +671,9 @@ void play () {
     &box_t	    box = Box::new (Box::dir_t.vertical,
 				    Box::box_item (&menu),
 				    Box::widget_item (&widget));
-    Chrome::set_box (&ui, &box);
+    Nichrome::set_box (&ui, &box);
     update_moves ();
-    Chrome::main_loop (&ui);
+    Nichrome::main_loop (&ui);
 }
 
 play ();

@@ -32,9 +32,10 @@
  *      Keith Packard <keithp@keithp.com>
  */
 
-autoload Chrome;
+autoload Nichrome;
+autoload Nichrome::Lozenge;
 
-extend namespace Chrome {
+extend namespace Nichrome {
     public namespace Scrollbar {
 	protected typedef void (&widget_t widget) callback_t;
 	
@@ -90,6 +91,7 @@ extend namespace Chrome {
 	    real    x, y, w, h;
 	    real    left = scrollbar.pos;
 	    real    right = left + scrollbar.size;
+	    int	    highlight;
 
 	    enum switch (scrollbar.dir) {
 	    case horizontal:
@@ -97,19 +99,28 @@ extend namespace Chrome {
 		w = right * scrollbar.geometry.width - x;
 		y = 0;
 		h = scrollbar.geometry.height;
+		highlight = -floor (h/10 + 0.5);
 		break;
 	    case vertical:
 		x = 0;
 		w = scrollbar.geometry.width;
 		y = left * scrollbar.geometry.height;
 		h = right * scrollbar.geometry.height - y;
+		highlight = -floor (w/10 + 0.5);
 		break;
 	    }
-	    set_source_rgba (cr,
-			     scrollbar.color.red, scrollbar.color.green,
-			     scrollbar.color.blue, scrollbar.color.alpha);
-	    rectangle (cr, x, y, w, h);
-	    fill (cr);
+	    save (cr);
+	    union switch (scrollbar.state) {
+	    case drag:
+		highlight = -highlight;
+		break;
+	    default:
+		break;
+	    }
+	    translate (cr, floor (x + 0.5), floor (y + 0.5));
+	    Lozenge::draw (cr, floor (w + 0.5), floor (h + 0.5),
+			   scrollbar.color, highlight);
+	    restore (cr);
 	}
 
 	real bound_pos (real pos, real size) = max (min (pos, 1-size), 0);
@@ -174,10 +185,10 @@ extend namespace Chrome {
 	}
 
 	public void init (&scrollbar_t widget,
-			  &chrome_t chrome,
+			  &nichrome_t nichrome,
 			  dir_t dir,
 			  callback_t callback) {
-	    Widget::init (&chrome, &widget);
+	    Widget::init (&nichrome, &widget);
 	    widget.draw = draw;
 	    widget.button = button;
 	    widget.motion = motion;
@@ -192,12 +203,12 @@ extend namespace Chrome {
 	    widget.thickness = 10;
 	}
 	
-	public *widget_t new (&chrome_t chrome,
+	public *widget_t new (&nichrome_t nichrome,
 			      dir_t dir,
 			      callback_t callback) {
 	    scrollbar_t	widget;
 
-	    init (&widget, &chrome, dir, callback);
+	    init (&widget, &nichrome, dir, callback);
 	    return &widget;
 	}
     }

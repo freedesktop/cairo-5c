@@ -32,39 +32,56 @@
  *      Keith Packard <keithp@keithp.com>
  */
 
-autoload Nichrome;
-autoload Nichrome::Box;
-autoload Nichrome::Label;
-autoload Nichrome::Button;
+load "nichrome.5c"
+load "nichrome-box.5c"
+load "nichrome-label.5c"
+load "nichrome-lozenge.5c"
+load "nichrome-scrollbar.5c"
 
 import Nichrome;
 import Nichrome::Box;
+import Nichrome::Scrollbar;
 import Nichrome::Label;
-import Nichrome::Button;
 
-void main () {
-    &nichrome_t	nichrome = Nichrome::new ("Nichrome Example", 400, 400);
-    &label_t	label = Nichrome::Label::new (&nichrome, "hi");
-    
-    void button_callback (&widget_t widget, bool state) {
-	if (label.label == "hi")
-	    Nichrome::Label::relabel (&label, "Hello, World");
-	else
-	    Nichrome::Label::relabel (&label, "hi");
+void
+main ()
+{
+    &nichrome_t	    nichrome = Nichrome::new ("Scrollbar Test", 400, 400);
+
+    &label_t	    label = Label::new (&nichrome, "hello, world");
+
+    void scrollbar_callback (&scrollbar_t widget, Scrollbar::action_t action)
+    {
+	union switch (action) {
+	case drag pos:
+	    Label::relabel (&label, sprintf ("%g", pos));
+	    Scrollbar::set (&widget, pos, .1 + pos / 10);
+	    break;
+	case pos pos:
+	    Label::relabel (&label, sprintf ("%g", pos));
+	    Scrollbar::set (&widget, pos, .1 + pos / 10);
+	    break;
+	default:
+	    break;
+	}
     }
-    
-    &widget_t	button = Nichrome::Button::new (&nichrome, "Push Me",
-					      button_callback);
-    &box_t	hbox = Nichrome::Box::new (Box::dir_t.horizontal,
-					Box::glue_item (100, 0),
-					Box::widget_item (&button, 0),
-					Box::glue_item (0, 1),
-					Box::widget_item (&label, 0));
-    &box_t	vbox = Nichrome::Box::new (Box::dir_t.vertical,
-					 Box::glue_item (0, 1),
-					 Box::box_item (&hbox),
-					 Box::glue_item (0, 1));
 
+    &scrollbar_t vscrollbar = Scrollbar::new (&nichrome,
+					  Scrollbar::dir_t.vertical,
+					  scrollbar_callback);
+
+    &scrollbar_t hscrollbar = Scrollbar::new (&nichrome,
+					  Scrollbar::dir_t.horizontal,
+					  scrollbar_callback);
+
+    &box_t	    hbox = Box::new (Box::dir_t.horizontal,
+				     Box::widget_item (&label, 1),
+				     Box::widget_item (&vscrollbar, 0, 1));
+    &box_t	    vbox = Box::new (Box::dir_t.vertical,
+				     Box::box_item (&hbox),
+				     Box::widget_item (&hscrollbar, 1, 0));
+    Scrollbar::set (&hscrollbar, 0, .1);
+    Scrollbar::set (&vscrollbar, 0, .1);
     Nichrome::set_box (&nichrome, &vbox);
     Nichrome::main_loop (&nichrome);
 }

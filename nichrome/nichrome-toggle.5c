@@ -33,40 +33,65 @@
  */
 
 autoload Nichrome;
-autoload Nichrome::Box;
-autoload Nichrome::Label;
 autoload Nichrome::Button;
 
-import Nichrome;
-import Nichrome::Box;
-import Nichrome::Label;
-import Nichrome::Button;
-
-void main () {
-    &nichrome_t	nichrome = Nichrome::new ("Nichrome Example", 400, 400);
-    &label_t	label = Nichrome::Label::new (&nichrome, "hi");
+extend namespace Nichrome {
     
-    void button_callback (&widget_t widget, bool state) {
-	if (label.label == "hi")
-	    Nichrome::Label::relabel (&label, "Hello, World");
-	else
-	    Nichrome::Label::relabel (&label, "hi");
+    public namespace Toggle {
+
+	public typedef Button::button_t + struct {
+	    bool really_inside;
+	} toggle_t;
+	
+	public void set (&toggle_t widget, bool pressed) {
+	    if (pressed != widget.pressed)
+	    {
+		widget.pressed = pressed;
+		widget.inside = widget.really_inside || widget.pressed;
+		widget.callback (&widget, widget.pressed);
+		Widget::redraw (&widget);
+	    }
+	}
+
+	public void button (&toggle_t widget, &button_event_t event) {
+	    enum switch (event.type) {
+	    case press:
+		set (&widget, !widget.pressed);
+		break;
+	    case release:
+	    default:
+		break;
+	    }
+	}
+
+	public void motion (&toggle_t widget, &motion_event_t event) {
+	    Button::motion (&widget, &event);
+	    enum switch (event.type) {
+	    case leaving:
+	    case entering:
+		widget.really_inside = widget.inside;
+		widget.inside = widget.really_inside || widget.pressed;
+		break;
+	    default:
+		break;
+	    }
+	}
+
+	public void init (&toggle_t widget,
+			  &nichrome_t nichrome,
+			  string label,
+			  Button::callback_t callback) {
+	    Button::init (&widget, &nichrome, label, callback);
+	    widget.button = button;
+	    widget.motion = motion;
+	}
+	
+	public *widget_t new (&nichrome_t nichrome,
+			      string label,
+			      Button::callback_t callback) {
+	    toggle_t	widget;
+	    init (&widget, &nichrome, label, callback);
+	    return &widget;
+	}
     }
-    
-    &widget_t	button = Nichrome::Button::new (&nichrome, "Push Me",
-					      button_callback);
-    &box_t	hbox = Nichrome::Box::new (Box::dir_t.horizontal,
-					Box::glue_item (100, 0),
-					Box::widget_item (&button, 0),
-					Box::glue_item (0, 1),
-					Box::widget_item (&label, 0));
-    &box_t	vbox = Nichrome::Box::new (Box::dir_t.vertical,
-					 Box::glue_item (0, 1),
-					 Box::box_item (&hbox),
-					 Box::glue_item (0, 1));
-
-    Nichrome::set_box (&nichrome, &vbox);
-    Nichrome::main_loop (&nichrome);
 }
-
-main ();

@@ -31,22 +31,25 @@
  * Contributor(s):
  *      Keith Packard <keithp@keithp.com>
  */
-autoload Chrome;
 
-extend namespace Chrome {
+autoload Nichrome;
+autoload Nichrome::Lozenge;
+
+extend namespace Nichrome {
     public namespace Button {
 
 	public typedef button_t;
 
-	public typedef struct {
+	protected typedef struct {
 	    real x, y;
 	    real pad;
 	    real width, height;
 	    real preferred_width, preferred_height;
 	} metrics_t;
 	
-	public typedef void (&widget_t widget, bool state) callback_t;
-	public typedef metrics_t (cairo_t cr, &button_t widget) get_metrics_t;
+	protected typedef void (&widget_t widget, bool state) callback_t;
+    
+	protected typedef metrics_t (cairo_t cr, &button_t widget) get_metrics_t;
 
 	public typedef widget_t + struct {
 	    string  label;
@@ -55,70 +58,96 @@ extend namespace Chrome {
 	    bool    inside;
 	    real    pad_ratio;
 	    rgba_color_t    color;
+	    rgba_color_t    text_color;
 	    callback_t	callback;
 	    get_metrics_t get_metrics;
 	} button_t;
 	
-	public metrics_t get_metrics (cairo_t cr, &button_t widget) {
+	protected metrics_t get_metrics (cairo_t cr, &button_t widget) {
 	    set_font (cr, widget.font);
 	    text_extents_t text = text_extents (cr, widget.label);
+	    text_extents_t m = text_extents (cr, "M");
+	    text_extents_t x = text_extents (cr, "x");
 	    font_extents_t font = font_extents(cr);
 	    metrics_t metrics;
 	    
-	    real pad = font.height / 2;
+	    real pad = floor (widget.pad_ratio * -m.y_bearing + 0.5);
 	    metrics.pad = pad;
-	    metrics.preferred_width = pad + text.width + pad;
-	    metrics.preferred_height = pad + font.height + pad;
+	    metrics.preferred_height = floor (pad + m.height + pad + 1.5) & ~1;
+	    metrics.preferred_width = floor (widget.pad_ratio * 2.5 * pad +
+	    text.width + 0.5);
 	    metrics.width = max (widget.geometry.width, metrics.preferred_width);
 	    metrics.height = max (widget.geometry.height, metrics.preferred_height);
-	    metrics.y = (metrics.height - font.ascent) / 2 + font.ascent;
-	    metrics.x = (metrics.width - text.width) / 2;
+	    real text_height = (x.height + m.height) / 2;
+	    real text_bearing = (x.y_bearing + m.y_bearing) / 2;
+	    metrics.y = floor ((metrics.height - text_height) / 2 
+			       - text_bearing + 0.5);
+	    metrics.x = floor ((metrics.width - text.width) / 2 
+			       - text.x_bearing + 0.5);
 	    return metrics;
 	}
 	
-	public void natural (cairo_t cr, &button_t widget) {
+	protected void natural (cairo_t cr, &button_t widget) {
 	    metrics_t	metrics = widget.get_metrics (cr, &widget);
 
 	    rectangle (cr, 0, 0, metrics.preferred_width, metrics.preferred_height);
 	}
 	
-	public void outline (cairo_t cr, &button_t widget) {
+	protected void outline (cairo_t cr, &button_t widget) {
 	    metrics_t	metrics = widget.get_metrics (cr, &widget);
 
-	    rectangle (cr, 0, 0, metrics.width, metrics.height);
+	    save (cr);
+	    translate (cr, floor (metrics.pad/2), floor (metrics.pad/2));
+	    Lozenge::outline (cr, floor (metrics.width - metrics.pad),
+			     floor (metrics.height - metrics.pad));
+	    restore (cr);
 	}
 	
-	public void draw (cairo_t cr, &button_t widget) {
+	protected void draw (cairo_t cr, &button_t widget) {
 	    metrics_t	metrics = widget.get_metrics (cr, &widget);
-	    
+	    real    highlight = -floor (metrics.height/20);
+
 	    if (widget.pressed && widget.inside)
+		highlight = -highlight;
+
+	    save (cr);
+	    translate (cr, floor (metrics.pad/2), floor (metrics.pad/2));
+	    Lozenge::draw (cr, floor (metrics.width - metrics.pad),
+			   floor (metrics.height - metrics.pad),
+			   widget.color, highlight);
+	    restore (cr);
+	    real text_x = metrics.x + highlight/2;
+	    real text_y = metrics.y + highlight/2;
+	    
+	    int    offset = floor (min (metrics.preferred_height,
+					metrics.preferred_width) / 120 +
+				   0.5);
+	    if (offset > 0)
 	    {
-		rectangle (cr, 0, 0, metrics.width, metrics.height);
-		set_source_rgba (cr, widget.color.red,
-				 widget.color.green, widget.color.blue,
-				 widget.color.alpha);
-		fill (cr);
+		rgba_color_t darker = Lozenge::illum (widget.text_color, -0.2);
+		rgba_color_t lighter = Lozenge::illum (widget.text_color, 0.2);
+		move_to (cr, text_x - offset, text_y - offset);
+		set_source_rgba (cr, darker.red, darker.green,
+				 darker.blue, darker.alpha);
+		show_text (cr, widget.label);
+		
+		move_to (cr, text_x + offset, text_y + offset);
+		set_source_rgba (cr, lighter.red, lighter.green,
+				 lighter.blue, lighter.alpha);
+		show_text (cr, widget.label);
 	    }
-	    if (widget.inside && !widget.pressed) {
-		set_source_rgba (cr, widget.color.red,
-				 widget.color.green, widget.color.blue,
-				 widget.color.alpha * 0.6);
-		rectangle (cr, metrics.pad / 2, metrics.pad / 2,
-			   metrics.width - metrics.pad, metrics.height -
-			   metrics.pad);
-		fill (cr);
-	    }
-	    move_to (cr, metrics.x, metrics.y);
-	    set_source_rgb (cr, 0, 0, 0);
+	    move_to (cr, text_x, text_y);
+	    set_source_rgba (cr, widget.text_color.red, widget.text_color.green,
+			     widget.text_color.blue, widget.text_color.alpha);
 	    show_text (cr, widget.label);
 	}
 	
-	public void relabel (&button_t widget, string label) {
+	protected void relabel (&button_t widget, string label) {
 	    widget.label = label;
 	    Widget::resize (&widget);
 	}
 
-	public void button (&button_t widget, &button_event_t event) {
+	protected void button (&button_t widget, &button_event_t event) {
 	    enum switch (event.type) {
 	    case press:
 		widget.pressed = true;
@@ -135,7 +164,7 @@ extend namespace Chrome {
 	    }
 	}
 	
-	public void motion (&button_t widget, &motion_event_t event) {
+	protected void motion (&button_t widget, &motion_event_t event) {
 	    enum switch (event.type) {
 	    case leaving:
 		widget.inside = false;
@@ -151,11 +180,11 @@ extend namespace Chrome {
 	    }
 	}
 
-	public void init (&button_t widget,
-			  &chrome_t chrome,
-			  string label,
-			  callback_t callback) {
-	    Widget::init (&chrome, &widget);
+	protected void init (&button_t widget,
+			     &nichrome_t nichrome,
+			     string label,
+			     callback_t callback) {
+	    Widget::init (&nichrome, &widget);
 	    widget.label = label;
 	    widget.font = Widget::default_font;
 	    widget.draw = draw;
@@ -169,14 +198,17 @@ extend namespace Chrome {
 	    widget.get_metrics = get_metrics;
 	    widget.pad_ratio = 1;
 	    widget.color = Widget::default_color;
+	    widget.text_color = (rgba_color_t) {
+		red = 0, green = 0, blue = 0, alpha = 1
+	    };
 	}
 	
-	public *widget_t new (&chrome_t chrome,
-			      string label,
-			      callback_t callback) {
+	protected *widget_t new (&nichrome_t nichrome,
+				 string label,
+				 callback_t callback) {
 	    button_t	widget;
 
-	    init (&widget, &chrome, label, callback);
+	    init (&widget, &nichrome, label, callback);
 	    return &widget;
 	}
     }

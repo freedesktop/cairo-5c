@@ -39,15 +39,14 @@
 autoload Mutex;
 autoimport Cairo;
 autoimport PRNG;
-autoimport Chrome;
-autoload Chrome::Lozenge;
-autoload Chrome::Button;
-autoload Chrome::Label;
-autoload Chrome::Box;
+autoimport Nichrome;
+autoload Nichrome::Button;
+autoload Nichrome::Label;
+autoload Nichrome::Box;
 
 import Widget;
-import Chrome;
-import Lozenge;
+import Nichrome;
+import Button;
 import Button;
 import Box;
 import Label;
@@ -433,7 +432,7 @@ void set_computer (&game_t game, piece_t player)
     }
 }
 
-extend namespace Chrome {
+extend namespace Nichrome {
     public namespace Gridwidget {
 	public typedef widget_t + struct {
 	    int down_x, down_y;
@@ -484,10 +483,10 @@ extend namespace Chrome {
 	    }
 	}
 	
-	public *grid_widget_t new (&chrome_t chrome, &game_t game) {
+	public *grid_widget_t new (&nichrome_t nichrome, &game_t game) {
 	    grid_widget_t    widget;
 	    
-	    Widget::init (&chrome, &widget);
+	    Widget::init (&nichrome, &widget);
 	    widget.button = button;
 	    widget.draw = draw;
 	    widget.outline = outline;
@@ -498,14 +497,15 @@ extend namespace Chrome {
     }
 }
 
-import Chrome::Gridwidget;
+import Nichrome::Gridwidget;
 
 /*
  * Play tic tac toe
  */
 void play ()
 {
-    &chrome_t	    chrome = Chrome::new ("Tic-Tac-Toe", 400, 400);
+    Widget::default_font = "Comic Sans MS-16";
+    &nichrome_t	    nichrome = Nichrome::new ("Tic-Tac-Toe", 400, 400);
     game_t  game = {
 	lock = Mutex::new (),
 	waiter = Semaphore::new (),
@@ -516,41 +516,51 @@ void play ()
 	computer = piece_o,
     };
     
-    &lozenge_t	    quit = Chrome::Lozenge::new (&chrome, "Quit",
+    &button_t	    quit = Nichrome::Button::new (&nichrome, "Quit",
 						void func (&widget_t w, bool state) {
-						    w.chrome.running = false;
+						    w.nichrome.running = false;
+						    game.quiting = true;
+						    Semaphore::signal (game.waiter);
 						});
 
-    &lozenge_t	    new = Chrome::Lozenge::new (&chrome, "New",
+    &button_t	    new = Nichrome::Button::new (&nichrome, "New",
 					       void func (&widget_t w, bool state) {
 						    reset_game (&game);
 					       });
-    &lozenge_t	    computer = Chrome::Button::new (&chrome, "Computer: o",
-						   void func (&widget_t w,
-							      bool state) 
-						   {
-						    set_computer (&game,
-								  other_player (game.computer));
-						    Button::relabel (&computer,
-								     "Computer: " + 
-								     (game.computer == piece_x ? "x" : "o"));
-						   });
-    &label_t	    thinking = Chrome::Label::new (&chrome, "");
+    &button_t	    computer;
+    void computer_callback (&widget_t w, bool state) {
+	set_computer (&game,
+		      other_player (game.computer));
+	Button::relabel (&computer,
+			 "Computer: " + 
+			 (game.computer == piece_x ? "x" : "o"));
+    }
     
-    &grid_widget_t   widget = Chrome::Gridwidget::new (&chrome, &game);
+    &computer = Nichrome::Button::new (&nichrome, "Computer: o",
+					void func (&widget_t w, bool state) {
+					    set_computer (&game,
+							  other_player (game.computer));
+					    Button::relabel (&computer,
+							     "Computer: " + 
+							     (game.computer == piece_x ? "x" : "o"));
+					});
+
+    &label_t	    thinking = Nichrome::Label::new (&nichrome, "");
+    
+    &grid_widget_t   widget = Nichrome::Gridwidget::new (&nichrome, &game);
 	
-    &box_t	    menu = Chrome::Box::new (dir_t.horizontal,
-					     widget_item (&new, 0),
-					     widget_item (&quit, 0),
-					     widget_item (&computer, 0),
-					     glue_item (1),
-					     widget_item (&thinking, 0));
-    &box_t	    box = Chrome::Box::new (dir_t.vertical,
-					    box_item (&menu),
-					    widget_item (&widget));
-    Chrome::set_box (&chrome, &box);
+    &box_t	    menu = Nichrome::Box::new (Box::dir_t.horizontal,
+					       Box::widget_item (&new, 0),
+					       Box::widget_item (&quit, 0),
+					       Box::widget_item (&computer, 0),
+					       Box::glue_item (1),
+					       Box::widget_item (&thinking, 0));
+    &box_t	    box = Nichrome::Box::new (Box::dir_t.vertical,
+					      Box::box_item (&menu),
+					      Box::widget_item (&widget));
+    Nichrome::set_box (&nichrome, &box);
     fork computer_player (&game, &thinking);
-    Chrome::main_loop (&chrome);
+    Nichrome::main_loop (&nichrome);
 }
 
 play ();

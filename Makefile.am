@@ -32,7 +32,7 @@
 #       Keith Packard <keithp@keithp.com>
 #
 
-SUBDIRS = src chrome test examples
+SUBDIRS = src nichrome test examples
 
 BUILD_DATE=$(shell date +"%F")
 NICKLE_VERSION=$(shell nickle -e version | sed 's/"//g')

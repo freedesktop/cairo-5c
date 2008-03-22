@@ -31,9 +31,9 @@
  * Contributor(s):
  *      Keith Packard <keithp@keithp.com>
  */
-autoload Chrome;
+autoload Nichrome;
 
-extend namespace Chrome {
+extend namespace Nichrome {
     public namespace Box {
 
 	protected typedef enum { horizontal, vertical } dir_t;
@@ -91,7 +91,7 @@ extend namespace Chrome {
 		}
 	    }
 	    if (&box.container == &no_container)
-		box.chrome.resize = true;
+		box.nichrome.resize = true;
 	    else
 		box.container.resize (&box.container, &box);
 	}
@@ -142,7 +142,7 @@ extend namespace Chrome {
 
 	/* find the natural bounding box of a contained */
 	rect_t contained_rect (&contained_t contained) {
-	    cairo_t cr = cairo (&contained.chrome);
+	    cairo_t cr = cairo (&contained.nichrome);
 	    contained.natural (cr, &contained);
 	    rect_t r = fill_extents (cr);
 	    Cairo::destroy (cr);
@@ -410,12 +410,12 @@ extend namespace Chrome {
 
     /*
      * When the top level geometry manager is a box,
-     * set the chrome configure function to relayout
+     * set the nichrome configure function to relayout
      * the box
      */
-    void configure (&chrome_t chrome, &Box::box_t box)
+    void configure (&nichrome_t nichrome, &Box::box_t box)
     {
-	cairo_t cr = cairo (&chrome);
+	cairo_t cr = cairo (&nichrome);
 
 	rect_t	geometry = {
 	    x = 0,
@@ -437,12 +437,12 @@ extend namespace Chrome {
 	Box::configure (&box, layout, geometry);
     }
 
-    public void set_box (&chrome_t chrome, &Box::box_t box)
+    public void set_box (&nichrome_t nichrome, &Box::box_t box)
     {
-	&box.chrome = &chrome;
-	Chrome::configure (&chrome, &box);
-	chrome.configure = void func (&chrome_t chrome) {
-	    Chrome::configure (&chrome, &box);
+	&box.nichrome = &nichrome;
+	Nichrome::configure (&nichrome, &box);
+	nichrome.configure = void func (&nichrome_t nichrome) {
+	    Nichrome::configure (&nichrome, &box);
 	};
     }
 }

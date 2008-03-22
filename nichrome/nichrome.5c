@@ -34,7 +34,7 @@
 autoload Cairo;
 autoimport Mutex;
 
-namespace Chrome {
+namespace Nichrome {
     import Cairo;
     
     /*
@@ -68,7 +68,7 @@ namespace Chrome {
 	string		text;
     } key_event_t;
     
-    public typedef chrome_t;
+    public typedef nichrome_t;
     public typedef widget_t;
     public typedef container_t;
     public typedef contained_t;
@@ -91,7 +91,7 @@ namespace Chrome {
     public typedef void(&widget_t, &key_event_t) key_handler_t;
 
     public typedef struct {
-	&chrome_t	    chrome;
+	&nichrome_t	    nichrome;
 	&container_t	    container;
 	configure_handler_t configure;
 	draw_t		    natural;
@@ -114,7 +114,7 @@ namespace Chrome {
     /*
      * An application surface
      */
-    public typedef void(&chrome_t chrome) callback_t;
+    public typedef void(&nichrome_t nichrome) callback_t;
 
     public typedef struct {
 	surface_t	    surface;
@@ -134,31 +134,31 @@ namespace Chrome {
 	bool		    running;
 	mutex		    drawing;
 	thread		    self;
-    } chrome_t;
+    } nichrome_t;
 
     public widget_t no_widget;
 
-    cairo_t cairo (&chrome_t chrome)
+    cairo_t cairo (&nichrome_t nichrome)
     {
-	cairo_t cr = create (chrome.surface);
-	scale (cr, chrome.scale.x, chrome.scale.y);
+	cairo_t cr = create (nichrome.surface);
+	scale (cr, nichrome.scale.x, nichrome.scale.y);
 	return cr;
     }
     
-    public void add (&chrome_t chrome, &widget_t widget) {
-	&chrome.widgets[dim(chrome.widgets)] = &widget;
-	chrome.draw = true;
+    public void add (&nichrome_t nichrome, &widget_t widget) {
+	&nichrome.widgets[dim(nichrome.widgets)] = &widget;
+	nichrome.draw = true;
     }
 
-    void draw (&chrome_t chrome);
+    void draw (&nichrome_t nichrome);
 	
-    public void redraw (&chrome_t chrome) {
-	if (is_uninit (&chrome.self))
+    public void redraw (&nichrome_t nichrome) {
+	if (is_uninit (&nichrome.self))
 	    return;
-        if (Thread::current() != chrome.self)
-	    draw (&chrome);
+        if (Thread::current() != nichrome.self)
+	    draw (&nichrome);
 	else
-	    chrome.draw = true;
+	    nichrome.draw = true;
     }
 
     public namespace Widget {
@@ -168,34 +168,34 @@ namespace Chrome {
 
 	protected void natural (cairo_t cr, &widget_t widget) = ◊;
 
-	protected void init (&chrome_t chrome, &widget_t widget) {
+	protected void init (&nichrome_t nichrome, &widget_t widget) {
 	    widget.geometry = (rect_t) {
 		x = 0, y = 0, width = 0, height = 0
 	    };
-	    &widget.chrome = &chrome;
+	    &widget.nichrome = &nichrome;
 	    widget.configure = configure;
 	    widget.natural = natural;
 	    widget.outline = natural;
 	    widget.draw = natural;
-	    Chrome::add (&chrome, &widget);
+	    Nichrome::add (&nichrome, &widget);
 	}
 	
 	protected void redraw (&widget_t widget) {
-	    Chrome::redraw (&widget.chrome);
+	    Nichrome::redraw (&widget.nichrome);
 	}
 	
 	protected void resize (&widget_t widget) {
 	    if (!is_uninit (&widget.container))
-		twixt (Mutex::acquire (widget.chrome.drawing);
-		       Mutex::release (widget.chrome.drawing))
+		twixt (Mutex::acquire (widget.nichrome.drawing);
+		       Mutex::release (widget.nichrome.drawing))
 		    widget.container.resize (&widget.container, &widget);
 	    else
 		redraw (&widget);
 	}
 
 	protected void reoutline (&widget_t widget) {
-	    if (&widget.chrome.outline_widget == &widget)
-		&widget.chrome.outline_widget = &no_widget;
+	    if (&widget.nichrome.outline_widget == &widget)
+		&widget.nichrome.outline_widget = &no_widget;
 	}
 
 	protected bool in_widget (&widget_t widget, real x, real y)
@@ -210,15 +210,15 @@ namespace Chrome {
 		widget.extents.y + widget.extents.height <= y)
 		return false;
 	    
-	    cairo_t cr = widget.chrome.outline_cr;
+	    cairo_t cr = widget.nichrome.outline_cr;
 	    
-	    if (&widget.chrome.outline_widget != &widget) {
+	    if (&widget.nichrome.outline_widget != &widget) {
 		new_path (cr);
 		save (cr);
 		translate (cr, widget.geometry.x, widget.geometry.y);
 		widget.outline (cr, &widget);
 		restore (cr);
-		&widget.chrome.outline_widget = &widget;
+		&widget.nichrome.outline_widget = &widget;
 	    }
 	    in = in_fill (cr, x, y);
 	    return in;
@@ -226,18 +226,18 @@ namespace Chrome {
 	
 	protected string default_font = "sans-12";
 	protected rgba_color_t default_color = {
-	    red = 0.7, green = 0.7,
-	    blue = 0.7, alpha = 0.7
+	    red = 0.6, green = 0.6,
+	    blue = 0.6, alpha = 0.75
 	};
     }
 
-    public *widget_t xy_to_widget (&chrome_t chrome, real x, real y) {
-	cairo_t cr = cairo (&chrome);
+    public *widget_t xy_to_widget (&nichrome_t nichrome, real x, real y) {
+	cairo_t cr = cairo (&nichrome);
 	point_t a = device_to_user (cr, (point_t) { x = x, y = y });
 	Cairo::destroy (cr);
 	x = a.x; y = a.y;
-	for (int w = 0; w < dim (chrome.widgets); w++) {
-	    &widget_t widget = &chrome.widgets[w];
+	for (int w = 0; w < dim (nichrome.widgets); w++) {
+	    &widget_t widget = &nichrome.widgets[w];
 	    if (Widget::in_widget (&widget, x, y))
 		return &widget;
 	}
@@ -247,9 +247,9 @@ namespace Chrome {
     /*
      * As usual, mouse grabs make this more complicated than we'd like.
      *
-     * chrome.mouse_in tracks the widget containing the pointer.
-     * chrome.mouse_grab tracks the grabbing widget.*
-     * chrome.button_down tracks which buttons are down
+     * nichrome.mouse_in tracks the widget containing the pointer.
+     * nichrome.mouse_grab tracks the grabbing widget.*
+     * nichrome.button_down tracks which buttons are down
      *
      * While grabbed, events are delivered only to the grab widget.
      * Otherwise, events are delivered to the containing widget.
@@ -277,24 +277,24 @@ namespace Chrome {
 	}
     }
     
-    public void dispatch_button (&chrome_t chrome, &button_event_t event) {
+    public void dispatch_button (&nichrome_t nichrome, &button_event_t event) {
 	&widget_t   widget;
 
-	if (&chrome.mouse_grab != &no_widget)
-	    &widget = &chrome.mouse_grab;
+	if (&nichrome.mouse_grab != &no_widget)
+	    &widget = &nichrome.mouse_grab;
 	else {
-	    &widget = &chrome.mouse_in;
+	    &widget = &nichrome.mouse_in;
 	    if (&widget == &no_widget)
 		return;
 	}
 
 	enum switch (event.type) {
 	case press:
-	    &chrome.mouse_grab = &widget;
-	    chrome.button_down |= 1 << event.button;
+	    &nichrome.mouse_grab = &widget;
+	    nichrome.button_down |= 1 << event.button;
 	    break;
 	case release:
-	    if (&chrome.mouse_grab == &no_widget)
+	    if (&nichrome.mouse_grab == &no_widget)
 		return;
 	    break;
 	default:
@@ -305,17 +305,17 @@ namespace Chrome {
 
 	if (event.type == button_type_t.release)
 	{
-	    chrome.button_down &= ~(1 << event.button);
-	    if (chrome.button_down == 0)
+	    nichrome.button_down &= ~(1 << event.button);
+	    if (nichrome.button_down == 0)
 	    {
-		&chrome.mouse_grab = &no_widget;
+		&nichrome.mouse_grab = &no_widget;
 		
 		/*
 		 * On ungrab, deliver an entering motion
 		 * to the widget under the pointer
 		 */
-		if (&widget != &chrome.mouse_in)
-		    deliver_motion (&chrome.mouse_in,
+		if (&widget != &nichrome.mouse_in)
+		    deliver_motion (&nichrome.mouse_in,
 				    (motion_event_t) {
 					type = motion_type_t.entering,
 					time = event.time,
@@ -325,17 +325,17 @@ namespace Chrome {
 	}
     }
 
-    public void dispatch_motion (&chrome_t chrome, &motion_event_t event) {
-	&widget_t   in = xy_to_widget (&chrome, event.x, event.y);
+    public void dispatch_motion (&nichrome_t nichrome, &motion_event_t event) {
+	&widget_t   in = xy_to_widget (&nichrome, event.x, event.y);
 
-	if (&chrome.mouse_grab == &no_widget) {
+	if (&nichrome.mouse_grab == &no_widget) {
 	    /*
 	     * Without a mouse grab, deliver events to the containing widget
 	     */
-	    if (&in != &chrome.mouse_in) {
+	    if (&in != &nichrome.mouse_in) {
 		
 		event.type = motion_type_t.leaving;
-		deliver_motion (&chrome.mouse_in, event);
+		deliver_motion (&nichrome.mouse_in, event);
 		
 		event.type = motion_type_t.entering;
 	    } else
@@ -346,32 +346,32 @@ namespace Chrome {
 	    /*
 	     * With mouse grab, deliver events to the grab widget
 	     */
-	    if (&in != &chrome.mouse_grab) {
-		if (&chrome.mouse_in == &chrome.mouse_grab)
+	    if (&in != &nichrome.mouse_grab) {
+		if (&nichrome.mouse_in == &nichrome.mouse_grab)
 		    event.type = motion_type_t.leaving;
 		else
 		    event.type = motion_type_t.outside;
 	    } else {
-		if (&chrome.mouse_in == &chrome.mouse_grab)
+		if (&nichrome.mouse_in == &nichrome.mouse_grab)
 		    event.type = motion_type_t.inside;
 		else
 		    event.type = motion_type_t.entering;
 	    }
-	    deliver_motion (&chrome.mouse_grab, event);
+	    deliver_motion (&nichrome.mouse_grab, event);
 	}
-        &chrome.mouse_in = &in;
+        &nichrome.mouse_in = &in;
     }
 
-    public void dispatch_key (&chrome_t chrome, &key_event_t event) {
-	&widget_t   widget = &chrome.key_focus;
+    public void dispatch_key (&nichrome_t nichrome, &key_event_t event) {
+	&widget_t   widget = &nichrome.key_focus;
 
 	if (&widget != &no_widget)
 	    if (!is_uninit (&widget.key))
 		widget.key (&widget, &event);
     }
 
-    public void set_key_focus (&chrome_t chrome, &widget_t widget) {
-	&chrome.key_focus = &widget;
+    public void set_key_focus (&nichrome_t nichrome, &widget_t widget) {
+	&nichrome.key_focus = &widget;
     }
 
     string hex_utf8 (int[...] bytes)
@@ -401,28 +401,28 @@ namespace Chrome {
 	return s;
     }
 
-    void draw (&chrome_t chrome) {
-	twixt (Mutex::acquire (chrome.drawing);
-	       Mutex::release (chrome.drawing))
+    void draw (&nichrome_t nichrome) {
+	twixt (Mutex::acquire (nichrome.drawing);
+	       Mutex::release (nichrome.drawing))
 	{
-	    if (chrome.resize) {
-		chrome.resize = false;
-		Cairo::destroy (chrome.outline_cr);
-		chrome.outline_cr = cairo (&chrome);
-		&chrome.outline_widget = &no_widget;
-		if (!is_uninit (&chrome.configure))
-		    chrome.configure (&chrome);
+	    if (nichrome.resize) {
+		nichrome.resize = false;
+		Cairo::destroy (nichrome.outline_cr);
+		nichrome.outline_cr = cairo (&nichrome);
+		&nichrome.outline_widget = &no_widget;
+		if (!is_uninit (&nichrome.configure))
+		    nichrome.configure (&nichrome);
 	    }
-	    chrome.draw = false;
-	    cairo_t cr = cairo (&chrome);
+	    nichrome.draw = false;
+	    cairo_t cr = cairo (&nichrome);
 	    int	i;
     
 	    disable (cr);
 	    set_source_rgba (cr, 1, 1, 1, 1);
 	    paint (cr);
-	    for (i = dim (chrome.widgets) - 1; i >= 0; i--)
+	    for (i = dim (nichrome.widgets) - 1; i >= 0; i--)
 	    {
-		&widget_t	widget = &chrome.widgets[i];
+		&widget_t	widget = &nichrome.widgets[i];
 		if (!is_uninit (&widget.draw)) {
 		    save (cr);
 		    translate (cr, widget.geometry.x, widget.geometry.y);
@@ -449,13 +449,13 @@ namespace Chrome {
 	}
     }
     
-    public void destroy (&chrome_t chrome) {
-	Cairo::Surface::destroy (chrome.surface);
-	chrome.running = false;
+    public void destroy (&nichrome_t nichrome) {
+	Cairo::Surface::destroy (nichrome.surface);
+	nichrome.running = false;
     }
     
-    public *chrome_t new (string name, real size ...) {
-	chrome_t chrome;
+    public *nichrome_t new (string name, real size ...) {
+	nichrome_t nichrome;
 	real width, height;
 
 	switch (dim (size)) {
@@ -464,59 +464,59 @@ namespace Chrome {
 	default: width = size[0], height = size[1]; break;
 	}
 	
-	chrome.surface = Cairo::Surface::create_window (name, width, height);
+	nichrome.surface = Cairo::Surface::create_window (name, width, height);
 
-	chrome.event = Cairo::Surface::open_event (chrome.surface);
-	chrome.draw = true;
-	chrome.resize = true;
-	chrome.widgets = ((&widget_t)[...]) {};
-	chrome.scale = (point_t) { x = 1, y = 1 };
-	chrome.destroy = destroy;
-	&chrome.key_focus = &no_widget;
-	&chrome.mouse_grab = &no_widget;
-	chrome.button_down = 0;
-	&chrome.mouse_in = &no_widget;
-	&chrome.outline_widget = &no_widget;
-	chrome.outline_cr = cairo (&chrome);
-	chrome.drawing = Mutex::new ();
-	return &chrome;
+	nichrome.event = Cairo::Surface::open_event (nichrome.surface);
+	nichrome.draw = true;
+	nichrome.resize = true;
+	nichrome.widgets = ((&widget_t)[...]) {};
+	nichrome.scale = (point_t) { x = 1, y = 1 };
+	nichrome.destroy = destroy;
+	&nichrome.key_focus = &no_widget;
+	&nichrome.mouse_grab = &no_widget;
+	nichrome.button_down = 0;
+	&nichrome.mouse_in = &no_widget;
+	&nichrome.outline_widget = &no_widget;
+	nichrome.outline_cr = cairo (&nichrome);
+	nichrome.drawing = Mutex::new ();
+	return &nichrome;
     }
     
-    public exception unknown_widget (&chrome_t chrome, &widget_t widget);
+    public exception unknown_widget (&nichrome_t nichrome, &widget_t widget);
     
-    int widget_pos (&chrome_t chrome, &widget_t widget) {
-	for (int i = 0; i < dim(chrome.widgets); i++)
-	    if (&chrome.widgets[i] == &widget)
+    int widget_pos (&nichrome_t nichrome, &widget_t widget) {
+	for (int i = 0; i < dim(nichrome.widgets); i++)
+	    if (&nichrome.widgets[i] == &widget)
 		return i;
-	raise unknown_widget (&chrome, &widget);
+	raise unknown_widget (&nichrome, &widget);
     }
 
-    public void remove (&chrome_t chrome, &widget_t widget) {
-	for (int i = widget_pos (&chrome, &widget); 
-	     i < dim(chrome.widgets) - 1;
+    public void remove (&nichrome_t nichrome, &widget_t widget) {
+	for (int i = widget_pos (&nichrome, &widget); 
+	     i < dim(nichrome.widgets) - 1;
 	     i++)
 	{
-    	    &chrome.widgets[i] = &chrome.widgets[i + 1];
+    	    &nichrome.widgets[i] = &nichrome.widgets[i + 1];
 	}
-	setdim (chrome.widgets, dim(chrome.widgets) - 1);
-	chrome.draw = true;
+	setdim (nichrome.widgets, dim(nichrome.widgets) - 1);
+	nichrome.draw = true;
     }
 
-    public void top (&chrome_t chrome, &widget_t widget) {
-	for (int i = widget_pos (&chrome, &widget);
+    public void top (&nichrome_t nichrome, &widget_t widget) {
+	for (int i = widget_pos (&nichrome, &widget);
 	     i > 0;
 	     i--)
 	{
-	    &chrome.widgets[i] = &chrome.widgets[i-1];
+	    &nichrome.widgets[i] = &nichrome.widgets[i-1];
 	}
-	&chrome.widgets[0] = &widget;
-	chrome.draw = true;
+	&nichrome.widgets[0] = &widget;
+	nichrome.draw = true;
     }
     
-    public void main_loop (&chrome_t chrome) {
+    public void main_loop (&nichrome_t nichrome) {
 	
-	chrome.running = true;
-	chrome.self = Thread::current ();
+	nichrome.running = true;
+	nichrome.self = Thread::current ();
 
 	string event_line;
 
@@ -525,7 +525,7 @@ namespace Chrome {
 	
 	void event_reader () {
 	    for (;;) {
-		event_line = File::fgets (chrome.event);
+		event_line = File::fgets (nichrome.event);
 		Semaphore::signal (has_event);
 		Semaphore::wait (read_event);
 	    }
@@ -533,13 +533,13 @@ namespace Chrome {
 	
 	thread event_thread = fork event_reader ();
 
-	while (chrome.running) {
-	    if (chrome.draw)
+	while (nichrome.running) {
+	    if (nichrome.draw)
 	    {
 		if (Semaphore::test (has_event))
 		    Semaphore::signal (has_event);
 		else {
-		    draw (&chrome);
+		    draw (&nichrome);
 		}
 	    }
 	    
@@ -568,7 +568,7 @@ namespace Chrome {
 		    button = button,
 		    x = x,
 		    y = y };
-		dispatch_button (&chrome, &bev);
+		dispatch_button (&nichrome, &bev);
 		break;
 	    case "motion":
 		File::fscanf (l, "%g %g", &(real x), &(real y));
@@ -577,7 +577,7 @@ namespace Chrome {
 		    time = time,
 		    x = x,
 		    y = y };
-		dispatch_motion (&chrome, &mev);
+		dispatch_motion (&nichrome, &mev);
 		break;
 	    case "key-down":
 	    case "key-up":
@@ -593,14 +593,14 @@ namespace Chrome {
 		    time = time,
 		    key = keyname,
 		    text = s };
-		dispatch_key (&chrome, &kev);
+		dispatch_key (&nichrome, &kev);
 		break;
 	    case "delete":
-		chrome.destroy (&chrome);
+		nichrome.destroy (&nichrome);
 		break;
 	    case "configure":
-		chrome.resize = true;
-		chrome.draw = true;
+		nichrome.resize = true;
+		nichrome.draw = true;
 		break;
 	    }
 	}
@@ -608,7 +608,7 @@ namespace Chrome {
 	Thread::kill (event_thread);
     }
 
-    string preferences_file = ".chromerc";
+    string preferences_file = ".nichromerc";
     
     public void load_preferences () {
 	string	home = Environ::get ("HOME");
@@ -626,4 +626,4 @@ namespace Chrome {
     }
 }
 
-Chrome::load_preferences ();
+Nichrome::load_preferences ();

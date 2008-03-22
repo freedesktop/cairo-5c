@@ -1,0 +1,152 @@
+/*
+ * Copyright © 2008 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
+
+autoload Nichrome;
+
+extend namespace Nichrome {
+    
+    public namespace Lozenge {
+	
+	protected rgba_color_t illum (rgba_color_t c, real add) {
+	    return (rgba_color_t) {
+		red = max (min (c.red + add, 1), 0),
+		green = max (min (c.green + add, 1), 0),
+		blue = max (min (c.blue + add, 1), 0),
+		alpha = c.alpha };
+	}
+
+	protected rgba_color_t interp (rgba_color_t l, rgba_color_t r, real ratio)
+	{
+	    return (rgba_color_t) {
+		red = l.red * (1-ratio) + r.red * ratio,
+		green = l.green * (1-ratio) + r.green * ratio,
+		blue = l.blue * (1-ratio) + r.blue * ratio,
+		alpha = l.alpha * (1-ratio) + r.alpha * ratio };
+	}
+
+	protected void outline (cairo_t cr, int width, int height)
+	{
+	    height = height & ~1;
+	    int    radius = height / 2;
+	    move_to (cr, radius, height);
+	    arc (cr, radius, radius, radius, pi/2, -pi/2);
+	    line_to (cr, width - radius, 0);
+	    arc (cr, width - radius, radius, radius, -pi/2, pi/2);
+	    close_path (cr);
+	}
+	
+	protected void draw (cairo_t cr, int width, int height, rgba_color_t color,
+		      int highlight)
+	{
+	    real    add = .3;
+	    int	    xhighlight = highlight;
+	    int	    yhighlight = highlight;
+	    
+	    save (cr);
+	    if (height > width) {
+		rotate (cr, pi/2);
+		translate (cr, 0, -width);
+		int t = width; width = height; height = t;
+		xhighlight = highlight;
+		yhighlight = -highlight;
+	    }
+	    height = height & ~1;
+	    int    radius = height / 2;
+	    outline (cr, width, height);
+	    clip (cr);
+
+	    rgba_color_t light = color;
+	    rgba_color_t lighter = illum (light, add);
+	    rgba_color_t medium = light;
+	    rgba_color_t darker = illum (light, -add);
+ 
+	    pattern_t pat = Pattern::create_radial (radius + xhighlight,
+						    radius + yhighlight,
+						    0,
+						    radius + xhighlight,
+						    radius + yhighlight,
+						    radius);
+	    Pattern::add_color_stop_rgba (pat, 0, lighter.red, lighter.green,
+					  lighter.blue, lighter.alpha);
+	    Pattern::add_color_stop_rgba (pat, 0.5, medium.red, medium.green,
+					  medium.blue, medium.alpha);
+
+	    Pattern::add_color_stop_rgba (pat, 1, darker.red, darker.green,
+					  darker.blue, darker.alpha);
+	    set_source (cr, pat);
+	    rectangle (cr, 0, 0, radius + xhighlight, height);
+	    fill (cr);
+
+	    pattern_t pat = Pattern::create_linear (0, yhighlight, 0,
+						    height + yhighlight);
+	    Pattern::add_color_stop_rgba (pat, 0, darker.red, darker.green,
+					  darker.blue, darker.alpha);
+
+	    Pattern::add_color_stop_rgba (pat, 0.25, medium.red, medium.green,
+					  medium.blue, medium.alpha);
+
+	    Pattern::add_color_stop_rgba (pat, 0.5, lighter.red, lighter.green,
+					  lighter.blue, lighter.alpha);
+
+	    Pattern::add_color_stop_rgba (pat, 0.75, medium.red, medium.green,
+					  medium.blue, medium.alpha);
+
+	    Pattern::add_color_stop_rgba (pat, 1, darker.red, darker.green,
+					  darker.blue, darker.alpha);
+	    set_source (cr, pat);
+
+	    rectangle (cr, radius + xhighlight, 0, width - height, height);
+	    fill (cr);
+
+	    pattern_t pat = Pattern::create_radial (width - radius + xhighlight,
+						    radius + yhighlight,
+						    0,
+						    width - radius + xhighlight,
+						    radius + yhighlight,
+						    radius);
+
+	    Pattern::add_color_stop_rgba (pat, 0, lighter.red, lighter.green,
+					  lighter.blue, lighter.alpha);
+	    Pattern::add_color_stop_rgba (pat, 0.5, medium.red, medium.green,
+					  medium.blue, medium.alpha);
+
+	    Pattern::add_color_stop_rgba (pat, 1, darker.red, darker.green,
+					  darker.blue, darker.alpha);
+	    set_source (cr, pat);
+	    rectangle (cr, width - radius + xhighlight, 0, radius - xhighlight, height);
+	    fill (cr);
+	    restore (cr);
+	}
+    }
+}
