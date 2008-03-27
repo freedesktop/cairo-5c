@@ -292,12 +292,16 @@ typedef struct {
     void()		unhint;
 } game_t;
 
-void add_highlight (&game_t game, int x, int y, pattern_t p)
+void add_highlight (&game_t game, int x, int y, pattern_t p, bool selects)
 {
     enum switch (game.board[y,x]) {
     case card:
 	&(pattern_t[...]) h = &game.board[y,x].card.highlight;
 	h[dim(h)] = p;
+	if (selects) {
+	    game.board[y,x].card.selected = true;
+	    game.nselected++;
+	}
 	break;
     case empty:
 	break;
@@ -307,6 +311,10 @@ void add_highlight (&game_t game, int x, int y, pattern_t p)
 void clear_highlight (&game_t game, int x, int y)
 {
     setdim (game.board[y,x].card.highlight, 0);
+    if (game.board[y,x].card.selected) {
+	game.board[y,x].card.selected = false;
+	--game.nselected;
+    }
 }
 
 void select (&game_t game, int x, int y)
@@ -315,13 +323,10 @@ void select (&game_t game, int x, int y)
     case card:
 	if (game.board[y,x].card.selected) {
 	    clear_highlight (&game, x, y);
-	    game.board[y,x].card.selected = false;
-	    --game.nselected;
 	} else {
 	    add_highlight (&game, x, y,
-			   Pattern::create_rgba (0, 0, 0.5, 0.25));
-	    game.board[y,x].card.selected = true;
-	    ++game.nselected;
+			   Pattern::create_rgba (0, 0, 0.5, 0.25),
+			   true);
 	}
 	break;
     case empty:
@@ -367,7 +372,6 @@ void unhighlight (&game_t game) {
 	    case empty:
 		break;
 	    }
-    game.nselected = 0;
 }
 
 (poly(card_t c))[*] getters = {
@@ -554,7 +558,7 @@ find_set (&game_t game)
 	       {
 		pattern_t pat = highlight_pattern (set++);
 		for (int i = 0; i < 3; i++)
-		    add_highlight (&game, pos[i].x, pos[i].y, pat);
+		    add_highlight (&game, pos[i].x, pos[i].y, pat, false);
 		return true;
 	       });
 }
