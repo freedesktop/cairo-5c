@@ -56,9 +56,13 @@ extend namespace Nichrome {
 	public void button (&toggle_t widget, &button_event_t event) {
 	    enum switch (event.type) {
 	    case press:
+		if (event.button > 3)
+		    break;
 		set (&widget, !widget.pressed);
 		break;
 	    case release:
+		if (event.button > 3)
+		    break;
 	    default:
 		break;
 	    }

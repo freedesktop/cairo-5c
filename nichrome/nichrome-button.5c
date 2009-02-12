@@ -150,10 +150,14 @@ extend namespace Nichrome {
 	protected void button (&button_t widget, &button_event_t event) {
 	    enum switch (event.type) {
 	    case press:
+		if (event.button > 3)
+		    break;
 		widget.pressed = true;
 		Widget::redraw (&widget);
 		break;
 	    case release:
+		if (event.button > 3)
+		    break;
 		Widget::redraw (&widget);
 		widget.pressed = false;
 		if (widget.inside)
