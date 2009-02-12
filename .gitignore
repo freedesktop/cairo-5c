@@ -4,6 +4,7 @@
 *.deb
 .deps
 .libs
+ChangeLog
 Makefile
 Makefile.in
 aclocal.m4

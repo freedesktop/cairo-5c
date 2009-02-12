@@ -155,11 +155,15 @@ extend namespace Nichrome {
 	protected void button (&scrollbar_t widget, &button_event_t event) {
 	    enum switch (event.type) {
 	    case press:
+		if (event.button > 3)
+		    break;
 		real pos = event_pos (&widget, &event);
 		widget.state = (state_t) { drag = { delta = pos - widget.pos }};
 		Widget::redraw (&widget);
 		break;
 	    case release:
+		if (event.button > 3)
+		    break;
 		real	pos = drag_pos (&widget, event_pos (&widget, &event));
 		widget.state = state_t.up;
 		widget.pos = pos;

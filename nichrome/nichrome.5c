@@ -185,11 +185,15 @@ namespace Nichrome {
 	}
 	
 	protected void resize (&widget_t widget) {
-	    if (!is_uninit (&widget.container))
-		twixt (Mutex::acquire (widget.nichrome.drawing);
-		       Mutex::release (widget.nichrome.drawing))
-		    widget.container.resize (&widget.container, &widget);
-	    else
+	    if (!is_uninit (&widget.container)) {
+		if (widget.nichrome.drawing->owner != (mutex_owner.owner) Thread::current())
+		{
+		    twixt (Mutex::acquire (widget.nichrome.drawing);
+			   Mutex::release (widget.nichrome.drawing))
+			widget.container.resize (&widget.container, &widget);
+		} else
+			widget.container.resize (&widget.container, &widget);
+	    } else
 		redraw (&widget);
 	}
 
