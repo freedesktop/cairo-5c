@@ -451,6 +451,8 @@ do_Cairo_Image_get_pixel (Value sv, Value xv, Value yv)
     unsigned char    	*data;
     uint32_t		pixel;
 
+    if (aborting)
+	RETURN (Void);
     if (c5s->kind != CAIRO_5C_IMAGE)
 	RaiseStandardException (exception_invalid_argument, 3,
 				NewStrString ("not an image surface_t"),
@@ -465,6 +467,7 @@ do_Cairo_Image_get_pixel (Value sv, Value xv, Value yv)
 	RaiseStandardException (exception_invalid_argument, 3,
 				NewStrString ("y out of range"),
 				NewInt(2), yv);
+
     if (aborting)
 	RETURN (Void);
 
