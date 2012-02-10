@@ -66,6 +66,9 @@
 #undef Bool
 #endif
 
+#include <librsvg/rsvg.h>
+#include <librsvg/rsvg-cairo.h>
+
 #include <nickle/builtin.h>
 
 typedef enum { CAIRO_5C_WINDOW, CAIRO_5C_IMAGE, CAIRO_5C_PDF, CAIRO_5C_SVG, CAIRO_5C_PS, CAIRO_5C_SCRATCH } cairo_5c_kind_t;
@@ -158,6 +161,9 @@ extern Type		*typeCairoPatternExtend;
 extern Type		*typeCairoPatternFilter;
 
 extern Type		*typeCairoImageFormat;
+
+extern Type		*typeRsvgDimensions;
+extern Type		*typeRsvgPosition;
 
 /* cairo.c */
     
@@ -634,5 +640,34 @@ Value
 cairo_5c_gui_open_event (cairo_5c_surface_t *c5s);
 
 #endif
+
+/* rsvg.c */
+Value
+do_Rsvg_new_from_string(Value sv);
+
+Value
+do_Rsvg_new_from_file(Value fv);
+
+Value
+do_Rsvg_render(Value cv, Value rv);
+
+Value
+do_Rsvg_render_sub(Value cv, Value rv, Value sv);
+
+Value
+do_Rsvg_set_dpi(Value rv, Value dv);
+
+Value
+do_Rsvg_set_dpi_x_y(Value rv, Value dx, Value dy);
+
+Value
+do_Rsvg_get_dimensions(Value rv);
+
+Value
+do_Rsvg_get_dimensions_sub(Value rv, Value sv);
+
+Value
+do_Rsvg_get_position_sub(Value rv, Value sv);
+
 
 #endif /* _CAIRO_5C_H_ */

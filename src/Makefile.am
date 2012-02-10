@@ -44,7 +44,8 @@ libcairo_5c_la_SOURCES = \
 	matrix.c \
 	pattern.c \
 	surface.c \
-	text.c
+	text.c \
+	rsvg.c
 
 lib_LTLIBRARIES = libcairo-5c.la
 

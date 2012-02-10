@@ -42,6 +42,7 @@ NamespacePtr	CairoImageNamespace;
 NamespacePtr	CairoPdfNamespace;
 NamespacePtr	CairoSvgNamespace;
 NamespacePtr	CairoPsNamespace;
+NamespacePtr	CairoRsvgNamespace;
 Type		*typeCairo;
 Type		*typeCairoSurface;
 Type		*typeCairoStatus;
@@ -68,6 +69,10 @@ Type		*typeCairoContent;
 Type		*typeCairoPatternExtend;
 Type		*typeCairoPatternFilter;
 Type		*typeCairoImageFormat;
+
+Type		*typeRsvg;
+Type		*typeRsvgDimensions;
+Type		*typeRsvgPosition;
 
 #define CAIRO_I		0
 #define CAIRO_S		"00"
@@ -121,6 +126,15 @@ Type		*typeCairoImageFormat;
 
 #define FORMAT_I	32
 #define FORMAT_S	"32"
+
+#define RSVG_I		33
+#define RSVG_S		"33"
+
+#define RSVG_DIMENSIONS_I	34
+#define RSVG_DIMENSIONS_S	"34"
+
+#define RSVG_POSITION_I	35
+#define RSVG_POSITION_S	"35"
 
 static Type *
 make_typedef (char	*name_str,
@@ -440,6 +454,34 @@ init_types (void)
 				      NULL,
 				      typePrim[rep_foreign]);
 
+    CairoRsvgNamespace = BuiltinNamespace(&CairoNamespace, "Rsvg")->namespace.namespace;
+
+    typeRsvgDimensions = make_typedef("dimensions_t",
+				      CairoRsvgNamespace,
+				      publish_public,
+				      RSVG_DIMENSIONS_I,
+				      NULL,
+				      BuildStructType(4,
+						      typePrim[rep_int], "width",
+						      typePrim[rep_int], "height",
+						      typePrim[rep_float], "em",
+						      typePrim[rep_float], "ex"));
+    typeRsvgPosition = make_typedef("position_t",
+				      CairoRsvgNamespace,
+				      publish_public,
+				      RSVG_POSITION_I,
+				      NULL,
+				      BuildStructType(2,
+						      typePrim[rep_int], "x",
+						      typePrim[rep_int], "y"));
+
+    typeRsvg = make_typedef("rsvg_t",
+			    CairoRsvgNamespace,
+			    publish_public,
+			    RSVG_I,
+			    NULL,
+			    typePrim[rep_foreign]);
+			    
     EXIT();
 }
 
@@ -1068,6 +1110,45 @@ nickle_init (void)
     };
 #endif
 					 
+    static const struct fbuiltin_1 rsvgfuncs_1[] = {
+	{ do_Rsvg_new_from_string, "new_from_string", RSVG_S, "s", "\n"
+	  " rsvg_t new_from_string (string svg)\n"
+	  "\n"
+	  " Create an RSVG object from the specified SVG string\n" },
+	{ do_Rsvg_new_from_file, "new_from_file", RSVG_S, "s", "\n"
+	  " rsvg_t new_from_file (string file)\n"
+	  "\n"
+	  " Create an RSVG object from the specified SVG file\n" },
+	{ do_Rsvg_get_dimensions, "get_dimensions", RSVG_DIMENSIONS_S, RSVG_S, "\n"
+	  " dimensions_t get_dimensions(rsvg_t rsvg)\n"
+	  "\n"
+	  " Get the dimensions and ex/em values for the specified SVG\n" },
+	{ 0 }
+    };
+
+    static const struct fbuiltin_2 rsvgfuncs_2[] = {
+	{ do_Rsvg_render, "render", "v", RSVG_S CAIRO_S, "\n"
+	  " void render (rsvg_t rsvg, cairo_t cairo)\n"
+	  "\n"
+	  " Draw an RSVG object using the specified cairo context\n" },
+	{ do_Rsvg_get_dimensions_sub, "get_dimensions_sub", RSVG_DIMENSIONS_S, RSVG_S "s", "\n"
+	  " dimensions_t get_dimensions_sub(rsvg_t rsvg, string id)\n"
+	  "\n"
+	  " Get the dimensions and ex/em values for the specified 'id' subset of an SVG\n" },
+	{ do_Rsvg_get_position_sub, "get_position_sub", RSVG_POSITION_S, RSVG_S "s", "\n"
+	  " position_t get_position_sub(rsvg_t rsvg, string id)\n"
+	  "\n"
+	  " Get the position of the specified 'id' subset of an SVG\n" },
+	{ 0 }
+    };
+
+    static const struct fbuiltin_3 rsvgfuncs_3[] = {
+	{ do_Rsvg_render_sub, "render_sub", "v", RSVG_S CAIRO_S "s", "\n"
+	  " void render_sub (rsvg_t rsvg, cairo_t cairo, string id)\n"
+	  "\n"
+	  " Draw the 'id' subset of an RSVG object using the specified cairo context\n" },
+	{ 0 }
+    };
     init_types ();
     
     BuiltinFuncs1 (&CairoNamespace, funcs_1);
@@ -1103,6 +1184,12 @@ nickle_init (void)
 #if HAVE_CAIRO_PS_H
     BuiltinFuncs3 (&CairoPsNamespace, psfuncs_3);
 #endif
+
+    rsvg_init();
+
+    BuiltinFuncs1 (&CairoRsvgNamespace, rsvgfuncs_1);
+    BuiltinFuncs2 (&CairoRsvgNamespace, rsvgfuncs_2);
+    BuiltinFuncs3 (&CairoRsvgNamespace, rsvgfuncs_3);
 
     RETURN(TrueVal);
 }
