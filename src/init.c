@@ -1123,6 +1123,18 @@ nickle_init (void)
 	  " dimensions_t get_dimensions(rsvg_t rsvg)\n"
 	  "\n"
 	  " Get the dimensions and ex/em values for the specified SVG\n" },
+	{ do_Rsvg_get_title, "get_title", "s", RSVG_S, "\n"
+	  " string get_title(rsvg_t rsvg)\n"
+	  "\n"
+	  " Get the title of specified SVG\n" },
+	{ do_Rsvg_get_desc, "get_desc", "s", RSVG_S, "\n"
+	  " string get_desc(rsvg_t rsvg)\n"
+	  "\n"
+	  " Get the description of specified SVG\n" },
+	{ do_Rsvg_get_metadata, "get_metadata", "s", RSVG_S, "\n"
+	  " string get_metadata(rsvg_t rsvg)\n"
+	  "\n"
+	  " Get the metadata of specified SVG\n" },
 	{ 0 }
     };
 

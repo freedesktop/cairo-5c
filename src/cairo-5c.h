@@ -669,5 +669,13 @@ do_Rsvg_get_dimensions_sub(Value rv, Value sv);
 Value
 do_Rsvg_get_position_sub(Value rv, Value sv);
 
+Value
+do_Rsvg_get_title(Value rv);
+
+Value
+do_Rsvg_get_desc(Value rv);
+
+Value
+do_Rsvg_get_metadata(Value rv);
 
 #endif /* _CAIRO_5C_H_ */

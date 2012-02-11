@@ -97,7 +97,28 @@ rsvg_foreign_free(void *object)
 Value
 do_Rsvg_new_from_string(Value sv)
 {
-    return Void;
+    ENTER();
+    rsvg_5c_t	*r5c;
+    RsvgHandle	*rsvg;
+    char	*str = StrzPart(sv, "invalid string");
+    GError	*error;
+    Value	ret;
+
+    if (!str)
+	RETURN(Void);
+    error = NULL;
+    rsvg = rsvg_handle_new_from_data((const guint8 *) str, strlen(str), &error);
+    if (!rsvg) {
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString (error->message),
+				NewInt(0), sv);
+	RETURN (Void);
+    }
+    r5c = ALLOCATE(&Rsvg5cType, sizeof (rsvg_5c_t));
+    r5c->rsvg = rsvg;
+    ret = NewForeign (RsvgId, r5c,
+		      rsvg_foreign_mark, rsvg_foreign_free);
+    RETURN(ret);
 }
 
 Value
@@ -249,3 +270,55 @@ do_Rsvg_get_position_sub(Value rv, Value sv)
     BoxValueSet(box, 1, NewInt(position_data.y));
     RETURN(ret);
 }
+
+Value
+do_Rsvg_get_title(Value rv)
+{
+    ENTER();
+    rsvg_5c_t	*r5c = rsvg_5c_get(rv);
+    const char 	*title;
+    Value	ret;
+
+    if (aborting)
+	RETURN(Void);
+    title = rsvg_handle_get_title(r5c->rsvg);
+    if (!title)
+	title = "";
+    ret = NewStrString(title);
+    RETURN(ret);
+}
+
+Value
+do_Rsvg_get_desc(Value rv)
+{
+    ENTER();
+    rsvg_5c_t	*r5c = rsvg_5c_get(rv);
+    const char 	*desc;
+    Value	ret;
+
+    if (aborting)
+	RETURN(Void);
+    desc = rsvg_handle_get_desc(r5c->rsvg);
+    if (!desc)
+	desc = "";
+    ret = NewStrString(desc);
+    RETURN(ret);
+}
+
+Value
+do_Rsvg_get_metadata(Value rv)
+{
+    ENTER();
+    rsvg_5c_t	*r5c = rsvg_5c_get(rv);
+    const char 	*metadata;
+    Value	ret;
+
+    if (aborting)
+	RETURN(Void);
+    metadata = rsvg_handle_get_metadata(r5c->rsvg);
+    if (!metadata)
+	metadata = "";
+    ret = NewStrString(metadata);
+    RETURN(ret);
+}
+
