@@ -150,6 +150,16 @@ namespace Nichrome {
 	nichrome.draw = true;
     }
 
+    public void remove (&nichrome_t nichrome, &widget_t widget) {
+	int i;
+	for (i = 0; i < dim(nichrome.widgets); i++)
+	    if (&nichrome.widgets[i] == &widget)
+		break;
+	for (; i < dim(nichrome.widgets) - 1; i++)
+	    &nichrome.widgets[i] = &nichrome.widgets[i+1];
+	setdim(nichrome.widgets, i);
+    }
+
     void draw (&nichrome_t nichrome);
 	
     public void redraw (&nichrome_t nichrome) {
