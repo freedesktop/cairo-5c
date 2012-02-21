@@ -1,0 +1,253 @@
+/*
+ * Copyright © 2012 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
+
+autoload Nichrome;
+
+extend namespace Nichrome {
+    public namespace Text {
+
+	public typedef void (&widget_t widget) callback_t;
+	
+	public typedef widget_t + struct {
+	    string  		text;
+	    int	    		caret;
+	    int			num_chars;
+	    string  		font;
+	    rgba_color_t	color;
+	    bool		clicked;
+	    real		click_x;
+	} text_t;
+	
+	typedef struct {
+	    real x, y;
+	    real pad;
+	    real caret_x, caret_y, caret_height;
+	    real width, height;
+	    real preferred_width, preferred_height;
+	} metrics_t;
+	
+	real text_x(cr, &text_t widget, int pos) {
+	    text_extents_t t = text_extents(cr, String::substr(widget.text, 0, pos));
+	    return t.x_advance;
+	}
+
+	int text_hit(cr, &text_t widget, real x) {
+	    int i;
+	    for (i = 0; i < String::length(widget.text); i++)
+		if (x < text_x(cr, &widget, i+1))
+		    break;
+	    return i;
+	}
+
+	metrics_t get_metrics (cr, &text_t widget) {
+	    set_font (cr, widget.font);
+
+	    if (widget.clicked) {
+		widget.clicked = false;
+		widget.caret = text_hit(cr, &widget, widget.click_x);
+	    }
+	    real caret_x = text_x (cr, &widget, widget.caret);
+	    text_extents_t m = text_extents (cr, "M");
+	    text_extents_t x = text_extents (cr, "x");
+	    font_extents_t font = font_extents(cr);
+	    metrics_t metrics;
+	    
+	    real pad = m.height / 2;
+	    metrics.pad = pad;
+	    metrics.preferred_width = pad + x.width * widget.num_chars + pad;
+	    metrics.preferred_height = pad + m.height + pad;
+	    metrics.width = max (widget.geometry.width, metrics.preferred_width);
+	    metrics.height = max (widget.geometry.height, metrics.preferred_height);
+	    real text_height = (x.height + m.height) / 2;
+	    real text_bearing = (x.y_bearing + m.y_bearing) / 2;
+	    metrics.y = floor ((metrics.height - text_height) / 2 
+			       - text_bearing + 0.5);
+	    metrics.x = floor (pad);
+	    metrics.caret_x = metrics.x + caret_x + 0.5;
+	    metrics.caret_y = metrics.y + m.height / 4;
+	    metrics.caret_height = m.height * 1.5;
+	    return metrics;
+	}
+	
+	public void natural (cairo_t cr, &text_t widget) {
+	    metrics_t	metrics = get_metrics (cr, &widget);
+
+	    rectangle (cr, 0, 0, metrics.preferred_width, metrics.preferred_height);
+	}
+	
+	public void outline (cairo_t cr, &text_t widget) {
+	    return natural(cr, &widget);
+	}
+	
+	public void draw (cairo_t cr, &text_t widget) {
+	    metrics_t	metrics = get_metrics (cr, &widget);
+	    move_to (cr, metrics.x, metrics.y);
+	    set_source_rgba (cr, widget.color.red, widget.color.green,
+			     widget.color.blue, widget.color.alpha);
+	    show_text (cr, widget.text);
+	    if (&widget == &widget.nichrome.key_focus) {
+		set_line_width(cr, 1);
+		move_to (cr, metrics.caret_x, metrics.caret_y);
+		rel_line_to (cr, 0, -metrics.caret_height);
+		stroke (cr);
+	    }
+	}
+	
+	protected void focus(&text_t widget, bool focus) {
+	    Widget::redraw(&widget);
+	}
+
+	protected void button(&text_t widget, &button_event_t event) {
+	    if (event.type == button_type_t.press) {
+		widget.clicked = true;
+		widget.click_x = event.x;
+		Widget::redraw(&widget);
+		Nichrome::set_key_focus(&widget.nichrome, &widget);
+	    }
+	}
+
+	protected void caret(&text_t widget, int pos) {
+	    if (pos < 0)
+		pos = 0;
+	    if (pos > String::length(widget.text))
+		pos = String::length(widget.text);
+	    if (pos != widget.caret) {
+		widget.caret = pos;
+		Widget::redraw(&widget);
+	    }
+	}
+
+	protected void insert(&text_t widget, int c) {
+	    string	before = String::substr(widget.text,
+						0,
+						widget.caret);
+	    string	after = String::substr(widget.text,
+					       widget.caret,
+					       String::length(widget.text) - widget.caret);
+	    widget.text = before + String::new(c) + after;
+	    widget.caret++;
+	    Widget::redraw(&widget);
+	}
+
+	protected void delete(&text_t widget, int count) {
+	    int	len = String::length(widget.text);
+
+	    if (count < 0)
+		count = 0;
+	    if (count > len - widget.caret)
+		count = len - widget.caret;
+	    if (count > 0) {
+		string	before = String::substr(widget.text,
+						0,
+						widget.caret);
+		string	after = String::substr(widget.text,
+					       widget.caret + count,
+					       len - (widget.caret + count));
+		widget.text = before + after;
+		Widget::redraw(&widget);
+	    }
+	}
+
+	protected void backspace (&text_t widget, int count) {
+	    while (count-- > 0) {
+		if (widget.caret > 0) {
+		    caret (&widget, widget.caret - 1);
+		    delete (&widget, 1);
+		}
+	    }
+	}
+
+	protected void key(&text_t widget, &key_event_t event) {
+	    if (event.type != key_type_t.press)
+		return;
+	    switch (event.key) {
+	    case "Left":
+		caret (&widget, widget.caret - 1);
+		break;
+	    case "Right":
+		caret (&widget, widget.caret + 1);
+		break;
+	    case "BackSpace":
+		backspace(&widget, 1);
+		break;
+	    default:
+		for (int i = 0; i < String::length(event.text); i++)
+		{
+		    int c = event.text[i];
+		    switch (c) {
+		    case '\b':
+			backspace (&widget, 1);
+			break;
+		    default:
+			if (Ctype::isprint(c))
+			    insert(&widget, c);
+			break;
+		    }
+		}
+		break;
+	    }
+	}
+
+	protected void print (&text_t widget, int indent) {
+	    do_indent(indent);
+	    printf("text %s %v\n", widget.text, widget.geometry);
+	}
+
+	public void init (&text_t widget, &nichrome_t nichrome, int num_chars) {
+	    Widget::init (&nichrome, &widget);
+	    widget.text = "hello";
+	    widget.num_chars = num_chars;
+	    widget.caret = 0;
+	    widget.font = Widget::default_font;
+	    widget.draw = draw;
+	    widget.outline = outline;
+	    widget.natural = natural;
+	    widget.focus = focus;
+	    widget.button = button;
+	    widget.key = key;
+	    widget.clicked = false;
+	    widget.color = (rgba_color_t) {
+		red = 0, green = 0, blue = 0, alpha = 1
+	    };
+	    widget.print = print;
+	}
+	
+	public *widget_t new (&nichrome_t nichrome, int num_chars) {
+	    text_t	widget;
+
+	    init (&widget, &nichrome, num_chars);
+	    return &widget;
+	}
+    }
+}

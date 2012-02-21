@@ -38,7 +38,8 @@ NICKLEFILES = \
 	nichrome-button.5c \
 	nichrome-label.5c \
 	nichrome-lozenge.5c \
-	nichrome-toggle.5c
+	nichrome-toggle.5c \
+	nichrome-text.5c
 
 EXTRA_DIST = $(NICKLEFILES)
 
