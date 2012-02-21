@@ -625,6 +625,23 @@ cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height)
     return True;
 }
 
+void
+cairo_5c_gui_resize (cairo_5c_surface_t *c5s, int width, int height)
+{
+    cairo_5c_gui_t *gui = c5s->u.window.gui;
+
+    if (!gui)
+	return;
+
+    if (gui->window)
+    {
+	Window	wid = gui->window;
+	XResizeWindow (gui->global->dpy, wid, width, height);
+	/* let configure notify do the actual resize work */
+	XFlush (gui->global->dpy);
+    }
+}
+
 /*
  * called when the client destroys a gui surface
  */

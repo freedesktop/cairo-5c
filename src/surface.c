@@ -229,6 +229,30 @@ do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
 
     RETURN (ret);
 }
+
+Value
+do_Cairo_Surface_resize_window (Value sv, Value wv, Value hv)
+{
+    ENTER ();
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get(sv);
+    int			width = IntPart (wv, "invalid width");
+    int			height = IntPart (hv, "invalid height");
+    
+    if (aborting )
+	RETURN (Void);
+
+    if (c5s->kind != CAIRO_5C_WINDOW) {
+	RaiseStandardException (exception_invalid_argument, 3,
+				NewStrString ("Not a window"),
+				NewInt(0), sv);
+	RETURN (Void);
+	    
+    }
+    
+    cairo_5c_gui_resize (c5s, width, height);
+
+    RETURN (Void);
+}
 #endif
 
 Value
@@ -453,10 +477,12 @@ do_Cairo_Image_get_pixel (Value sv, Value xv, Value yv)
 
     if (aborting)
 	RETURN (Void);
-    if (c5s->kind != CAIRO_5C_IMAGE)
+    if (c5s->kind != CAIRO_5C_IMAGE) {
 	RaiseStandardException (exception_invalid_argument, 3,
 				NewStrString ("not an image surface_t"),
 				NewInt(0), sv);
+	RETURN(Void);
+    }
     width = cairo_image_surface_get_width (c5s->surface);
     height = cairo_image_surface_get_height (c5s->surface);
     if (x < 0 || width <= x)

@@ -944,6 +944,10 @@ nickle_init (void)
 	    " surface_t create_window (real width, real height)\n"
 	    "\n"
 	    " Create a window and return a surface pointer for it\n" },
+	{ do_Cairo_Surface_resize_window, "resize_window", "v",  SURFACE_S "nn", "\n"
+	    " void resize_window (surface_t surface, real width, real height)\n"
+	    "\n"
+	    " Request that a window be resized. A configure event will signal the new size.\n" },
 #endif
 	{ do_Cairo_Surface_set_device_offset, "set_device_offset", "v", SURFACE_S "nn", "\n"
 	    " void set_device_offset (surface_t surface, real x, real y)\n"

@@ -204,6 +204,9 @@ cairo_5c_surface_get (Value av);
 #if HAVE_CAIRO_XLIB_H
 Value
 do_Cairo_Surface_create_window (Value namev, Value wv, Value hv);
+
+Value
+do_Cairo_Surface_resize_window (Value sv, Value wv, Value hv);
 #endif
 
 Value
@@ -617,6 +620,9 @@ do_Cairo_scaled_text_extents (Value sfv, Value uv);
 #if HAVE_CAIRO_XLIB_H
 Bool
 cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height);
+
+void
+cairo_5c_gui_resize (cairo_5c_surface_t *c5s, int width, int height);
 
 void
 cairo_5c_gui_destroy (cairo_5c_surface_t *c5s);
