@@ -184,6 +184,11 @@ extend namespace Nichrome {
 	    }
 	}
 
+	protected void print(&button_t widget, int indent) {
+	    do_indent(indent);
+	    printf("button %s %v\n", widget.label, widget.geometry);
+	}
+
 	protected void init (&button_t widget,
 			     &nichrome_t nichrome,
 			     string label,
@@ -205,6 +210,7 @@ extend namespace Nichrome {
 	    widget.text_color = (rgba_color_t) {
 		red = 0, green = 0, blue = 0, alpha = 1
 	    };
+	    widget.print = print;
 	}
 	
 	protected *widget_t new (&nichrome_t nichrome,

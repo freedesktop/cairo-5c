@@ -89,12 +89,18 @@ namespace Nichrome {
     public typedef void(&widget_t, &button_event_t) button_handler_t;
     public typedef void(&widget_t, &motion_event_t) motion_handler_t;
     public typedef void(&widget_t, &key_event_t) key_handler_t;
+    public typedef void(&widget_t, bool focus) focus_handler_t;
+    public typedef void(&poly object, int indent) print_handler_t;
+
+    public void do_indent (int indent) {
+	while (indent-- > 0)
+	    printf(" ");
+    }
 
     public typedef struct {
-	&nichrome_t	    nichrome;
 	&container_t	    container;
 	configure_handler_t configure;
-	draw_t		    natural;
+	print_handler_t	    print;
     } contained_t;
 
     /*
@@ -102,13 +108,16 @@ namespace Nichrome {
      */
 
     public typedef contained_t + struct {
+	&nichrome_t	    nichrome;
 	rect_t		    geometry;
 	rect_t		    extents;
 	draw_t		    outline;
 	draw_t		    draw;
+	draw_t		    natural;
 	button_handler_t    button;
 	motion_handler_t    motion;
 	key_handler_t	    key;
+	focus_handler_t	    focus;
     } widget_t;
 
     /*
@@ -178,6 +187,11 @@ namespace Nichrome {
 
 	protected void natural (cairo_t cr, &widget_t widget) = ◊;
 
+	protected void print (&widget_t widget, int indent) {
+	    do_indent(indent);
+	    printf ("widget %v\n", widget.geometry);
+	}
+
 	protected void init (&nichrome_t nichrome, &widget_t widget) {
 	    widget.geometry = (rect_t) {
 		x = 0, y = 0, width = 0, height = 0
@@ -187,6 +201,7 @@ namespace Nichrome {
 	    widget.natural = natural;
 	    widget.outline = natural;
 	    widget.draw = natural;
+	    widget.print = print;
 	    Nichrome::add (&nichrome, &widget);
 	}
 	
@@ -385,7 +400,15 @@ namespace Nichrome {
     }
 
     public void set_key_focus (&nichrome_t nichrome, &widget_t widget) {
-	&nichrome.key_focus = &widget;
+	if (&widget != &nichrome.key_focus) {
+	    if (!is_uninit (&nichrome.key_focus))
+		if (!is_uninit(&nichrome.key_focus.focus))
+		    nichrome.key_focus.focus(&nichrome.key_focus, false);
+	    &nichrome.key_focus = &widget;
+	    if (&widget != &no_widget)
+		if (!is_uninit(&widget.focus))
+		    widget.focus(&widget, true);
+	}
     }
 
     string hex_utf8 (int[...] bytes)
@@ -596,7 +619,7 @@ namespace Nichrome {
 	    case "key-up":
 		File::fscanf (l, "%s", &(string keyname));
 		int[...] bytes = {};
-		while (File::fscanf (l, "%02x", &(int byte)) == 1)
+		while (File::fscanf (l, "%x", &(int byte)) == 1)
 		    bytes[dim(bytes)] = byte;
 		string s = hex_utf8(bytes);
 		key_event_t kev = {

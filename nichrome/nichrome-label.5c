@@ -100,6 +100,11 @@ extend namespace Nichrome {
 	    Widget::resize (&widget);
 	}
 
+	protected void print (&label_t widget, int indent) {
+	    do_indent(indent);
+	    printf("label %s %v\n", widget.label, widget.geometry);
+	}
+
 	public void init (&label_t widget, &nichrome_t nichrome, string label) {
 	    Widget::init (&nichrome, &widget);
 	    widget.label = label;
@@ -110,6 +115,7 @@ extend namespace Nichrome {
 	    widget.color = (rgba_color_t) {
 		red = 0, green = 0, blue = 0, alpha = 1
 	    };
+	    widget.print = print;
 	}
 	
 	public *widget_t new (&nichrome_t nichrome,

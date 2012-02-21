@@ -70,8 +70,10 @@ extend namespace Nichrome {
 	} item_t;
 
 	public typedef container_t + contained_t + struct {
+	    &nichrome_t	    nichrome;
 	    dir_t	    dir;
 	    item_t[...]	    items;
+	    bool	    realized;
 	} box_t;
 
 	container_t no_container;
@@ -90,12 +92,26 @@ extend namespace Nichrome {
 		    break;
 		}
 	    }
-	    if (&box.container == &no_container)
-		box.nichrome.resize = true;
-	    else
+	    if (&box.container == &no_container) {
+		if (box.realized)
+		    box.nichrome.resize = true;
+	    } else
 		box.container.resize (&box.container, &box);
 	}
 
+	void box_print (&box_t box, int indent) {
+	    do_indent(indent);
+	    printf ("box %v {\n", box.dir);
+	    for (int i = 0; i < dim(box.items); i++) {
+		&item_t	item = &box.items[i];
+		item.contained.print (&item.contained, indent + 2);
+		do_indent(indent + 4);
+		printf ("layout %v\n", item.layout);
+	    }
+	    do_indent(indent);
+	    printf ("}\n");
+	    
+	}
 	/*
 	 * Construct a new box, computing the layout of the inserted items
 	 */
@@ -104,7 +120,9 @@ extend namespace Nichrome {
 		container = &no_container,
 		resize = box_resize,
 		dir = dir,
-		items = items
+		items = items,
+		realized = false,
+		print = box_print,
 	    };
 	    for (int i = 0; i < dim (items); i++)
 	    {
@@ -137,13 +155,13 @@ extend namespace Nichrome {
 	}
 
 	/*
-	 * Handle containeds inside of boxes
+	 * Handle widgets inside of boxes
 	 */
 
-	/* find the natural bounding box of a contained */
-	rect_t contained_rect (&contained_t contained) {
-	    cairo_t cr = cairo (&contained.nichrome);
-	    contained.natural (cr, &contained);
+	/* find the natural bounding box of a widget */
+	rect_t widget_rect (&widget_t widget) {
+	    cairo_t cr = cairo (&widget.nichrome);
+	    widget.natural (cr, &widget);
 	    rect_t r = fill_extents (cr);
 	    Cairo::destroy (cr);
 	    return r;
@@ -152,8 +170,8 @@ extend namespace Nichrome {
 	/*
 	 * Widget layout follows natural size
 	 */
-	void contained_query (&contained_t contained, &layout_t layout) {
-	    rect_t  natural = contained_rect (&contained);
+	void widget_query (&widget_t widget, &layout_t layout) {
+	    rect_t  natural = widget_rect (&widget);
 	    layout.natural_width = natural.width;
 	    layout.natural_height = natural.height;
 	}
@@ -161,17 +179,17 @@ extend namespace Nichrome {
 	/*
 	 * Set the geometry of the contained
 	 */
-	void contained_configure (&contained_t contained,
-				  layout_t layout,
-				  rect_t geometry)
+	void widget_configure (&widget_t widget,
+			       layout_t layout,
+			       rect_t geometry)
 	{
-	    contained.configure (&contained, geometry);
+	    widget.configure (&widget, geometry);
 	}
 
 	/*
-	 * Construct a new contained item for a box
+	 * Construct a new widget item for a box
 	 */
-	protected item_t contained_item (&contained_t contained, real stretch...)
+	protected item_t widget_item (&widget_t widget, real stretch...)
 	{
 	    get_stretches (&stretch,
 			   &(real stretch_width), &(real stretch_height));
@@ -180,13 +198,10 @@ extend namespace Nichrome {
 		    stretch_width = stretch_width,
 		    stretch_height = stretch_height
 		},
-		query = contained_query,
-		configure = contained_configure,
-		contained = &contained
+		query = widget_query,
+		configure = widget_configure,
+		contained = &widget
 	    };
-	}
-	protected item_t widget_item (&contained_t contained, real stretch...){
-	    return contained_item (&contained, stretch...);
 	}
 
 	/*
@@ -197,7 +212,7 @@ extend namespace Nichrome {
 	 * Compute the layout for this box by
 	 * walking through the items in the box
 	 */
-	protected void query (&box_t box, &layout_t layout) {
+	protected void box_query (&box_t box, &layout_t layout) {
 	    layout.natural_width = 0;
 	    layout.natural_height = 0;
 	    if (box.dir == dir_t.horizontal) {
@@ -233,11 +248,13 @@ extend namespace Nichrome {
 	/*
 	 * Configure a box
 	 */
-	protected void configure (&box_t box, layout_t layout, rect_t geometry) {
+	protected void box_configure (&box_t box, layout_t layout, rect_t geometry) {
 	    real    actual;
 	    real    stretch;
 	    real    pref;
 	    real    pos;
+
+	    box.realized = true;
 
 	    if (box.dir == dir_t.horizontal) {
 		stretch = layout.stretch_width;
@@ -309,8 +326,8 @@ extend namespace Nichrome {
 	{
 	    return (item_t) {
 		contained = &box,
-		query = query,
-		configure = configure,
+		query = box_query,
+		configure = box_configure,
 	    };
 	}
 
@@ -355,11 +372,16 @@ extend namespace Nichrome {
 	    }
 	}
 
+	void glue_print(&glue_t glue, int indent) {
+	    do_indent(indent);
+	    printf ("glue\n");
+	}
+
 	protected item_t glue_item (real param...)
 	{
 	    get_glue (&param, &(real size), &(real stretch));
 	    return (item_t) {
-		contained = &(glue_t) { },
+		contained = &(glue_t) { .print = glue_print },
 		layout = {
 		    natural_width = size,
 		    natural_height = size,
@@ -385,26 +407,21 @@ extend namespace Nichrome {
 	    box.resize (&box, &new.contained);
 	}
 
-	protected void add_contained (&box_t box,
-				&contained_t contained,
-				real stretch_width,
-				real stretch_height)
+	protected void add_widget (&box_t box,
+				   &widget_t widget,
+				   real stretch ...)
 	{
-	    add_item (&box,
-		      contained_item (&contained, stretch_width, stretch_height));
+	    add_item (&box, widget_item (&widget, stretch ...));
 	}
 
-	protected void add_box (&box_t box,
-			     &box_t add)
+	protected void add_box (&box_t box, &box_t add)
 	{
 	    add_item (&box, box_item (&add));
 	}
 
-	protected void add_glue (&box_t box,
-			      real param ...)
+	protected void add_glue (&box_t box, real param ...)
 	{
-	    get_glue (&param, &(real size), &(real stretch));
-	    add_item (&box, glue_item (size, stretch));
+	    add_item (&box, glue_item (param ...));
 	}
     }
 
@@ -429,20 +446,24 @@ extend namespace Nichrome {
 	 * Get box preferred size
 	 */
 	Box::layout_t	layout;
-	Box::query (&box, &layout);
+	Box::box_query (&box, &layout);
 
 	/*
 	 * Layout box
 	 */
-	Box::configure (&box, layout, geometry);
+	Box::box_configure (&box, layout, geometry);
     }
 
     public void set_box (&nichrome_t nichrome, &Box::box_t box)
     {
 	&box.nichrome = &nichrome;
+	Box::layout_t layout;
+	Box::box_query (&box, &layout);
+	Nichrome::resize (&nichrome, layout.natural_width, layout.natural_height);
 	Nichrome::configure (&nichrome, &box);
 	nichrome.configure = void func (&nichrome_t nichrome) {
 	    Nichrome::configure (&nichrome, &box);
 	};
+#	box.print(&box, 0);
     }
 }
