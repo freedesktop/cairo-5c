@@ -549,13 +549,8 @@ namespace Nichrome {
 
 	while (nichrome.running) {
 	    if (nichrome.draw)
-	    {
-		if (Semaphore::test (has_event))
-		    Semaphore::signal (has_event);
-		else {
+		if (Semaphore::count (has_event) == 0)
 		    draw (&nichrome);
-		}
-	    }
 	    
 	    Semaphore::wait (has_event);
 	    string line = event_line;
