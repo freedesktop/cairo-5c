@@ -459,7 +459,7 @@ extend namespace Nichrome {
 	    
 	void natural (cairo_t cr, &grid_widget_t widget)
 	{
-	    rectangle (cr, 0, 0, 1, 1);
+	    rectangle (cr, 0, 0, 256, 256);
 	}
 	
 	void button (&grid_widget_t widget, &button_event_t event) {

@@ -583,7 +583,7 @@ extend namespace Nichrome {
 
 	void natural (cairo_t cr, &set_widget_t widget)
 	{
-	    rectangle (cr, 0, 0, 1, 1);
+	    rectangle (cr, 0, 0, 640, 480);
 	}
 	
 	void button (&set_widget_t widget, &button_event_t event) {
