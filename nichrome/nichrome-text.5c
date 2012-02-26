@@ -224,9 +224,14 @@ extend namespace Nichrome {
 	    printf("text %s %v\n", widget.text, widget.geometry);
 	}
 
+	public void set_text(&text_t widget, string new_text) {
+	    widget.text = new_text;
+	    Widget::redraw(&widget);
+	}
+
 	public void init (&text_t widget, &nichrome_t nichrome, int num_chars) {
 	    Widget::init (&nichrome, &widget);
-	    widget.text = "hello";
+	    widget.text = "";
 	    widget.num_chars = num_chars;
 	    widget.caret = 0;
 	    widget.font = Widget::default_font;
