@@ -106,7 +106,7 @@ extend namespace Nichrome {
 		&item_t	item = &box.items[i];
 		item.contained.print (&item.contained, indent + 2);
 		do_indent(indent + 4);
-		printf ("layout %v\n", item.layout);
+		printf ("active %v layout %v\n", item.contained.active, item.layout);
 	    }
 	    do_indent(indent);
 	    printf ("}\n");
@@ -123,6 +123,7 @@ extend namespace Nichrome {
 		items = items,
 		realized = false,
 		print = box_print,
+		active = true,
 	    };
 	    for (int i = 0; i < dim (items); i++)
 	    {
@@ -225,6 +226,9 @@ extend namespace Nichrome {
 
 	    for (int i = 0; i < dim (box.items); i++)
 	    {
+		if (!box.items[i].contained.active)
+		    continue;
+
 		&layout_t child = &box.items[i].layout;
 
 		if (box.dir == dir_t.horizontal) {
@@ -273,6 +277,10 @@ extend namespace Nichrome {
 
 	    for (int i = 0; i < dim (box.items); i++) {
 		&item_t	    item = &box.items[i];
+
+		if (!item.contained.active)
+		    continue;
+
 		&layout_t   child_layout = &item.layout;
 		real	    delta_this;
 
@@ -381,7 +389,7 @@ extend namespace Nichrome {
 	{
 	    get_glue (&param, &(real size), &(real stretch));
 	    return (item_t) {
-		contained = &(glue_t) { .print = glue_print },
+		contained = &(glue_t) { .print = glue_print, .active = true },
 		layout = {
 		    natural_width = size,
 		    natural_height = size,
@@ -422,6 +430,33 @@ extend namespace Nichrome {
 	protected void add_glue (&box_t box, real param ...)
 	{
 	    add_item (&box, glue_item (param ...));
+	}
+
+	protected void set_active (&contained_t contained, bool active) {
+	    &contained_t top = &contained;
+
+	    while (&top.container != &no_container) {
+		&box_t	container = &top.container;
+		&top = &container;
+	    }
+	    &box_t top_box = &top;
+
+	    void set_all_active (&contained_t contained) {
+		contained.active = active;
+		if (is_type (contained, box_t)) {
+		    &box_t	box = &contained;
+		    printf ("setting box active %v\n", active);
+		    for (int i = 0; i < dim(box.items); i++)
+			set_all_active(&box.items[i].contained);
+		    printf ("done setting box active %v\n", active);
+		} else {
+		    box_resize(&contained.container, &contained);
+		}
+	    }
+
+	    set_all_active(&contained);
+	    if (!is_uninit(&(&top_box.nichrome)))
+		Nichrome::redraw(&top_box.nichrome);
 	}
     }
 

@@ -101,6 +101,7 @@ namespace Nichrome {
 	&container_t	    container;
 	configure_handler_t configure;
 	print_handler_t	    print;
+	bool		    active;
     } contained_t;
 
     /*
@@ -143,6 +144,7 @@ namespace Nichrome {
 	bool		    running;
 	mutex		    drawing;
 	thread		    self;
+	int		    suspend_draw;
     } nichrome_t;
 
     public widget_t no_widget;
@@ -174,10 +176,34 @@ namespace Nichrome {
     public void redraw (&nichrome_t nichrome) {
 	if (is_uninit (&nichrome.self))
 	    return;
-        if (Thread::current() != nichrome.self)
+        if (Thread::current() != nichrome.self && nichrome.suspend_draw == 0)
 	    draw (&nichrome);
 	else
 	    nichrome.draw = true;
+    }
+
+    public void suspend_draw(&nichrome_t nichrome) {
+	++nichrome.suspend_draw;
+    }
+
+    public void release_draw(&nichrome_t nichrome) {
+	assert (nichrome.suspend_draw > 0, "mismatched suspend_draw/release_draw calls");
+	--nichrome.suspend_draw;
+	if (!nichrome.running)
+	    return;
+	printf ("release running %v\n", nichrome.running);
+	printf ("release suspend_draw %d\n", nichrome.suspend_draw);
+	printf ("release draw %v\n", nichrome.draw);
+	printf ("release thread %v\n", nichrome.self);
+	if (nichrome.suspend_draw == 0 && nichrome.draw && Thread::current() != nichrome.self)
+	    draw(&nichrome);
+    }
+
+    public void set_active(&nichrome_t nichrome, &contained_t contained, bool active) {
+	if (active != contained.active) {
+	    contained.active = active;
+	    redraw (&nichrome);
+	}
     }
 
     public namespace Widget {
@@ -202,6 +228,7 @@ namespace Nichrome {
 	    widget.outline = natural;
 	    widget.draw = natural;
 	    widget.print = print;
+	    widget.active = true;
 	    Nichrome::add (&nichrome, &widget);
 	}
 	
@@ -267,7 +294,7 @@ namespace Nichrome {
 	x = a.x; y = a.y;
 	for (int w = 0; w < dim (nichrome.widgets); w++) {
 	    &widget_t widget = &nichrome.widgets[w];
-	    if (Widget::in_widget (&widget, x, y))
+	    if (widget.active && Widget::in_widget (&widget, x, y))
 		return &widget;
 	}
 	return &no_widget;
@@ -460,6 +487,10 @@ namespace Nichrome {
 	    for (i = dim (nichrome.widgets) - 1; i >= 0; i--)
 	    {
 		&widget_t	widget = &nichrome.widgets[i];
+
+		if (!widget.active)
+		    continue;
+
 		if (!is_uninit (&widget.draw)) {
 		    save (cr);
 		    translate (cr, widget.geometry.x, widget.geometry.y);
@@ -504,8 +535,9 @@ namespace Nichrome {
 	nichrome.surface = Cairo::Surface::create_window (name, width, height);
 
 	nichrome.event = Cairo::Surface::open_event (nichrome.surface);
-	nichrome.draw = true;
+	nichrome.draw = false;
 	nichrome.resize = true;
+	nichrome.running = false;
 	nichrome.widgets = ((&widget_t)[...]) {};
 	nichrome.scale = (point_t) { x = 1, y = 1 };
 	nichrome.destroy = destroy;
@@ -516,6 +548,7 @@ namespace Nichrome {
 	&nichrome.outline_widget = &no_widget;
 	nichrome.outline_cr = cairo (&nichrome);
 	nichrome.drawing = Mutex::new ();
+	nichrome.suspend_draw = 0;
 	return &nichrome;
     }
     
@@ -557,6 +590,7 @@ namespace Nichrome {
     public void main_loop (&nichrome_t nichrome) {
 	
 	nichrome.running = true;
+	nichrome.draw = true;
 	nichrome.self = Thread::current ();
 
 	string event_line;
