@@ -191,10 +191,6 @@ namespace Nichrome {
 	--nichrome.suspend_draw;
 	if (!nichrome.running)
 	    return;
-	printf ("release running %v\n", nichrome.running);
-	printf ("release suspend_draw %d\n", nichrome.suspend_draw);
-	printf ("release draw %v\n", nichrome.draw);
-	printf ("release thread %v\n", nichrome.self);
 	if (nichrome.suspend_draw == 0 && nichrome.draw && Thread::current() != nichrome.self)
 	    draw(&nichrome);
     }

@@ -445,10 +445,8 @@ extend namespace Nichrome {
 		contained.active = active;
 		if (is_type (contained, box_t)) {
 		    &box_t	box = &contained;
-		    printf ("setting box active %v\n", active);
 		    for (int i = 0; i < dim(box.items); i++)
 			set_all_active(&box.items[i].contained);
-		    printf ("done setting box active %v\n", active);
 		} else {
 		    box_resize(&contained.container, &contained);
 		}
