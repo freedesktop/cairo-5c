@@ -222,6 +222,7 @@ namespace Nichrome {
 	    widget.geometry = (rect_t) {
 		x = 0, y = 0, width = 0, height = 0
 	    };
+	    widget.extents = widget.geometry;
 	    &widget.nichrome = &nichrome;
 	    widget.configure = configure;
 	    widget.natural = natural;
