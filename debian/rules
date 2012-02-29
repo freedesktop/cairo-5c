@@ -11,7 +11,9 @@ configure-stamp:
 	./configure --with-nickle-libdir='$${datadir}/nickle' --prefix=/usr --mandir='$${prefix}/share/man'
 	touch configure-stamp
 
-build: configure-stamp build-stamp
+build: configure-stamp build-arch build-indep
+build-arch: build-stamp
+build-indep: build-stamp
 build-stamp:
 	dh_testdir
 	$(MAKE)
@@ -28,7 +30,7 @@ clean:
 install: build
 	dh_testdir
 	dh_testroot
-	dh_clean -k
+	dh_prep
 	dh_installdirs
 	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
 	pwd

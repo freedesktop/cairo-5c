@@ -1,3 +1,11 @@
+cairo-5c (1.5) unstable; urgency=low
+  * Add SVG support using librsvg
+  * Add new single-line text widget
+  * resize application to preferred size at startup time
+  * Update packaging to current standards
+
+ -- Keith Packard <keithp@keithp.com>  Wed, 29 Feb 2012 22:35:37 +1300
+
 cairo-5c (1.4) unstable; urgency=low
   * Rename toolkit to 'nichrome'
   * Use lozenge theme for buttons, toggles and scrollbars
@@ -27,9 +35,9 @@ cairo-5c (1.1) unstable; urgency=low
   * Add buttons to tic-tac-toe example
   * Add setgame example
   * Add keyboard support
-  
+
  -- Keith Packard <keithp@keithp.com>  Sun, 13 Jan 2008 21:59:43 -0800
- 
+
 cairo-5c (1.0) unstable; urgency=low
 
   * Original debian packaging exporting version 1.0.

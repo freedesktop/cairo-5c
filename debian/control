@@ -2,19 +2,18 @@ Source: cairo-5c
 Section: interpreters
 Priority: optional
 Maintainer: Keith Packard <keithp@keithp.com>
-Build-Depends: debhelper (>= 4), libcairo2-dev, nickle (>= 2.67), libx11-dev, libfreetype6-dev
-Standards-Version: 3.7.3
+Build-Depends: debhelper (>= 7), libcairo2-dev, nickle (>= 2.73), libx11-dev, libfreetype6-dev
+Standards-Version: 3.9.2
 
 Package: cairo-5c
-Section: interpreters
 Architecture: any
 Depends: ${misc:Depends}, nickle, libcairo5c-0
 Description: nickle bindings for the cairo graphics library
  This package contains the nickle code to load and use the cairo-5c library
 
 Package: libcairo5c-0
-Section: libs
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: nickle bindings for the cairo graphics library
- This package contains a shared library which links to the cairo library.
+Description: library for cairo nickle bindings
+ This package contains a shared library which links to the cairo
+ library using the nickle FFI mechanism.
