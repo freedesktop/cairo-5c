@@ -1,0 +1,224 @@
+/*
+ * Copyright © 2005 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
+
+autoimport Cairo;
+
+void fob (cairo_t cr)
+{
+    translate (cr, -7, -9);		
+    scale (cr, 1.5, 1.5);
+
+    void face (cairo_t cr)
+    {
+	save (cr);
+	set_line_width (cr, 3);
+
+	scale (cr, 3.5, 4);
+	arc (cr, 9, 9, 7, 0, 2*pi);
+	save (cr);
+	pattern_t pat = Pattern::create_radial (12, 12, 0, 9, 9, 7);
+	Pattern::add_color_stop_rgba (pat, 0, 1, 1, 1, 1);
+	Pattern::add_color_stop_rgba (pat, 1, 1, .8, .6, 1);
+	set_source (cr, pat);
+	fill_preserve (cr);
+	restore (cr);
+	scale (cr, 1/3.5, 1/4);
+	stroke (cr);
+	restore (cr);
+    }
+
+    void sclera (cairo_t cr, real x, real y)
+    {
+	save (cr);
+	translate (cr, x, y);
+	set_source_rgb (cr, 1, 1, 1);
+	arc (cr, 0, 0, 4, 0, 2*pi);
+	fill (cr);
+	restore (cr);
+    }
+
+    void iris (cairo_t cr, real x, real y)
+    {
+	save (cr);
+	translate (cr, x, y);
+	set_source_rgb (cr, .5, .5, 1);
+	arc (cr, 0, 0, 2.5, 0, 2*pi);
+	fill (cr);
+	restore (cr);
+    }
+
+    void pupil (cairo_t cr, real x, real y)
+    {
+	save (cr);
+	translate (cr, x, y);
+	set_source_rgb (cr, 0, 0, 0);
+	arc (cr, 0, 0, 1.8, 0, 2*pi);
+	fill (cr);
+	restore (cr);
+    }
+
+    void specular (cairo_t cr, real x, real y)
+    {
+	save (cr);
+	translate (cr, x, y);
+	pattern_t pat = Pattern::create_radial (.5, .5, 0, 0, 0, 3);
+	Pattern::add_color_stop_rgba (pat, 0, 1, 1, 1, .5);
+	Pattern::add_color_stop_rgba (pat, .5, 0, 0, 0, 0);
+	Pattern::add_color_stop_rgba (pat, 1, 0, 0, 0, 0);
+	set_source (cr, pat);
+	arc (cr, 0, 0, 4, 0, 2*pi);
+	fill (cr);
+	restore (cr);
+    }
+
+    void eye (cairo_t cr, real x, real y)
+    {
+	sclera (cr, x, y);
+	iris (cr, x, y);
+	pupil (cr, x, y);
+	specular (cr, x, y);
+    }
+
+    void lens (cairo_t cr, real x, real y)
+    {
+	save (cr);
+	translate (cr, x, y);
+	move_to (cr, 0, 0);
+	line_to (cr, 0, 10);
+	curve_to (cr, 0, 18, 13, 18, 13, 10);
+	line_to (cr, 13, 0);
+	close_path (cr);
+	if (true)
+	{
+	    save (cr);
+	    if (true)
+	    {
+		pattern_t pat = Pattern::create_linear (0, 0, 11, 11);
+		Pattern::add_color_stop_rgba (pat, 0, .4, .4, .4, 1);
+		Pattern::add_color_stop_rgba (pat, 1, 1, 1, 1, 1);
+		set_source (cr, pat);
+	    }
+	    else
+	    {
+		pattern_t pat = Pattern::create_radial (8, 10, 0,
+							6.5, 6.5, 8);
+		Pattern::add_color_stop_rgba (pat, 0, 1, 1, 1, 1);
+		Pattern::add_color_stop_rgba (pat, 1, .3, .3, .3, 1);
+		set_source (cr, pat);
+	    }
+	    fill (cr);
+	    restore (cr);
+	}
+	restore (cr);
+    }
+
+    void letters (cairo_t cr)
+    {
+	save (cr);
+	select_font_face (cr, "sans", font_slant_t.NORMAL, font_weight_t.NORMAL);
+	set_font_size (cr, 40);
+	rotate (cr, 90 * pi / 180);
+	translate (cr, 12, -20);
+	move_to (cr, 0, 0);
+	show_text (cr, "F");
+	move_to (cr, 8, 4);
+	show_text (cr, "B");
+	restore (cr);
+    }
+
+
+    void earpiece (cairo_t cr)
+    {
+	save (cr);
+	set_line_width (cr, 3);
+	move_to (cr, 12, 20);
+	set_source_rgba (cr, 0, 0, 0, 1);
+	curve_to (cr, 15, 20, 14, 23, 17, 26);
+	stroke (cr);
+	restore (cr);
+    }
+
+    face (cr);
+    lens (cr, 18, 26);
+    lens (cr, 31, 26);
+    letters (cr);
+    earpiece (cr);
+}
+
+void
+fob_to_png (cairo_t cr, string filename)
+{
+    fob (cr); write_to_png (cr, filename);
+}
+
+if (true)
+{
+    cairo_t cr = new_svg ("fob.svg", 800, 900);
+    scale (cr, 10, 10);
+    fob (cr);
+    destroy(cr);
+
+    cairo_t cr = new_image (80, 90);
+    fob_to_png (cr, "fob-80x90.png");
+    destroy (cr);
+
+    cairo_t cr = new_image (400, 450);
+    scale (cr, 5, 5);
+    fob_to_png (cr, "fob-400x450.png");
+    destroy (cr);
+
+    cairo_t cr = new_image (16, 16);
+    scale (cr, 0.1{7}, 0.1{7});
+    translate (cr, 5, 0);
+    fob_to_png (cr, "fob-16x16.png");
+    destroy (cr);
+
+    cairo_t cr = new_image (32, 32);
+    scale (cr, 0.3{5}, 0.3{5});
+    translate (cr, 5, 0);
+    fob_to_png (cr, "fob-32x32.png");
+    destroy (cr);
+
+    cairo_t cr = new_image (48, 48);
+    scale (cr, 0.5{3}, 0.5{3});
+    translate (cr, 5, 0);
+    fob_to_png (cr, "fob-48x48.png");
+    destroy (cr);
+}
+else
+{
+    cairo_t cr = new ();
+    fob (cr);
+    sleep (10000000);
+}
