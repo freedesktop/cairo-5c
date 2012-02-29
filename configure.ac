@@ -4,24 +4,26 @@ dnl Copyright © 2007-2007 Keith Packard
 dnl All Rights Reserved.  See the file COPYING in this directory
 dnl for licensing information.
 
-AC_PREREQ(2.59)
+AC_PREREQ(2.64)
 
 AC_INIT([cairo-5c],
-	1.4,
+	[1.5],
 	[http://cairographics.org],
-	cairo-5c)
+	[cairo-5c])
 
 AC_CONFIG_SRCDIR([cairo.5c])
+AC_CONFIG_HEADERS(config.h)
+AC_CONFIG_MACRO_DIR([m4])
+AC_CONFIG_AUX_DIR(.)
+
 AM_INIT_AUTOMAKE([foreign])
 AM_MAINTAINER_MODE
 
-AC_CONFIG_HEADERS(config.h)
-
 dnl libtool versioning
 
-LT_CURRENT=0
+LT_CURRENT=1
 LT_REVISION=0
-LT_AGE=0
+LT_AGE=1
 AC_SUBST(LT_CURRENT)
 AC_SUBST(LT_REVISION)
 AC_SUBST(LT_AGE)

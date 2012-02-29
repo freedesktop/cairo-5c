@@ -49,6 +49,7 @@ libcairo_5c_la_SOURCES = \
 
 lib_LTLIBRARIES = libcairo-5c.la
 
+libcairo_5c_la_LDFLAGS = -version-info $(LT_VERSION_INFO)
 libcairo_5c_la_LIBADD = $(CAIRO_5C_LIBS)
 
 AM_CFLAGS=$(WARN_CFLAGS) $(CAIRO_5C_CFLAGS)
