@@ -192,8 +192,8 @@ cairo_surface_foreign_free (void *object)
 }
 
 #if HAVE_CAIRO_XLIB_H
-Value
-do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
+static Value
+create_window (Value namev, Value wv, Value hv, Value sv)
 {
     ENTER ();
     cairo_5c_surface_t	*c5s;
@@ -201,6 +201,7 @@ do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
     char		*name = StrzPart (namev, "invalid name");
     int			width = IntPart (wv, "invalid width");
     int			height = IntPart (hv, "invalid height");
+    Bool		shown = sv == TrueVal;
     
     if (aborting )
 	RETURN (Void);
@@ -215,7 +216,7 @@ do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
     c5s->recv_events = Void;
     c5s->u.window.gui = NULL;
     
-    if (!cairo_5c_gui_create (c5s, name, width, height))
+    if (!cairo_5c_gui_create (c5s, name, width, height, shown))
     {
 	int err = errno;
 	RaiseStandardException (exception_open_error, 3,
@@ -228,6 +229,32 @@ do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
 		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
 
     RETURN (ret);
+}
+
+Value
+do_Cairo_Surface_create_window (Value namev, Value wv, Value hv)
+{
+    return create_window (namev, wv, hv, TrueVal);
+}
+
+Value
+do_Cairo_Surface_create_window_hidden (Value namev, Value wv, Value hv)
+{
+    return create_window (namev, wv, hv, FalseVal);
+}
+
+Value
+do_Cairo_Surface_set_window_shown (Value gv, Value sv)
+{
+    ENTER();
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get(gv);
+    Bool		shown = sv == TrueVal;
+
+    if (aborting)
+	RETURN(Void);
+
+    cairo_5c_gui_set_shown (c5s, shown);
+    RETURN(Void);
 }
 
 Value

@@ -530,7 +530,7 @@ x_global_create (void)
  */
 
 Bool
-cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height)
+cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height, Bool shown)
 {
     ENTER ();
     x_global_t		    *xg;
@@ -614,7 +614,8 @@ cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height)
 			  NULL, 0, &sizeHints, &wmHints, &classHints);
     XSetWMProtocols (dpy, gui->window, &xg->wm_delete_window, 1);
 			  
-    XMapWindow (dpy, gui->window);
+    if (shown)
+	XMapWindow (dpy, gui->window);
 
     c5s->u.window.gui = gui;
     
@@ -623,6 +624,23 @@ cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height)
     
     EXIT ();
     return True;
+}
+
+void
+cairo_5c_gui_set_shown (cairo_5c_surface_t *c5s, Bool shown)
+{
+    cairo_5c_gui_t *gui = c5s->u.window.gui;
+
+    if (!gui)
+	return;
+
+    if (!gui->window)
+	return;
+
+    if (shown)
+	XMapWindow (gui->global->dpy, gui->window);
+    else
+	XUnmapWindow (gui->global->dpy, gui->window);
 }
 
 void

@@ -131,6 +131,8 @@ namespace Nichrome {
 	file		    event;
 	bool		    draw;
 	bool		    resize;
+	bool		    shown;
+	bool		    want_shown;
 	point_t		    scale;
 	(&widget_t)[...]    widgets;
 	&widget_t	    key_focus;
@@ -466,6 +468,13 @@ namespace Nichrome {
 	twixt (Mutex::acquire (nichrome.drawing);
 	       Mutex::release (nichrome.drawing))
 	{
+	    if (nichrome.shown != nichrome.want_shown) {
+		Cairo::Surface::set_window_shown(nichrome.surface, nichrome.want_shown);
+		nichrome.shown = nichrome.want_shown;
+	    }
+	    if (!nichrome.shown)
+		return;
+
 	    if (nichrome.resize) {
 		nichrome.resize = false;
 		Cairo::destroy (nichrome.outline_cr);
@@ -514,6 +523,18 @@ namespace Nichrome {
 	}
     }
     
+    public void show (&nichrome_t nichrome) {
+	nichrome.want_shown = true;
+	if (!nichrome.shown)
+	    redraw(&nichrome);
+    }
+
+    public void hide (&nichrome_t nichrome) {
+	if (nichrome.shown)
+	    Cairo::Surface::set_window_shown(nichrome.surface, false);
+	nichrome.shown = nichrome.want_shown = false;
+    }
+
     public void destroy (&nichrome_t nichrome) {
 	Cairo::Surface::destroy (nichrome.surface);
 	nichrome.running = false;
@@ -529,11 +550,13 @@ namespace Nichrome {
 	default: width = size[0], height = size[1]; break;
 	}
 	
-	nichrome.surface = Cairo::Surface::create_window (name, width, height);
+	nichrome.surface = Cairo::Surface::create_window_hidden (name, width, height);
 
 	nichrome.event = Cairo::Surface::open_event (nichrome.surface);
 	nichrome.draw = false;
 	nichrome.resize = true;
+	nichrome.shown = false;
+	nichrome.want_shown = true;
 	nichrome.running = false;
 	nichrome.widgets = ((&widget_t)[...]) {};
 	nichrome.scale = (point_t) { x = 1, y = 1 };

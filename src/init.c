@@ -935,6 +935,12 @@ nickle_init (void)
 	    " void write_to_png (surface_t surface, file f)\n"
 	    "\n"
 	    " Write a surface to f in png format\n" },
+#if HAVE_CAIRO_XLIB_H
+	{ do_Cairo_Surface_set_window_shown, "set_window_shown", "v", SURFACE_S "b", "\n"
+	  " void set_window_shown (surface_t surface, bool shown)\n"
+	  "\n"
+	  " Show or hide the specified window\n" },
+#endif
 	{ 0 }
     };
     
@@ -943,7 +949,11 @@ nickle_init (void)
 	{ do_Cairo_Surface_create_window, "create_window", SURFACE_S, "snn", "\n"
 	    " surface_t create_window (real width, real height)\n"
 	    "\n"
-	    " Create a window and return a surface pointer for it\n" },
+	    " Create a window, show it, and return a surface pointer for it\n" },
+	{ do_Cairo_Surface_create_window_hidden, "create_window_hidden", SURFACE_S, "snn", "\n"
+	    " surface_t create_window_hidden (real width, real height)\n"
+	    "\n"
+	    " Create a window, but do not show it, and return a surface pointer for it\n" },
 	{ do_Cairo_Surface_resize_window, "resize_window", "v",  SURFACE_S "nn", "\n"
 	    " void resize_window (surface_t surface, real width, real height)\n"
 	    "\n"
