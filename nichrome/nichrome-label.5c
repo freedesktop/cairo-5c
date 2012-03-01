@@ -39,10 +39,15 @@ extend namespace Nichrome {
 
 	public typedef void (&widget_t widget) callback_t;
 	
+	public typedef enum {
+		left, center, right
+	} justify_t;
+
 	public typedef widget_t + struct {
-	    string  label;
-	    string  font;
-	    rgba_color_t    color;
+	    string  		label;
+	    string  		font;
+	    rgba_color_t    	color;
+	    justify_t		justify;
 	} label_t;
 	
 	typedef struct {
@@ -70,8 +75,18 @@ extend namespace Nichrome {
 	    real text_bearing = (x.y_bearing + m.y_bearing) / 2;
 	    metrics.y = floor ((metrics.height - text_height) / 2 
 			       - text_bearing + 0.5);
-	    metrics.x = floor ((metrics.width - text.width) / 2 
-			       - text.x_bearing + 0.5);
+	    enum switch (widget.justify) {
+	    case left:
+		metrics.x = text.x_bearing;
+		break;
+	    case center:
+		metrics.x = floor ((metrics.width - text.width) / 2 
+				   - text.x_bearing + 0.5);
+		break;
+	    case right:
+		metrics.x = metrics.width - text.width - text.x_bearing;
+		break;
+	    }
 	    return metrics;
 	}
 	
@@ -109,6 +124,7 @@ extend namespace Nichrome {
 	    Widget::init (&nichrome, &widget);
 	    widget.label = label;
 	    widget.font = Widget::default_font;
+	    widget.justify = justify_t.center;
 	    widget.draw = draw;
 	    widget.outline = outline;
 	    widget.natural = natural;
