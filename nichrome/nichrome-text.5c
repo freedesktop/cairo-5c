@@ -37,7 +37,7 @@ autoload Nichrome;
 extend namespace Nichrome {
     public namespace Text {
 
-	public typedef void (&widget_t widget) callback_t;
+	protected typedef bool (&widget_t widget, string key) callback_t;
 	
 	public typedef widget_t + struct {
 	    string  		text;
@@ -47,6 +47,7 @@ extend namespace Nichrome {
 	    rgba_color_t	color;
 	    bool		clicked;
 	    real		click_x;
+	    callback_t		callback;
 	} text_t;
 	
 	typedef struct {
@@ -191,6 +192,10 @@ extend namespace Nichrome {
 	protected void key(&text_t widget, &key_event_t event) {
 	    if (event.type != key_type_t.press)
 		return;
+	    if (!is_uninit(&widget.callback))
+		if (widget.callback(&widget, event.key))
+		    return;
+
 	    switch (event.key) {
 	    case "Left":
 		caret (&widget, widget.caret - 1);
@@ -200,6 +205,8 @@ extend namespace Nichrome {
 		break;
 	    case "BackSpace":
 		backspace(&widget, 1);
+		break;
+	    case "Return":
 		break;
 	    default:
 		for (int i = 0; i < String::length(event.text); i++)
@@ -227,6 +234,12 @@ extend namespace Nichrome {
 	public void set_text(&text_t widget, string new_text) {
 	    widget.text = new_text;
 	    Widget::redraw(&widget);
+	    widget.caret = 0;
+	}
+
+	public void set_caret(&text_t widget, int caret) {
+	    if (caret < 0) caret = 0;
+	    widget.caret = min (caret, String::length(widget.text));
 	}
 
 	public void init (&text_t widget, &nichrome_t nichrome, int num_chars) {
