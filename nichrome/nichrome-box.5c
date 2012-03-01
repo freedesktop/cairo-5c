@@ -379,6 +379,7 @@ extend namespace Nichrome {
 	    case 2:
 		size = param[0];
 		stretch = param[1];
+		strut = 0;
 		break;
 	    default:
 		size = param[0];
