@@ -41,6 +41,7 @@ extend namespace Nichrome {
 	public typedef box_t;
 
 	protected typedef contained_t + struct {
+		int	strut;
 	} glue_t;
 
 	protected exception unknown_contained (&box_t box,
@@ -351,10 +352,10 @@ extend namespace Nichrome {
 	void glue_query (&glue_t glue, &layout_t layout) {
 	    &box_t  box = &glue.container;
 	    if (box.dir == dir_t.horizontal) {
-		layout.natural_height = 0;
+		layout.natural_height = glue.strut;
 		layout.stretch_height = 10000;
 	    } else {
-		layout.natural_width = 0;
+		layout.natural_width = glue.strut;
 		layout.stretch_width = 10000;
 	    }
 	}
@@ -363,19 +364,26 @@ extend namespace Nichrome {
 	 * Allow applications to specify size and stretch, just stretch
 	 * or neither
 	 */
-	void get_glue (&real[*] param, &real size, &real stretch) {
+	void get_glue (&real[*] param, &real size, &real stretch, &real strut) {
 	    switch (dim (param)) {
 	    case 0:
 		size = 0;
 		stretch = 1;
+		strut = 0;
 		break;
 	    case 1:
 		size = 0;
 		stretch = param[0];
+		strut = 0;
+		break;
+	    case 2:
+		size = param[0];
+		stretch = param[1];
 		break;
 	    default:
 		size = param[0];
 		stretch = param[1];
+		strut = param[2];
 		break;
 	    }
 	}
@@ -387,9 +395,9 @@ extend namespace Nichrome {
 
 	protected item_t glue_item (real param...)
 	{
-	    get_glue (&param, &(real size), &(real stretch));
+	    get_glue (&param, &(real size), &(real stretch), &(real strut));
 	    return (item_t) {
-		contained = &(glue_t) { .print = glue_print, .active = true },
+		contained = &(glue_t) { .print = glue_print, .active = true, .strut = strut },
 		layout = {
 		    natural_width = size,
 		    natural_height = size,
