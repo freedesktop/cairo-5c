@@ -151,7 +151,7 @@ namespace Nichrome {
 
     public widget_t no_widget;
 
-    cairo_t cairo (&nichrome_t nichrome)
+    public cairo_t cairo (&nichrome_t nichrome)
     {
 	cairo_t cr = create (nichrome.surface);
 	scale (cr, nichrome.scale.x, nichrome.scale.y);
