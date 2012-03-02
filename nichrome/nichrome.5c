@@ -475,6 +475,10 @@ namespace Nichrome {
     }
 
     void draw (&nichrome_t nichrome) {
+	if (Mutex::owner(nichrome.drawing) == (mutex_owner.owner) Thread::current()) {
+	    nichrome.draw = true;
+	    return;
+	}
 	twixt (Mutex::acquire (nichrome.drawing);
 	       Mutex::release (nichrome.drawing))
 	{
