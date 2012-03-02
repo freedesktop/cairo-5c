@@ -71,7 +71,7 @@ extend namespace Nichrome {
 	    return i;
 	}
 
-	metrics_t get_metrics (cr, &text_t widget) {
+	metrics_t get_metrics (cairo_t cr, &text_t widget) {
 	    set_font (cr, widget.font);
 
 	    if (widget.clicked) {
