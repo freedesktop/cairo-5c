@@ -91,6 +91,7 @@ namespace Nichrome {
     public typedef void(&widget_t, &key_event_t) key_handler_t;
     public typedef void(&widget_t, bool focus) focus_handler_t;
     public typedef void(&poly object, int indent) print_handler_t;
+    public typedef bool(&key_event_t) global_key_handler_t;
 
     public void do_indent (int indent) {
 	while (indent-- > 0)
@@ -147,6 +148,7 @@ namespace Nichrome {
 	mutex		    drawing;
 	thread		    self;
 	int		    suspend_draw;
+	global_key_handler_t	global_key;
     } nichrome_t;
 
     public widget_t no_widget;
@@ -202,6 +204,10 @@ namespace Nichrome {
 	    contained.active = active;
 	    redraw (&nichrome);
 	}
+    }
+
+    public void set_global_key(&nichrome_t nichrome, global_key_handler_t global_key) {
+	nichrome.global_key = global_key;
     }
 
     public namespace Widget {
@@ -418,6 +424,10 @@ namespace Nichrome {
     }
 
     public void dispatch_key (&nichrome_t nichrome, &key_event_t event) {
+	if (!is_uninit(&nichrome.global_key))
+	    if (nichrome.global_key(&event))
+		return;
+
 	&widget_t   widget = &nichrome.key_focus;
 
 	if (&widget != &no_widget)
