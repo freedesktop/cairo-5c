@@ -7,7 +7,7 @@ dnl for licensing information.
 AC_PREREQ(2.64)
 
 AC_INIT([cairo-5c],
-	[1.5],
+	[1.6],
 	[http://cairographics.org],
 	[cairo-5c])
 

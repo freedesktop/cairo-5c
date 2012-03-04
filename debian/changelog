@@ -1,3 +1,12 @@
+cairo-5c (1.6) unstable; urgency=low
+  * Add global key event hook
+  * Fix debian build from source (add librsvg2-dev build depend)
+  * Add scrollbar widget
+  * Add ability to show/hide windows
+  * Add a couple locking fixes
+
+ -- Keith Packard <keithp@keithp.com>  Sat, 03 Mar 2012 16:38:18 -0800
+
 cairo-5c (1.5) unstable; urgency=low
   * Add SVG support using librsvg
   * Add new single-line text widget

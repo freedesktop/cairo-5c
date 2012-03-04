@@ -1,5 +1,5 @@
 Source: cairo-5c
-Section: interpreters
+Section: lib
 Priority: optional
 Maintainer: Keith Packard <keithp@keithp.com>
 Build-Depends: debhelper (>= 7), libcairo2-dev, librsvg2-dev, nickle (>= 2.73), libx11-dev, libfreetype6-dev
