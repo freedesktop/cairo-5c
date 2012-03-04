@@ -85,7 +85,7 @@ $(LIBDEBFILE): $(DEBFILE)
 
 $(DEBFILE): $(TARFILE)
 	tar xzf $(TARFILE)
-	(cd $(distdir) && debuild)
+	(cd $(distdir) && pdebuild --buildresult `pwd`)
 
 $(TARFILE): dist-gzip
 
