@@ -293,14 +293,14 @@ namespace Nichrome {
     }
 
     public *widget_t xy_to_widget (&nichrome_t nichrome, real x, real y) {
-	cairo_t cr = cairo (&nichrome);
-	point_t a = device_to_user (cr, (point_t) { x = x, y = y });
-	Cairo::destroy (cr);
-	x = a.x; y = a.y;
-	for (int w = 0; w < dim (nichrome.widgets); w++) {
-	    &widget_t widget = &nichrome.widgets[w];
-	    if (widget.active && Widget::in_widget (&widget, x, y))
-		return &widget;
+	twixt (Mutex::acquire(nichrome.drawing); Mutex::release(nichrome.drawing)) {
+	    point_t a = device_to_user (nichrome.outline_cr, (point_t) { x = x, y = y });
+	    x = a.x; y = a.y;
+	    for (int w = 0; w < dim (nichrome.widgets); w++) {
+		&widget_t widget = &nichrome.widgets[w];
+		if (widget.active && Widget::in_widget (&widget, x, y))
+		    return &widget;
+	    }
 	}
 	return &no_widget;
     }
