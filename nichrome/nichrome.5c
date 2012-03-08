@@ -587,7 +587,7 @@ namespace Nichrome {
     }
     
     public void resize (&nichrome_t nichrome, real width, real height) {
-	Cairo::Surface::resize_window(nichrome.surface, floor(width), floor(height));
+	Cairo::Surface::resize_window(nichrome.surface, max(1, floor(width)), max(1, floor(height)));
     }
 
     public exception unknown_widget (&nichrome_t nichrome, &widget_t widget);
