@@ -90,6 +90,7 @@ namespace Nichrome {
     public typedef void(&widget_t, &motion_event_t) motion_handler_t;
     public typedef void(&widget_t, &key_event_t) key_handler_t;
     public typedef void(&widget_t, bool focus) focus_handler_t;
+    public typedef void(&contained_t) remove_handler_t;
     public typedef void(&poly object, int indent) print_handler_t;
     public typedef bool(&key_event_t) global_key_handler_t;
 
@@ -102,6 +103,7 @@ namespace Nichrome {
 	&container_t	    container;
 	configure_handler_t configure;
 	print_handler_t	    print;
+	remove_handler_t    remove;
 	bool		    active;
     } contained_t;
 
@@ -217,6 +219,10 @@ namespace Nichrome {
 
 	protected void natural (cairo_t cr, &widget_t widget) = ◊;
 
+	protected void remove (&widget_t widget) {
+	    Nichrome::remove (&widget.nichrome, &widget);
+	}
+
 	protected void print (&widget_t widget, int indent) {
 	    do_indent(indent);
 	    printf ("widget %v\n", widget.geometry);
@@ -232,6 +238,7 @@ namespace Nichrome {
 	    widget.natural = natural;
 	    widget.outline = natural;
 	    widget.draw = natural;
+	    widget.remove = remove;
 	    widget.print = print;
 	    widget.active = true;
 	    Nichrome::add (&nichrome, &widget);
