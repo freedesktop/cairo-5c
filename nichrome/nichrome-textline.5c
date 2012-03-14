@@ -35,7 +35,7 @@
 autoload Nichrome;
 
 extend namespace Nichrome {
-    public namespace Text {
+    public namespace Textline {
 
 	protected typedef bool (&widget_t widget, string key) callback_t;
 	
@@ -48,7 +48,7 @@ extend namespace Nichrome {
 	    bool		clicked;
 	    real		click_x;
 	    callback_t		callback;
-	} text_t;
+	} textline_t;
 	
 	typedef struct {
 	    real x, y;
@@ -58,12 +58,12 @@ extend namespace Nichrome {
 	    real preferred_width, preferred_height;
 	} metrics_t;
 	
-	real text_x(cr, &text_t widget, int pos) {
+	real text_x(cr, &textline_t widget, int pos) {
 	    text_extents_t t = text_extents(cr, String::substr(widget.text, 0, pos));
 	    return t.x_advance;
 	}
 
-	int text_hit(cr, &text_t widget, real x) {
+	int text_hit(cr, &textline_t widget, real x) {
 	    int i;
 	    for (i = 0; i < String::length(widget.text); i++)
 		if (x < text_x(cr, &widget, i+1))
@@ -71,7 +71,7 @@ extend namespace Nichrome {
 	    return i;
 	}
 
-	metrics_t get_metrics (cairo_t cr, &text_t widget) {
+	metrics_t get_metrics (cairo_t cr, &textline_t widget) {
 	    set_font (cr, widget.font);
 
 	    if (widget.clicked) {
@@ -101,17 +101,17 @@ extend namespace Nichrome {
 	    return metrics;
 	}
 	
-	public void natural (cairo_t cr, &text_t widget) {
+	public void natural (cairo_t cr, &textline_t widget) {
 	    metrics_t	metrics = get_metrics (cr, &widget);
 
 	    rectangle (cr, 0, 0, metrics.preferred_width, metrics.preferred_height);
 	}
 	
-	public void outline (cairo_t cr, &text_t widget) {
+	public void outline (cairo_t cr, &textline_t widget) {
 	    return natural(cr, &widget);
 	}
 	
-	public void draw (cairo_t cr, &text_t widget) {
+	public void draw (cairo_t cr, &textline_t widget) {
 	    metrics_t	metrics = get_metrics (cr, &widget);
 	    move_to (cr, metrics.x, metrics.y);
 	    set_source_rgba (cr, widget.color.red, widget.color.green,
@@ -125,11 +125,11 @@ extend namespace Nichrome {
 	    }
 	}
 	
-	protected void focus(&text_t widget, bool focus) {
+	protected void focus(&textline_t widget, bool focus) {
 	    Widget::redraw(&widget);
 	}
 
-	protected void button(&text_t widget, &button_event_t event) {
+	protected void button(&textline_t widget, &button_event_t event) {
 	    if (event.type == button_type_t.press) {
 		widget.clicked = true;
 		widget.click_x = event.x;
@@ -138,7 +138,7 @@ extend namespace Nichrome {
 	    }
 	}
 
-	protected void caret(&text_t widget, int pos) {
+	protected void caret(&textline_t widget, int pos) {
 	    if (pos < 0)
 		pos = 0;
 	    if (pos > String::length(widget.text))
@@ -149,7 +149,7 @@ extend namespace Nichrome {
 	    }
 	}
 
-	protected void insert(&text_t widget, int c) {
+	protected void insert(&textline_t widget, int c) {
 	    string	before = String::substr(widget.text,
 						0,
 						widget.caret);
@@ -161,7 +161,7 @@ extend namespace Nichrome {
 	    Widget::redraw(&widget);
 	}
 
-	protected void delete(&text_t widget, int count) {
+	protected void delete(&textline_t widget, int count) {
 	    int	len = String::length(widget.text);
 
 	    if (count < 0)
@@ -180,7 +180,7 @@ extend namespace Nichrome {
 	    }
 	}
 
-	protected void backspace (&text_t widget, int count) {
+	protected void backspace (&textline_t widget, int count) {
 	    while (count-- > 0) {
 		if (widget.caret > 0) {
 		    caret (&widget, widget.caret - 1);
@@ -189,7 +189,7 @@ extend namespace Nichrome {
 	    }
 	}
 
-	protected void key(&text_t widget, &key_event_t event) {
+	protected void key(&textline_t widget, &key_event_t event) {
 	    if (event.type != key_type_t.press)
 		return;
 	    if (!is_uninit(&widget.callback))
@@ -226,23 +226,23 @@ extend namespace Nichrome {
 	    }
 	}
 
-	protected void print (&text_t widget, int indent) {
+	protected void print (&textline_t widget, int indent) {
 	    do_indent(indent);
 	    printf("text %s %v\n", widget.text, widget.geometry);
 	}
 
-	public void set_text(&text_t widget, string new_text) {
+	public void set_text(&textline_t widget, string new_text) {
 	    widget.text = new_text;
 	    Widget::redraw(&widget);
 	    widget.caret = 0;
 	}
 
-	public void set_caret(&text_t widget, int caret) {
+	public void set_caret(&textline_t widget, int caret) {
 	    if (caret < 0) caret = 0;
 	    widget.caret = min (caret, String::length(widget.text));
 	}
 
-	public void init (&text_t widget, &nichrome_t nichrome, int num_chars) {
+	public void init (&textline_t widget, &nichrome_t nichrome, int num_chars) {
 	    Widget::init (&nichrome, &widget);
 	    widget.text = "";
 	    widget.num_chars = num_chars;
@@ -262,7 +262,7 @@ extend namespace Nichrome {
 	}
 	
 	public *widget_t new (&nichrome_t nichrome, int num_chars) {
-	    text_t	widget;
+	    textline_t	widget;
 
 	    init (&widget, &nichrome, num_chars);
 	    return &widget;
