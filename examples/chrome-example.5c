@@ -56,16 +56,16 @@ void main () {
     &widget_t	button = Nichrome::Button::new (&nichrome, "Push Me",
 					      button_callback);
     &box_t	hbox = Nichrome::Box::new (Box::dir_t.horizontal,
-					Box::glue_item (100, 0),
-					Box::widget_item (&button, 0),
-					Box::glue_item (0, 1),
-					Box::widget_item (&label, 0));
+					   Box::glue_item (100, 1, 0, 0),
+					   Box::widget_item (&button, 0),
+					   Box::widget_item (&label, 0));
     &box_t	vbox = Nichrome::Box::new (Box::dir_t.vertical,
-					 Box::glue_item (0, 1),
-					 Box::box_item (&hbox),
-					 Box::glue_item (0, 1));
+					   Box::glue_item (0, 100),
+					   Box::box_item (&hbox),
+					   Box::glue_item (0, 100));
 
     Nichrome::set_box (&nichrome, &vbox);
+    Box::box_print(&vbox, 0);
     Nichrome::main_loop (&nichrome);
 }
 
