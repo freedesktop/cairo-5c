@@ -167,14 +167,27 @@ namespace Nichrome {
 	nichrome.draw = true;
     }
 
-    public void remove (&nichrome_t nichrome, &widget_t widget) {
-	int i;
-	for (i = 0; i < dim(nichrome.widgets); i++)
+    public exception unknown_widget (&nichrome_t nichrome, &widget_t widget);
+    
+    int widget_pos (&nichrome_t nichrome, &widget_t widget) {
+	for (int i = 0; i < dim(nichrome.widgets); i++)
 	    if (&nichrome.widgets[i] == &widget)
-		break;
-	for (; i < dim(nichrome.widgets) - 1; i++)
-	    &nichrome.widgets[i] = &nichrome.widgets[i+1];
-	setdim(nichrome.widgets, i);
+		return i;
+	raise unknown_widget (&nichrome, &widget);
+    }
+
+    public void remove (&nichrome_t nichrome, &widget_t widget) {
+	twixt (Mutex::acquire (nichrome.drawing);
+	       Mutex::release (nichrome.drawing)) {
+		for (int i = widget_pos (&nichrome, &widget); 
+		     i < dim(nichrome.widgets) - 1;
+		     i++)
+		{
+			&nichrome.widgets[i] = &nichrome.widgets[i + 1];
+		}
+		setdim (nichrome.widgets, dim(nichrome.widgets) - 1);
+		nichrome.draw = true;
+	}
     }
 
     void draw (&nichrome_t nichrome);
@@ -595,26 +608,6 @@ namespace Nichrome {
     
     public void resize (&nichrome_t nichrome, real width, real height) {
 	Cairo::Surface::resize_window(nichrome.surface, max(1, floor(width)), max(1, floor(height)));
-    }
-
-    public exception unknown_widget (&nichrome_t nichrome, &widget_t widget);
-    
-    int widget_pos (&nichrome_t nichrome, &widget_t widget) {
-	for (int i = 0; i < dim(nichrome.widgets); i++)
-	    if (&nichrome.widgets[i] == &widget)
-		return i;
-	raise unknown_widget (&nichrome, &widget);
-    }
-
-    public void remove (&nichrome_t nichrome, &widget_t widget) {
-	for (int i = widget_pos (&nichrome, &widget); 
-	     i < dim(nichrome.widgets) - 1;
-	     i++)
-	{
-    	    &nichrome.widgets[i] = &nichrome.widgets[i + 1];
-	}
-	setdim (nichrome.widgets, dim(nichrome.widgets) - 1);
-	nichrome.draw = true;
     }
 
     public void top (&nichrome_t nichrome, &widget_t widget) {
