@@ -1,0 +1,254 @@
+/*
+ * Copyright © 2012 Keith Packard <keithp@keithp.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but
+ * WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ * General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA.
+ */
+
+autoload Nichrome;
+autoload Nichrome::Scrollbar;
+
+extend namespace Nichrome {
+
+	public namespace Text {
+
+		import Cairo;
+
+		typedef struct {
+			int			pos;
+			int			len;
+		} line_t;
+
+		public typedef widget_t + struct {
+			string			text;
+			string			font;
+			rgba_color_t		color;
+			font_extents_t		font_extents;
+			int			top;
+			int			lines;
+			real			old_width;
+			bool			dirty;
+			line_t[*]		layout;
+			*Scrollbar::scrollbar_t	scrollbar;
+		} text_t;
+
+		/* just after the previous newline */
+		int bol(&text_t text, int pos) {
+			for (; --pos >= 0;)
+				if (text.text[pos] == '\n')
+					return pos + 1;
+			return 0;
+		}
+
+		/* on the next newline */
+		int eol (&text_t text, int pos) {
+			for (; pos < String::length(text.text); pos++)
+				if (text.text[pos] == '\n')
+					return pos;
+			return pos;
+		}
+
+		/* column number of 'pos' */
+		int column (&text_t e, int pos) {
+			return pos - bol(&e, pos);
+		}
+
+		/* basic text motion */
+		int left(&text_t text, int pos) {
+			if (pos > 0)
+				return pos - 1;
+			return pos;
+		}
+
+		int right(&text_t text, int pos) {
+			if (pos < String::length(text.text))
+				return pos + 1;
+			return pos;
+		}
+
+		int up(&text_t text, int pos) {
+			int	e = bol(&text, pos) - 1;
+			if (e >= 0) {
+				int prev = bol(&text, e);
+				return min(prev + column(&text, pos), e);
+			}
+			return pos;
+		}
+
+		int down(&text_t text, int pos) {
+			int	next = eol(&text, pos) + 1;
+
+			if (next <= String::length(text.text))
+				return min(eol(&text, next),
+					   next + column(&text, pos));
+			return pos;
+		}
+
+		/* painted width of specified subset of text */
+		real width(cairo_t cr, &text_t text, int start, int end) {
+			text_extents_t	t = text_extents(cr, String::substr(text.text, start,
+									    end-start));
+			return t.x_advance;
+		}
+
+		void set_scroll(&text_t text) {
+			if (is_uninit(&text.scrollbar))
+				return;
+
+			real	top = text.top / dim(text.layout);
+			real	bottom = min((text.top + text.lines) / dim(text.layout), 1);
+			Scrollbar::set(text.scrollbar,
+				       top, bottom - top);
+		}
+
+		void prep(cairo_t cr, &text_t text) {
+			set_font(cr, text.font);
+			text.font_extents = font_extents(cr);
+			if (text.old_width != text.geometry.width) {
+				text.dirty = true;
+				text.old_width = text.geometry.width;
+			}
+			if (text.dirty) {
+				text.layout = (line_t[...]) {};
+
+				int	pos = 0;
+				int	l = 0;
+				do {
+					int	e = eol(&text, pos);
+					while (e > pos + 1 && width(cr, &text, pos, e) > text.geometry.width)
+						e--;
+					text.layout[l] = (line_t) { .pos = pos,
+								    .len = e - pos };
+					pos = e;
+					if (pos < String::length(text.text) && text.text[pos] == '\n')
+						pos++;
+					l++;
+				} while (pos < String::length(text.text));
+
+				text.dirty = false;
+			}
+			text.top = min(text.top, dim(text.layout) - 1);
+			text.lines = max (1, floor(text.geometry.height / text.font_extents.height));
+			set_scroll(&text);
+		}
+
+		void paint (cairo_t cr, &text_t text) {
+			for (int i = text.top; i < dim(text.layout) && i < text.top + text.lines; i++) {
+				move_to (cr, 0, (i - text.top) * text.font_extents.height + text.font_extents.ascent);
+				set_source_rgba (cr, text.color.red, text.color.green,
+						 text.color.blue, text.color.alpha);
+				show_text(cr, String::substr(text.text, text.layout[i].pos, text.layout[i].len));
+			}
+		}
+
+		public void insert(&text_t text, int pos, string s) {
+			text.text = String::substr(text.text, 0, pos) +
+				s + String::substr(text.text, pos, String::length(text.text) - pos);
+			text.dirty = true;
+			Widget::redraw(&text);
+		}
+
+		public void delete(&text_t text, int pos, int n) {
+			n = min (n, String::length(text.text) - pos);
+
+			text.text = String::substr(text.text, 0, pos) +
+				String::substr(text.text, pos + n, String::length(text.text) - (pos + n));
+			text.dirty = true;
+			Widget::redraw(&text);
+		}
+
+		public bool scroll_up(&text_t text) {
+			if (text.top > 0) {
+				text.top--;
+				Widget::redraw(&text);
+				return true;
+			}
+			return false;
+		}
+
+		public bool scroll_down(&text_t text) {
+			if (text.top < dim(text.layout) - text.lines) {
+				text.top++;
+				Widget::redraw(&text);
+				return true;
+			}
+			return false;
+		}
+
+		void draw(cairo_t cr, &text_t text) {
+			prep(cr, &text);
+			paint(cr, &text);
+		}
+
+		void natural(cairo_t cr, &text_t text) {
+			prep(cr, &text);
+			rectangle(cr, 0, 0, 200, 200);
+		}
+
+		void outline(cairo_t cr, &text_t text) {
+			natural(cr, &text);
+		}
+
+		void print(&text_t text, int indent) {
+			do_indent(indent);
+			printf("text %s\n", text.text);
+		}
+
+		
+		public void init (&text_t text, &nichrome_t nichrome) {
+			Widget::init(&nichrome, &text);
+			text.text = "";
+			text.dirty = true;
+			text.old_width = 0;
+			text.draw = draw;
+			text.top = 0;
+			text.outline = outline;
+			text.natural = natural;
+			text.font = Widget::default_font;
+			text.color = (rgba_color_t) {
+				red = 0, green = 0, blue = 0, alpha = 1
+			};
+			text.print = print;
+		}
+
+		public *Scrollbar::scrollbar_t scrollbar(&text_t text) {
+			if (is_uninit(&text.scrollbar)) {
+				void scrollbar_callback(&widget_t scroll, Scrollbar::action_t action) {
+					printf ("action %v\n", action);
+					union switch (action) {
+					case drag pos:
+						text.top = floor (pos * dim(text.layout) + 0.5);
+						set_scroll(&text);
+						Widget::redraw(&text);
+						break;
+					case pos pos:
+						break;
+					default:
+						break;
+					}
+				}
+				text.scrollbar = Scrollbar::new(&text.nichrome,
+								 Scrollbar::dir_t.vertical,
+								 scrollbar_callback);
+			}
+			return text.scrollbar;
+		}
+
+		public *widget_t new (&nichrome_t nichrome) {
+			*text_t	text = &(text_t) {};
+
+			init(text, &nichrome);
+			return text;
+		}
+	}
+}
