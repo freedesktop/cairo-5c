@@ -305,7 +305,7 @@ namespace Nichrome {
 	    return in;
 	}
 	
-	protected string default_font = "sans-12";
+	protected string default_font = "sans";
 	protected rgba_color_t default_color = {
 	    red = 0.6, green = 0.6,
 	    blue = 0.6, alpha = 0.75
