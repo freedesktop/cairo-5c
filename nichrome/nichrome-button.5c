@@ -172,11 +172,13 @@ extend namespace Nichrome {
 	    enum switch (event.type) {
 	    case leaving:
 		widget.inside = false;
-		Widget::redraw (&widget);
+		if (widget.pressed)
+		    Widget::redraw (&widget);
 		break;
 	    case entering:
 		widget.inside = true;
-		Widget::redraw (&widget);
+		if (widget.pressed)
+		    Widget::redraw (&widget);
 		break;
 	    case inside:
 	    case outside:

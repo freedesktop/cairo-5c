@@ -142,9 +142,11 @@ extend namespace Nichrome {
 	protected void set (&scrollbar_t widget, real pos, real size) {
 	    size = bound_pos (size, 0);
 	    pos = bound_pos (pos, size);
-	    widget.pos = pos;
-	    widget.size = size;
-	    Widget::redraw (&widget);
+	    if (pos != widget.pos || size != widget.size) {
+		widget.pos = pos;
+		widget.size = size;
+		Widget::redraw (&widget);
+	    }
 	}
 
 	real drag_pos (&scrollbar_t widget, real pos) {
