@@ -224,7 +224,6 @@ extend namespace Nichrome {
 		public *Scrollbar::scrollbar_t scrollbar(&text_t text) {
 			if (is_uninit(&text.scrollbar)) {
 				void scrollbar_callback(&widget_t scroll, Scrollbar::action_t action) {
-					printf ("action %v\n", action);
 					union switch (action) {
 					case drag pos:
 						text.top = floor (pos * dim(text.layout) + 0.5);
