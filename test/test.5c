@@ -794,12 +794,13 @@ quiet_test_t[] quiet_tests = {
 	name = "font-extents",
 	test = void func (cairo_t cr) {
 	    font_extents_t  expect = {
-		ascent = 12, descent = 3, height = 14,
+		ascent = 11, descent = 3, height = 14,
 		max_x_advance = 16, max_y_advance = 0
 	    };
 	    set_font (cr, font_name);
-	    test_check (font_extents(cr) == expect,
-			"font_extents returned wrong value");
+	    font_extents_t  actual = font_extents(cr);
+	    test_check (actual == expect,
+			sprintf ("font_extents returned wrong value: %v != %v", expect, actual));
 	}
     },
     
