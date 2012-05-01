@@ -5,7 +5,7 @@ Maintainer: Keith Packard <keithp@keithp.com>
 Build-Depends: debhelper (>= 7.0.50), libcairo2-dev, librsvg2-dev,
  nickle (>= 2.73), libx11-dev (>= 2:1.4.99.901), libfreetype6-dev,
  autotools-dev, ttf-bitstream-vera
-Standards-Version: 3.9.2
+Standards-Version: 3.9.3
 
 Package: cairo-5c
 Architecture: any
