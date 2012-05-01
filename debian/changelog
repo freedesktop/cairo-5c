@@ -1,3 +1,12 @@
+cairo-5c (1.7) unstable; urgency=low
+  * Update to new version of cairo
+  * Add new multi-line text widget
+  * Replace 1d box widget with 2d version
+  * Add border and toggle widgets
+  * Switch to debhelper for packaging
+
+ -- Keith Packard <keithp@keithp.com>  Mon, 30 Apr 2012 20:03:25 -0700
+
 cairo-5c (1.6) unstable; urgency=low
   * Add global key event hook
   * Fix debian build from source (add librsvg2-dev build depend)
