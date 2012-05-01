@@ -5,62 +5,10 @@
 # Uncomment this to turn on verbose mode.
 export DH_VERBOSE=1
 
-configure: configure-stamp
-configure-stamp:
-	dh_testdir
-	./configure --with-nickle-libdir='$${datadir}/nickle' --prefix=/usr --mandir='$${prefix}/share/man'
-	touch configure-stamp
+configure_flags = --with-nickle-libdir='$${datadir}/nickle' --prefix=/usr --mandir='$${prefix}/share/man'
 
-build: build-arch build-indep
-build-arch: build-stamp
-build-indep: build-stamp
-build-stamp: configure-stamp
-	dh_testdir
-	$(MAKE)
-	$(MAKE) cairo-5c.3
-	touch build-stamp
+%:
+	dh $@  --with autotools-dev
 
-clean:
-	dh_testdir
-	dh_testroot
-	rm -f build-stamp configure-stamp
-	if test -f Makefile; then $(MAKE) distclean; else true; fi
-	dh_clean
-
-install: build
-	dh_testdir
-	dh_testroot
-	dh_prep
-	dh_installdirs
-	$(MAKE) install DESTDIR=$(CURDIR)/debian/tmp
-	pwd
-
-# Build architecture-independent files here.
-binary-indep: build install
-# We have nothing to do by default.
-
-# Build architecture-dependent files here.
-binary-arch: build install
-	dh_testdir
-	dh_testroot
-	dh_installdocs
-	dh_installexamples
-	dh_installmenu
-	dh_installcron
-	dh_installman
-	dh_installinfo
-	dh_installchangelogs
-	dh_install
-	dh_link
-	dh_strip
-	dh_compress -X.5c
-	dh_fixperms
-	dh_makeshlibs -p libcairo5c-0
-	dh_installdeb
-	dh_shlibdeps
-	dh_gencontrol
-	dh_md5sums
-	dh_builddeb
-
-binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install configure
+override_dh_auto_configure:
+	dh_auto_configure -- $(configure_flags)
