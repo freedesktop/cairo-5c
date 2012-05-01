@@ -11,10 +11,10 @@ configure-stamp:
 	./configure --with-nickle-libdir='$${datadir}/nickle' --prefix=/usr --mandir='$${prefix}/share/man'
 	touch configure-stamp
 
-build: configure-stamp build-arch build-indep
+build: build-arch build-indep
 build-arch: build-stamp
 build-indep: build-stamp
-build-stamp:
+build-stamp: configure-stamp
 	dh_testdir
 	$(MAKE)
 	$(MAKE) cairo-5c.3
