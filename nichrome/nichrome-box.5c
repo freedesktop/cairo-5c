@@ -118,6 +118,9 @@ extend namespace Nichrome {
 		}
 
 		void box_resize (*box_t box, *contained_t contained) {
+			if (Mutex::owner(box->query_lock) == (mutex_owner.owner) Thread::current())
+				return;
+
 			twixt(Mutex::acquire(box->query_lock); Mutex::release(box->query_lock)) {
 				int[2] d = dims(box->items);
 				for (int y = 0; y < d[1]; y++) {
