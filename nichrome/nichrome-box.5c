@@ -61,6 +61,8 @@ extend namespace Nichrome {
 			layout_t	layout;
 			query_t	    	query;
 			configure_t	configure;
+			int		span_width;
+			int		span_height;
 		} item_contents_t;
 
 		protected typedef *item_contents_t item_t;
@@ -289,15 +291,21 @@ extend namespace Nichrome {
 
 		protected *box_t new_horizontal(item_t items...) {
 			*box_t	box = new_empty();
-			for (int x = 0; x < dim(items); x++)
-				add(box, x, 0, items[x]);
+			int x = 0;
+			for (int i = 0; i < dim(items); i++) {
+				add(box, x, 0, items[i]);
+				x += max(1, items[i]->span_width);
+			}
 			return box;
 		}
 
 		protected *box_t new_vertical(item_t items...) {
 			*box_t	box = new_empty();
-			for (int y = 0; y < dim(items); y++)
-				add(box, 0, y, items[y]);
+			int y = 0;
+			for (int i = 0; i < dim(items); i++) {
+				add(box, 0, y, items[i]);
+				y += max(1, items[i]->span_height);
+			}
 			return box;
 		}
 
@@ -388,7 +396,7 @@ extend namespace Nichrome {
 		/*
 		 * Construct a new widget item for a box
 		 */
-		protected item_t widget_item (&widget_t widget, real stretch...)
+		protected item_t widget_span_item(&widget_t widget, int span_width, int span_height, real stretch...)
 		{
 			get_stretches (&stretch,
 				       &(real stretch_width), &(real stretch_height), &(real aspect));
@@ -398,10 +406,17 @@ extend namespace Nichrome {
 					stretch_height = stretch_height,
 					aspect = aspect
 				},
+				span_width = span_width,
+				span_height = span_height,
 				query = widget_query,
 				configure = widget_configure,
 				contained = &widget
 			};
+		}
+
+		protected item_t widget_item (&widget_t widget, real stretch...)
+		{
+			return widget_span_item(&widget, 1, 1, stretch...);
 		}
 
 		/*
@@ -560,6 +575,8 @@ extend namespace Nichrome {
 
 				box->realized = true;
 				
+				box->geometry = geometry;
+
 				for (int y = 0; y < dim(box->heights); y++) {
 
 					if (is_uninit(&box->heights[y].natural))
@@ -575,21 +592,17 @@ extend namespace Nichrome {
 
 						item_t	item = box->items[x,y];
 
-						/* Span this item across empty space */
-						real width = box->widths[x].actual;
-						for (int nx = x + 1; nx < dim(box->widths); nx++) {
-							if (active(&box->items, nx, y))
-								break;
-							if (!is_uninit(&box->widths[nx].actual))
-								width += box->widths[nx].actual;
+						/* Span this item */
+						real width = 0;
+						for (int span = 0; x + span < dim(box->widths) && span < item->span_width; span++) {
+							if (!is_uninit(&box->widths[x + span].actual))
+								width += box->widths[x + span].actual;
 						}
 
-						real height = box->heights[y].actual;
-						for (int ny = y + 1; ny < dim(box->heights); ny++) {
-							if (active(&box->items, x,ny))
-								break;
-							if (!is_uninit(&box->heights[ny].actual))
-								height += box->heights[ny].actual;
+						real height = 0;
+						for (int span = 0; y + span < dim(box->heights) && span < item->span_height; span++) {
+							if (!is_uninit(&box->heights[y + span].actual))
+								height += box->heights[y + span].actual;
 						}
 
 						rect_t child_geometry = (rect_t) {
@@ -603,17 +616,23 @@ extend namespace Nichrome {
 									 item->layout, child_geometry);
 					}
 				}
-				box->geometry = geometry;
 			}
 		}
 
-		protected item_t box_item (&box_t box)
+		protected item_t box_span_item(&box_t box, int span_width, int span_height)
 		{
 			return &(item_contents_t) {
 				contained = &box,
 				query = box_query,
 				configure = box_configure,
+				span_width = span_width,
+				span_height = span_height,
 				};
+		}
+
+		protected item_t box_item (&box_t box)
+		{
+			return box_span_item(&box, 1, 1);
 		}
 
 		/*
@@ -627,7 +646,8 @@ extend namespace Nichrome {
 		 * Allow applications to specify size and stretch, just stretch
 		 * or neither
 		 */
-		void get_glue (&real[*] param, &layout_t layout) {
+		layout_t get_glue (&real[*] param) {
+			layout_t layout;
 			switch (dim (param)) {
 			case 0:
 				layout.natural_width = 0;
@@ -660,6 +680,7 @@ extend namespace Nichrome {
 				layout.stretch_height = param[3];
 				break;
 			}
+			return layout;
 		}
 
 		void glue_remove(&glue_t glue) {
@@ -670,13 +691,32 @@ extend namespace Nichrome {
 			printf ("glue\n");
 		}
 
+		protected item_t glue_span_item (int span_width, int span_height, real param...) {
+			return &(item_contents_t) {
+				contained = &(glue_t) {
+					.print = glue_print,
+					.active = true,
+					.remove = glue_remove
+				},
+				.layout = get_glue(&param),
+				.query = glue_query,
+				.span_width = span_width,
+				.span_height = span_height
+			};
+		}
+
 		protected item_t glue_item (real param...)
 		{
-			get_glue (&param, &((layout_t) layout));
-			return &(item_contents_t) {
-				contained = &(glue_t) { .print = glue_print, .active = true, .remove = glue_remove },
-					.layout = layout,
-					.query = glue_query };
+			return glue_span_item(1, 1, param...);
+		}
+
+		protected void add_span_widget (&box_t box,
+						int x, int y,
+						int span_width, int span_height,
+						&widget_t widget,
+						real stretch ...)
+		{
+			add (&box, x, y, widget_span_item (&widget, span_width, span_height, stretch ...));
 		}
 
 		protected void add_widget (&box_t box,
@@ -684,30 +724,44 @@ extend namespace Nichrome {
 					   &widget_t widget,
 					   real stretch ...)
 		{
-			add (&box, x, y, widget_item (&widget, stretch ...));
+			add_span_widget(&box, x, y, 1, 1, &widget, stretch...);
+		}
+
+		protected void add_span_box (&box_t box, int x, int y, int span_width, int span_height, &box_t t)
+		{
+			add (&box, x, y, box_span_item (&t, span_width, span_height));
 		}
 
 		protected void add_box (&box_t box, int x, int y, &box_t t)
 		{
-			add (&box, x, y, box_item (&t));
+			add_span_box (&box, x, y, 1, 1, &t);
+		}
+
+		protected void add_span_glue (&box_t box, int x, int y, int span_width, int span_height, real param ...)
+		{
+			add (&box, x, y, glue_span_item (span_width, span_height, param ...));
 		}
 
 		protected void add_glue (&box_t box, int x, int y, real param ...)
 		{
-			add (&box, x, y, glue_item (param ...));
+			add_span_glue(&box, x, y, 1, 1, param...);
 		}
 
 		protected void add_row (&box_t box, int x, int y, item_t items...) {
 			suspend(&box);
-			for (int i = 0; i < dim(items); i++)
-				add (&box, x + i, y, items[i]);
+			for (int i = 0; i < dim(items); i++) {
+				add (&box, x, y, items[i]);
+				x += max(1, items[i]->span_width);
+			}
 			release(&box);
 		}
 
 		protected void add_column (&box_t box, int x, int y, item_t items...) {
 			suspend(&box);
-			for (int i = 0; i < dim(items); i++)
-				add (&box, x, y + i, items[i]);
+			for (int i = 0; i < dim(items); i++) {
+				add (&box, x, y, items[i]);
+				y += max(1, items[i]->span_height);
+			}
 			release(&box);
 		}
 
