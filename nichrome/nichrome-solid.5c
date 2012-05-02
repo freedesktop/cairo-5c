@@ -1,0 +1,87 @@
+/*
+ * Copyright © 2012 Keith Packard
+ *
+ * This library is free software; you can redistribute it and/or
+ * modify it either under the terms of the GNU Lesser General Public
+ * License version 2.1 as published by the Free Software Foundation
+ * (the "LGPL") or, at your option, under the terms of the Mozilla
+ * Public License Version 1.1 (the "MPL"). If you do not alter this
+ * notice, a recipient may use your version of this file under either
+ * the MPL or the LGPL.
+ *
+ * You should have received a copy of the LGPL along with this library
+ * in the file COPYING-LGPL-2.1; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ * You should have received a copy of the MPL along with this library
+ * in the file COPYING-MPL-1.1
+ *
+ * The contents of this file are subject to the Mozilla Public License
+ * Version 1.1 (the "License"); you may not use this file except in
+ * compliance with the License. You may obtain a copy of the License at
+ * http://www.mozilla.org/MPL/
+ *
+ * This software is distributed on an "AS IS" basis, WITHOUT WARRANTY
+ * OF ANY KIND, either express or implied. See the LGPL or the MPL for
+ * the specific language governing rights and limitations.
+ *
+ * The Original Code is the cairo graphics library.
+ *
+ * The Initial Developer of the Original Code is Keith Packard
+ *
+ * Contributor(s):
+ *      Keith Packard <keithp@keithp.com>
+ */
+
+autoload Nichrome;
+
+extend namespace Nichrome {
+    public namespace Solid {
+
+	public typedef widget_t + struct {
+	    rgba_color_t    	color;
+	    real		width, height;
+	} solid_t;
+	
+	public void natural (cairo_t cr, &solid_t widget) {
+	    rectangle (cr, 0, 0, widget.width, widget.height);
+	}
+	
+	public void outline (cairo_t cr, &solid_t widget) {
+	    rectangle (cr, 0, 0, 0, 0);
+	}
+	
+	public void draw (cairo_t cr, &solid_t widget) {
+	    set_source_rgba (cr, widget.color.red, widget.color.green,
+			     widget.color.blue, widget.color.alpha);
+	    rectangle (cr, 0, 0, widget.geometry.width, widget.geometry.height);
+	    fill(cr);
+	}
+	
+
+	protected void print (&solid_t widget, int indent) {
+	    do_indent(indent);
+	    printf("solid (%f x %f) %v\n", widget.width, widget.height, widget.geometry);
+	}
+
+	public void init (&solid_t widget, &nichrome_t nichrome, real width, real height, rgba_color_t color...) {
+	    Widget::init (&nichrome, &widget);
+	    widget.draw = draw;
+	    widget.outline = outline;
+	    widget.natural = natural;
+	    if (dim(color) > 0)
+		widget.color = color[0];
+	    else
+		widget.color = (Cairo::rgba_color_t) { .red = 0, .green = 0, .blue = 0, .alpha = 1 };
+	    widget.print = print;
+	    widget.width = width;
+	    widget.height = height;
+	}
+	
+	public *widget_t new (&nichrome_t nichrome, real width, real height, rgba_color_t color ...) {
+	    &solid_t	widget = &(solid_t) {};
+
+	    init (&widget, &nichrome, width, height, color ...);
+	    return &widget;
+	}
+    }
+}
