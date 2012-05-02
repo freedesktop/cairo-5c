@@ -1,0 +1,29 @@
+autoload Nichrome;
+autoload Nichrome::Button;
+autoload Nichrome::Box;
+
+&Nichrome::nichrome_t nichrome = Nichrome::new ("Test");
+
+void button_callback (&Nichrome::widget_t widget, bool state) {
+    static int	i = 0;
+    Nichrome::Button::relabel (&widget, sprintf ("click %d", ++i));
+}
+
+void exit_callback (&Nichrome::widget_t widget, bool state) {
+    widget.nichrome.running = false;
+}
+
+&Nichrome::widget_t hello_widget = Nichrome::Button::new (&nichrome, "hello, world", button_callback);
+&Nichrome::widget_t exit_widget = Nichrome::Button::new (&nichrome, "exit", exit_callback);
+
+&Nichrome::Box::box_t box = Nichrome::Box::new (Nichrome::Box::dir_t.horizontal,
+					   Nichrome::Box::glue_item (10),
+					   Nichrome::Box::widget_item (&hello_widget, 10, 0),
+					   Nichrome::Box::glue_item (10),
+					   Nichrome::Box::widget_item (&exit_widget, 10, 0),
+					   Nichrome::Box::glue_item (10));
+
+Nichrome::set_box (&nichrome, &box);
+
+Nichrome::main_loop (&nichrome);
+
