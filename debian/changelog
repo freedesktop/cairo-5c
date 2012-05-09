@@ -1,3 +1,12 @@
+cairo-5c (1.8) unstable; urgency=low
+
+  * Skip infinite recursive box resize
+  * Add explicit x/y 'span' for box elements
+  * Allow for significant pixel differences. Fixes build failures on
+    non-i386 machines
+
+ -- Keith Packard <keithp@keithp.com>  Wed, 09 May 2012 16:43:08 -0700
+
 cairo-5c (1.7) unstable; urgency=low
   * Update to new version of cairo
   * Add new multi-line text widget
