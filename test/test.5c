@@ -65,6 +65,34 @@ void test_check (bool ok, string reason, poly args ...) {
 	raise test_fail (File::sprintf (reason, args ...));
 }
 
+/*
+ * This computes a distance between two pixels and
+ * warns the user if it is non-zero, while allowing
+ * some error as different architectures may generate
+ * slightly different colors
+ */
+real pixel_dist(int a, int b) {
+	typedef struct {
+		int a, r, g, b;
+	} color;
+
+	color get_color(int p) {
+		return (color) {
+			.a = (p >> 24) & 0xff,
+			.r = (p >> 16) & 0xff,
+			.g = (p >> 8) & 0xff,
+			.b = p & 0xff
+		};
+	}
+
+	real color_dist(color a, color b) {
+		return sqrt(abs(a.a - b.a) ** 2 + abs(a.r - b.r) ** 2 +
+			    abs(a.g - b.g) ** 2 + abs(a.b - b.b) ** 2);
+	}
+	
+	return color_dist(get_color(a), get_color(b));
+}
+
 operator_t[*] operators = {
     operator_t.CLEAR, operator_t.SOURCE, operator_t.OVER,
     operator_t.IN, operator_t.OUT, operator_t.ATOP,
@@ -809,6 +837,7 @@ quiet_test_t[] quiet_tests = {
 bool
 run_image_test (image_test_t t, string srcdir)
 {
+    int variations = 0;
     printf ("%-20.20s ", t.name);
     twixt (surface_t out = surface_create (t.format, test_width, test_height);
 	   Surface::destroy (out))
@@ -834,8 +863,11 @@ run_image_test (image_test_t t, string srcdir)
 			for (int x = 0; x < Surface::width (ref); x++) {
 			    int out_p = Image::get_pixel (out, x, y) & mask;
 			    int ref_p = Image::get_pixel (ref, x, y) & mask;
-			    test_check (out_p == ref_p,
-					"pixel mismatch 0x%x != 0x%x at %d %d",
+			    real dist = pixel_dist(out_p, ref_p);
+			    if (dist != 0)
+				++variations;
+			    test_check (dist < 20,
+					"pixel mismatch 0x%x not similar to 0x%x at %d %d",
 					out_p, ref_p, x, y);
 			}
 		}
@@ -852,6 +884,8 @@ run_image_test (image_test_t t, string srcdir)
 	    return false;
 	}
     }
+    if (variations != 0)
+	printf (" (%d minor variations)", variations);
     printf (" passed.\n");
     return true;
 }
