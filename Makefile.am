@@ -84,8 +84,7 @@ debuild: $(DEBFILE) $(LIBDEBFILE)
 $(LIBDEBFILE): $(DEBFILE)
 
 $(DEBFILE): $(TARFILE)
-	tar xzf $(TARFILE)
-	(cd $(distdir) && pdebuild --buildresult $(abs_top_builddir) --auto-debsign)
+	(pdebuild --buildresult $(abs_top_builddir) --auto-debsign --debbuildopts -i)
 
 $(TARFILE): dist-gzip
 
