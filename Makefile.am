@@ -83,8 +83,9 @@ debuild: $(DEBFILE) $(LIBDEBFILE)
 
 $(LIBDEBFILE): $(DEBFILE)
 
-$(DEBFILE): $(TARFILE)
-	(pdebuild --buildresult $(abs_top_builddir) --auto-debsign --debbuildopts -i)
+$(DEBFILE): distdir
+	(cd $(distdir) && pdebuild --buildresult $(abs_top_builddir) --auto-debsign)
+	$(am__remove_distdir)
 
 $(TARFILE): dist-gzip
 
