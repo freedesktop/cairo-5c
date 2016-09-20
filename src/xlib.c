@@ -54,6 +54,7 @@ typedef struct _x_global {
     int		running;
     int		pipe[2];
     pthread_t	x_thread;
+    pthread_mutex_t repaint_mutex;
     XContext	context;
     x_repaint_t	*repaint;
     XAtom	wm_delete_window;
@@ -332,7 +333,7 @@ repaint (cairo_5c_surface_t *c5s, int x, int y, int w, int h)
 }
 
 static void
-repaint_timeout (x_global_t *xg, int when)
+_repaint_timeout (x_global_t *xg, int when)
 {
     x_repaint_t	*xr;
     
@@ -340,10 +341,14 @@ repaint_timeout (x_global_t *xg, int when)
     {
 	cairo_5c_surface_t  *c5s = xr->c5s;
 	cairo_5c_gui_t	    *gui = c5s->u.window.gui;
+	xg->repaint = xr->next;
+
+	pthread_mutex_unlock(&xg->repaint_mutex);
+	free (xr);
+
 	if (gui->disable == 0 && gui->dirty)
 	    repaint (c5s, 0, 0, 0, 0);
-	xg->repaint = xr->next;
-	free (xr);
+	pthread_mutex_lock(&xg->repaint_mutex);
     }
 }
 
@@ -415,6 +420,7 @@ x_thread_main (void *closure)
 	    }
 	}
 	timeout = -1;
+	pthread_mutex_lock(&xg->repaint_mutex);
 	while (xg->repaint)
 	{
 	    int when = now ();
@@ -422,8 +428,9 @@ x_thread_main (void *closure)
 	    if (timeout > 0)
 		break;
 	    timeout = -1;
-	    repaint_timeout (xg, when);
+	    _repaint_timeout (xg, when);
 	}
+	pthread_mutex_unlock(&xg->repaint_mutex);
 	poll (fds, 2, timeout);
 	if (fds[1].revents & POLLIN) {
 	    char    stuffed[128];
@@ -453,7 +460,7 @@ x_schedule_repaint (cairo_5c_surface_t *c5s, int delta)
     for (xr = xg->repaint; xr; xr = xr->next)
 	if (xr->c5s == c5s)
 	    return;
-    
+
     xr = malloc (sizeof (x_repaint_t));
     xr->when = now () + delta;
     xr->c5s = c5s;
@@ -520,6 +527,7 @@ x_global_create (void)
     xg->repaint = NULL;
     pipe (xg->pipe);
     
+    pthread_mutex_init(&xg->repaint_mutex, NULL);
     pthread_create (&xg->x_thread, 0, x_thread_main, xg);
     x_global = xg;
     return xg;
@@ -768,7 +776,6 @@ cairo_5c_gui_enable (cairo_5c_surface_t *c5s)
 	{
 	    repaint (c5s, 0, 0, 0, 0);
 	    gui->dirty = 0;
-//	    g_timeout_add (0, gtk_repaint_timeout, c5s);
 	}
     }
     return was_disabled;
