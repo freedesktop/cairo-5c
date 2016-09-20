@@ -1,3 +1,12 @@
+cairo-5c (1.9) unstable; urgency=low
+
+  * Add connect 3 demo application
+  * Protect repaint queue with mutex
+  * Update test images with current cairo
+  * Fix test suite execution.
+
+ -- Keith Packard <keithp@keithp.com>  Tue, 20 Sep 2016 02:34:53 -0700
+
 cairo-5c (1.8) unstable; urgency=low
 
   * Skip infinite recursive box resize
