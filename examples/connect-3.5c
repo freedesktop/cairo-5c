@@ -433,9 +433,8 @@ void computer_player (&game_t game, &label_t label)
 	    board_t best_board = game.board;
 	    move_t computer = best_move (&best_board, game.turn);
 	    assert (computer.position.x != -1, "no move");
-	    printf("score: %d\n", computer.score);
 	    make_move (&game, computer.position.x, computer.position.y);
-	    Label::relabel (&label, "");
+	    Label::relabel (&label, sprintf("score: %d", computer.score));
 	    Widget::redraw (&label);
 	}
     }
