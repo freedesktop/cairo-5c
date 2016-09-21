@@ -2,6 +2,7 @@ NICKLEFILES=\
 	animate.5c \
 	arc.5c \
 	chrome-example.5c \
+	connect-3.5c \
 	draw.5c \
 	events.5c \
 	fob.5c \
