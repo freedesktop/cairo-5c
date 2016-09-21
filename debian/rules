@@ -12,3 +12,6 @@ configure_flags = --with-nickle-libdir='$${datadir}/nickle' --prefix=/usr --mand
 
 override_dh_auto_configure:
 	dh_auto_configure -- $(configure_flags)
+
+override_dh_compress:
+	dh_compress -X.5c
