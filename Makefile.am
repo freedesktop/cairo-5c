@@ -46,7 +46,7 @@ NICKLEFILES= cairo.5c
 DEBIAN = debian/cairo-5c.install debian/libcairo5c-0.install \
 	 debian/changelog debian/compat \
 	 debian/control debian/copyright debian/docs \
-	 debian/rules
+	 debian/rules debian/source/format
 
 EXTRA_DIST = $(NICKLEFILES) ChangeLog autogen.sh cairo-5c.3.in $(DEBIAN)
 
