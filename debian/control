@@ -1,5 +1,5 @@
 Source: cairo-5c
-Section: lib
+Section: libs
 Priority: optional
 Maintainer: Keith Packard <keithp@keithp.com>
 Build-Depends: debhelper (>= 9), libcairo2-dev, librsvg2-dev,
@@ -9,14 +9,15 @@ Standards-Version: 3.9.3
 
 Package: cairo-5c
 Architecture: all
-Depends: ${misc:Depends}, nickle, libcairo5c-0
+Depends: ${misc:Depends}, nickle, libcairo-5c0
 Description: nickle bindings for the cairo graphics library
  This package contains the nickle code to load and use the cairo-5c library
 
-Package: libcairo5c-0
+Package: libcairo-5c0
 Architecture: any
 Multi-Arch: same
 Depends: ${shlibs:Depends}, ${misc:Depends}
+Replaces: libcairo5c-0
 Description: library for cairo nickle bindings
  This package contains a shared library which links to the cairo
  library using the nickle FFI mechanism.

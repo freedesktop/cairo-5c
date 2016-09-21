@@ -43,7 +43,7 @@ RELEASE_UPLOAD_DIR =	$(RELEASE_UPLOAD_BASE)/releases
 
 NICKLEFILES= cairo.5c
 
-DEBIAN = debian/cairo-5c.install debian/libcairo5c-0.install \
+DEBIAN = debian/cairo-5c.install debian/libcairo-5c0.install \
 	 debian/changelog debian/compat \
 	 debian/control debian/copyright debian/docs \
 	 debian/rules debian/source/format
@@ -71,9 +71,10 @@ cairo-5c.3: cairo-5c.3.in
 	    -e 's,@''BUILD_DATE@,$(BUILD_DATE),' \
 	    -e 's,@''pkgdatadir@,$(pkgdatadir),' $(top_srcdir)/cairo-5c.3.in > $@
 	    
+ARCH=amd64
 TARFILE=$(PACKAGE)-$(VERSION).tar.gz
-DEBFILE=$(PACKAGE)_$(VERSION)-1_i386.deb
-LIBDEBFILE=libcairo5c_$(VERSION)-1_i386.deb
+DEBFILE=$(PACKAGE)_$(VERSION)-1_$(ARCH).deb
+LIBDEBFILE=libcairo-5c$(VERSION)-1_$(ARCH).deb
 SHA1_FILE=$(TARFILE).sha1
 GPG_FILE=$(SHA1_FILE).asc
 

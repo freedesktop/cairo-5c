@@ -3,7 +3,7 @@
 # GNU copyright 1997 to 1999 by Joey Hess.
 
 # Uncomment this to turn on verbose mode.
-export DH_VERBOSE=1
+#export DH_VERBOSE=1
 
 configure_flags = $(WITHARCH) --libdir=\$${prefix}/lib/$(DEB_HOST_MULTIARCH) --with-nickle-libdir='$${datadir}/nickle' --prefix=/usr --mandir='$${prefix}/share/man'
 
