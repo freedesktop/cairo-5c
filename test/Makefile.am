@@ -37,3 +37,10 @@ TESTS_ENVIRONMENT=SRCDIR="$(srcdir)" NICKLEPATH="$(top_srcdir):$(top_srcdir)/chr
 TESTS=test.5c
 
 EXTRA_DIST=$(NICKLEFILES) $(REFPNG)
+
+set-ref: test-suite.log
+	for ref in $(REFPNG); do \
+		out=`echo $$ref | sed 's/-ref.png/-out.png/'`; \
+		echo cp $$out $$ref; \
+		cp $$out $$ref; \
+	done
