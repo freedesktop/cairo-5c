@@ -34,7 +34,6 @@
 
 SUBDIRS = src nichrome test examples
 
-BUILD_DATE=$(shell date +"%F")
 NICKLE_VERSION=$(shell nickle -e version | sed 's/"//g')
 
 RELEASE_UPLOAD_HOST =   cairographics.org
@@ -67,8 +66,7 @@ nicklelib_DATA = $(NICKLEFILES)
 man_MANS = cairo-5c.3
 
 cairo-5c.3: cairo-5c.3.in
-	sed -e 's,@''NICKLE_VERSION@,$(NICKLE_ERSION),' \
-	    -e 's,@''BUILD_DATE@,$(BUILD_DATE),' \
+	sed -e 's,@''NICKLE_VERSION@,$(NICKLE_VERSION),' \
 	    -e 's,@''pkgdatadir@,$(pkgdatadir),' $(top_srcdir)/cairo-5c.3.in > $@
 	    
 ARCH=amd64

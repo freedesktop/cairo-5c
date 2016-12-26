@@ -1,4 +1,4 @@
-.TH CAIRO-5C 3 "@BUILD_DATE@"
+.TH CAIRO-5C 3 "2016-12-26"
 .SH NAME
 cairo-5c \- cairo bindings for nickle programs
 .SH SYNOPSIS
