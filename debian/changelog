@@ -1,3 +1,9 @@
+cairo-5c (1.10) unstable; urgency=low
+
+  * Set date of release in man page by hand. Closes: #845524.
+
+ -- Keith Packard <keithp@keithp.com>  Mon, 26 Dec 2016 07:27:52 -0800
+
 cairo-5c (1.9) unstable; urgency=low
 
   * Add connect 3 demo application
