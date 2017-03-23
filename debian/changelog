@@ -1,3 +1,10 @@
+cairo-5c (1.11) unstable; urgency=medium
+
+  * Set debian standards to 3.9.8
+  * Set dh compat to 10
+
+ -- Keith Packard <keithp@keithp.com>  Thu, 23 Mar 2017 15:52:47 +0100
+
 cairo-5c (1.10) unstable; urgency=low
 
   * Set date of release in man page by hand. Closes: #845524.
