@@ -2,10 +2,10 @@ Source: cairo-5c
 Section: libs
 Priority: optional
 Maintainer: Keith Packard <keithp@keithp.com>
-Build-Depends: debhelper (>= 9), libcairo2-dev, librsvg2-dev,
+Build-Depends: debhelper (>= 10), libcairo2-dev, librsvg2-dev,
  nickle (>= 2.73), libx11-dev (>= 2:1.4.99.901), libfreetype6-dev,
  autotools-dev, ttf-bitstream-vera
-Standards-Version: 3.9.3
+Standards-Version: 3.9.8
 
 Package: cairo-5c
 Architecture: all
