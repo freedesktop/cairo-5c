@@ -50,13 +50,17 @@ typedef struct {
 
 int test_width = 100;
 int test_height = 100;
+bool dump_out = false;
 
-string font_name = "Bitstream Vera Sans-12";
+string font_style=":hintstyle=hintfull:hinting=true:autohint=false:lcdfilter=lcdlegacy:rgba=none";
+string font_family = "Bitstream Vera Sans-12";
+string font_name = font_family + font_style;
+
 string[*] font_names = {
     font_name,
-    "Bitstream Vera Sans-12:bold",
-    "Bitstream Vera Sans-12:italic",
-    "Bitstream Vera Sans-12:bold:italic"
+    font_family + ":bold" + font_style,
+    font_family + ":italic" + font_style,
+    font_family + ":bold:italic" + font_style,
 };
 
 exception test_fail (string reason);
@@ -884,6 +888,8 @@ run_image_test (image_test_t t, string srcdir)
 	    printf (" failed: %s\n", reason);
 	    return false;
 	}
+	if (dump_out)
+	    Surface::write_to_png (out, t.name + "-out.png");
     }
     if (variations != 0)
 	printf (" (%d minor variations)", variations);
@@ -913,6 +919,7 @@ run_quiet_test (quiet_test_t t, string srcdir)
 string srcdir = ".";
 
 if (Environ::check ("SRCDIR")) srcdir = Environ::get ("SRCDIR");
+dump_out = Environ::check("DUMP_OUT");
 if (dim (argv) > 1) srcdir = argv[1];
 
 int
