@@ -38,6 +38,9 @@ TESTS=test.5c
 
 EXTRA_DIST=$(NICKLEFILES) $(REFPNG)
 
+clean-local:
+	rm -f *-out.png
+
 set-ref: test-suite.log
 	for ref in $(REFPNG); do \
 		out=`echo $$ref | sed 's/-ref.png/-out.png/'`; \
