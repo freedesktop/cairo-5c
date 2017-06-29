@@ -1,3 +1,9 @@
+cairo-5c (1.12) unstable; urgency=low
+
+  * Force hinting in test font names. Closes: #866360.
+
+ -- Keith Packard <keithp@keithp.com>  Thu, 29 Jun 2017 14:13:34 -0700
+
 cairo-5c (1.11) unstable; urgency=medium
 
   * Set debian standards to 3.9.8
