@@ -1,3 +1,9 @@
+cairo-5c (1.13) unstable; urgency=medium
+
+  * Adapt to new fontconfig/freetype bits. Closes: #866707.
+
+ -- Keith Packard <keithp@keithp.com>  Sat, 08 Jul 2017 21:37:06 -0500
+
 cairo-5c (1.12) unstable; urgency=low
 
   * Force hinting in test font names. Closes: #866360.
