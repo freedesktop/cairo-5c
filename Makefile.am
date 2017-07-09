@@ -82,7 +82,8 @@ debuild: $(DEBFILE) $(LIBDEBFILE)
 
 $(LIBDEBFILE): $(DEBFILE)
 
-$(DEBFILE): distdir
+$(DEBFILE): $(TARFILE)
+	tar xzf $(TARFILE)
 	(cd $(distdir) && pdebuild --buildresult $(abs_top_builddir) --auto-debsign)
 	$(am__remove_distdir)
 
