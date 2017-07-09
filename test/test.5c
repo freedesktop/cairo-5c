@@ -52,8 +52,8 @@ int test_width = 100;
 int test_height = 100;
 bool dump_out = false;
 
-string font_style=":hintstyle=hintfull:hinting=true:autohint=false:lcdfilter=lcdlegacy:rgba=none";
-string font_family = "Bitstream Vera Sans-12";
+string font_style=":pixelsize=12.3:hintstyle=hintfull:hinting=true:autohint=false:lcdfilter=lcdlegacy:rgba=none";
+string font_family = "Bitstream Vera Sans";
 string font_name = font_family + font_style;
 
 string[*] font_names = {
