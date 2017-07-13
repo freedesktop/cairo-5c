@@ -1,3 +1,10 @@
+cairo-5c (1.14) unstable; urgency=medium
+
+  * Force freetype rendering to version 35.
+  * Only warn on text drawing test failures. Closes: #867845.
+
+ -- Keith Packard <keithp@keithp.com>  Thu, 13 Jul 2017 12:52:50 -0700
+
 cairo-5c (1.13) unstable; urgency=medium
 
   * Adapt to new fontconfig/freetype bits. Closes: #866707.
