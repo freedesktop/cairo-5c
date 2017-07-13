@@ -32,19 +32,21 @@
  * Contributor(s):
  *      Keith Packard <keithp@keithp.com>
  */
-    
+
 autoimport Cairo;
 
 import Image;
 
 typedef struct {
     string		name;
+    bool		warn;
     format_t		format;
     void(cairo_t)    	paint;
 } image_test_t;
 
 typedef struct {
     string		name;
+    bool		warn;
     void(cairo_t)	test;
 } quiet_test_t;
 
@@ -94,7 +96,7 @@ real pixel_dist(int a, int b) {
 		return sqrt(abs(a.a - b.a) ** 2 + abs(a.r - b.r) ** 2 +
 			    abs(a.g - b.g) ** 2 + abs(a.b - b.b) ** 2);
 	}
-	
+
 	return color_dist(get_color(a), get_color(b));
 }
 
@@ -153,7 +155,7 @@ make_another_pattern ()
     rectangle (cs, 0, 0, w/2, h/2);
     rectangle (cs, w/2, h/2, w/2, h/2);
     fill (cs);
-    
+
     set_source_rgba (cs, 1, 1, 1, 0.5);
     rectangle (cs, 0, h/2, w/2, h/2);
     rectangle (cs, w/2, 0, w/2, h/2);
@@ -180,7 +182,7 @@ pattern_t
 make_radial_gradient_pattern ()
 {
     pattern_t	pat = Pattern::create_radial (test_width / 2, test_height / 2,
-					      0, 
+					      0,
 					      test_width / 2, test_height / 2,
 					      test_width / 4);
     Pattern::add_color_stop_rgba (pat, 1, 1, 0, 0, 1);
@@ -199,7 +201,7 @@ star (cairo_t cr, real w, real h)
 	line_to (cr, 0, h/3);
     }
     fill (cr);
-    restore (cr);    
+    restore (cr);
 }
 
 void
@@ -210,11 +212,11 @@ many_paint (cairo_t cr, int n, void(cairo_t cr, real w, real h) sub_paint)
     int	    xinc = width (cr) // nx;
     int	    yinc = height (cr) // ny;
 
-    for (int i = 0; i < n; i++) 
+    for (int i = 0; i < n; i++)
     {
 	int x = (i % nx) * xinc;
 	int y = (i // nx) * yinc;
-	
+
 	save (cr);
 	rectangle (cr, x, y, xinc, yinc);
 	clip (cr);
@@ -227,6 +229,7 @@ many_paint (cairo_t cr, int n, void(cairo_t cr, real w, real h) sub_paint)
 image_test_t[] image_tests = {
     {
 	name = "paint",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgba (cr, 1, 0, 0, 1);
@@ -235,8 +238,9 @@ image_test_t[] image_tests = {
 	    paint (cr);
 	}
     },
-    { 
+    {
 	name = "line",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgb (cr, 1, 0, 0);
@@ -247,6 +251,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "box",
+	warn = false,
 	format = format_t.RGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgb (cr, 0, 1, 0);
@@ -256,6 +261,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "circle",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgba (cr, 1, 1, 0, .5);
@@ -265,6 +271,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "fill-preserve",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    rectangle (cr, 10, 10, 80, 80);
@@ -277,6 +284,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "stroke-preserve",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    rectangle (cr, 10, 10, 80, 80);
@@ -289,6 +297,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "clip",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    arc (cr, 50, 50, 30, 0, 2*pi);
@@ -300,6 +309,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "fill-extents",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    arc (cr, 50, 50, 30, 0, 2*pi);
@@ -313,6 +323,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "stroke-extents",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    arc (cr, 50, 50, 30, 0, 2*pi);
@@ -327,11 +338,12 @@ image_test_t[] image_tests = {
     },
     {
 	name = "set-operator",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source (cr, make_a_pattern ());
 	    paint (cr);
-	    
+
 	    set_source (cr, make_another_pattern ());
 
 	    void sub_paint (cairo_t cr, real w, real h)
@@ -346,6 +358,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "set-source",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    pattern_t[*]    pats = {
@@ -355,18 +368,19 @@ image_test_t[] image_tests = {
 		make_radial_gradient_pattern (),
 		Pattern::create_rgba (1, 1, 0, 1),
 	    };
-	    
+
 	    void sub_paint (cairo_t cr, real w, real h) {
 		static int p = 0;
 		set_source (cr, pats[p++]);
 		paint (cr);
 	    }
-	    
+
 	    many_paint (cr, dim (pats), sub_paint);
 	}
     },
     {
 	name = "set-tolerance",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_tolerance (cr, 10);
@@ -377,6 +391,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "set-fill-rule",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgba (cr, 1, 1, 1, 1);
@@ -390,10 +405,11 @@ image_test_t[] image_tests = {
     },
     {
 	name = "set-line-width",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgba (cr, 1, 0, 1, 1);
-	    
+
 	    real[*] widths = { .5, 1, 2, 3, 5, 10 };
 
 	    void sub_paint (cairo_t cr, real w, real h) {
@@ -409,10 +425,11 @@ image_test_t[] image_tests = {
     },
     {
 	name = "set-line-cap",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgba (cr, 1, 0, 1, 1);
-	    
+
 	    set_line_width (cr, 10);
 	    void sub_paint (cairo_t cr, real w, real h) {
 		static int c = 0;
@@ -426,10 +443,11 @@ image_test_t[] image_tests = {
     },
     {
 	name = "set-line-join",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgba (cr, 1, 0, 1, 1);
-	    
+
 	    set_line_width (cr, 10);
 	    void sub_paint (cairo_t cr, real w, real h) {
 		static int j = 0;
@@ -444,16 +462,17 @@ image_test_t[] image_tests = {
     },
     {
 	name = "set-miter-limit",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    real[*] miter_limits = {
 		1, 5, 10, 20
 	    };
 	    set_source_rgba (cr, 1, 0, 1, 1);
-	    
+
 	    set_line_width (cr, 6);
 	    set_line_join (cr, line_join_t.MITER);
-	    
+
 	    void sub_paint (cairo_t cr, real w, real h) {
 		static int l = 0;
 		set_miter_limit (cr, miter_limits[l++]);
@@ -467,6 +486,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "rotate",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    real[*] rotations = {
@@ -488,6 +508,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "paint-with-alpha",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source (cr, make_a_pattern ());
@@ -498,6 +519,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "mask",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    surface_t	mask_surf = Image::surface_create (format_t.A,
@@ -510,13 +532,14 @@ image_test_t[] image_tests = {
 	    set_operator (mask_cr, operator_t.OVER);
 	    set_source_rgba (mask_cr, 0, 0, 0, 1);
 	    star (mask_cr, test_width, test_height);
-	    
+
 	    set_source (cr, make_a_pattern());
 	    mask (cr, mask_pattern);
 	}
     },
     {
 	name = "append-path",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    path_t[*] path = {
@@ -532,6 +555,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "set-font",
+	warn = true,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgba (cr, 0, 0, 0, 1);
@@ -546,6 +570,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "set-font-size",
+	warn = true,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgba (cr, 0, 0, 0, 1);
@@ -564,27 +589,28 @@ image_test_t[] image_tests = {
     },
     {
 	name = "set-font-matrix",
+	warn = true,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_source_rgba (cr, 0, 0, 0, 1);
 	    set_font (cr, font_name);
 	    matrix_t[*] font_matrices = {
-		{ 
+		{
 		    xx = 10, yx = 0,
 		    xy = 0, yy = 10,
 		    x0 = 0, y0 = 0
 		},
-		{ 
+		{
 		    xx = 10, yx = 2,
 		    xy = 0, yy = 10,
 		    x0 = 0, y0 = 0
 		},
-		{ 
+		{
 		    xx = 8, yx = 4,
 		    xy = 4, yy = 8,
 		    x0 = 0, y0 = 0
 		},
-		{ 
+		{
 		    xx = 10, yx = 0,
 		    xy = 0, yy = -10,
 		    x0 = 0, y0 = 0
@@ -601,6 +627,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "show-text",
+	warn = true,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    move_to (cr, 10, 20);
@@ -610,6 +637,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "text-path",
+	warn = true,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    move_to (cr, 10, 40);
@@ -622,6 +650,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "text-extents",
+	warn = true,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    set_font (cr, font_name);
@@ -645,6 +674,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "create-rgba",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    rgba_color_t[*] colors = {
@@ -669,6 +699,7 @@ image_test_t[] image_tests = {
     },
     {
 	name = "create-rgb",
+	warn = false,
 	format = format_t.ARGB,
 	paint = void func (cairo_t cr) {
 	    rgb_color_t[*] colors = {
@@ -695,6 +726,7 @@ image_test_t[] image_tests = {
 quiet_test_t[] quiet_tests = {
     {
 	name = "get-operator",
+	warn = false,
 	test = void func (cairo_t cr) {
 	    for (int i = 0; i < dim (operators); i++) {
 		set_operator (cr, operators[i]);
@@ -705,10 +737,11 @@ quiet_test_t[] quiet_tests = {
     },
     {
 	name = "get-source",
+	warn = false,
 	test = void func (cairo_t cr) {
 	    pattern_t	pat = make_a_pattern ();
 	    pattern_t	old = get_source (cr);
-	    
+
 	    set_source (cr, pat);
 	    test_check (get_source (cr) == pat,
 			"get_source returned wrong pattern");
@@ -716,6 +749,7 @@ quiet_test_t[] quiet_tests = {
     },
     {
 	name = "get-tolerance",
+	warn = false,
 	test = void func (cairo_t cr) {
 	    for (real t = 11; t <= 81; t += 10) {
 		set_tolerance (cr, t);
@@ -726,6 +760,7 @@ quiet_test_t[] quiet_tests = {
     },
     {
 	name = "get-current-point",
+	warn = false,
 	test = void func (cairo_t cr) {
 	    for (real x = 12; x < 82; x += 10) {
 		for (real y = 13; y < 83; y += 10) {
@@ -739,6 +774,7 @@ quiet_test_t[] quiet_tests = {
     },
     {
 	name = "get-fill-rule",
+	warn = false,
 	test = void func (cairo_t cr) {
 	    for (int i = 0; i < dim (fill_rules); i++) {
 		set_fill_rule (cr, fill_rules[i]);
@@ -749,6 +785,7 @@ quiet_test_t[] quiet_tests = {
     },
     {
 	name = "get-line-width",
+	warn = false,
 	test = void func (cairo_t cr) {
 	    for (real l = 1; l < 20; l++) {
 		set_line_width (cr, l);
@@ -759,6 +796,7 @@ quiet_test_t[] quiet_tests = {
     },
     {
 	name = "get-line-cap",
+	warn = false,
 	test = void func (cairo_t cr) {
 	    for (int i = 0; i < dim (line_caps); i++) {
 		set_line_cap (cr, line_caps[i]);
@@ -769,6 +807,7 @@ quiet_test_t[] quiet_tests = {
     },
     {
 	name = "get-line-join",
+	warn = false,
 	test = void func (cairo_t cr) {
 	    for (int i = 0; i < dim (line_joins); i++) {
 		set_line_join (cr, line_joins[i]);
@@ -779,6 +818,7 @@ quiet_test_t[] quiet_tests = {
     },
     {
 	name = "get-miter-limit",
+	warn = false,
 	test = void func (cairo_t cr) {
 	    for (real l = 1; l < 20; l++) {
 		set_miter_limit (cr, l);
@@ -789,6 +829,7 @@ quiet_test_t[] quiet_tests = {
     },
     {
 	name = "get-matrix",
+	warn = false,
 	test = void func (cairo_t cr) {
 	    for (real s = 1; s < 10; s++)
 	    {
@@ -808,6 +849,7 @@ quiet_test_t[] quiet_tests = {
     },
     {
 	name = "get-font-matrix",
+	warn = false,
 	test = void func (cairo_t cr) {
 	    for (real s = 1; s < 30; s++)
 	    {
@@ -825,6 +867,7 @@ quiet_test_t[] quiet_tests = {
     },
     {
 	name = "font-extents",
+	warn = true,
 	test = void func (cairo_t cr) {
 	    font_extents_t  expect = {
 		ascent = 11, descent = 3, height = 14,
@@ -836,7 +879,7 @@ quiet_test_t[] quiet_tests = {
 			sprintf ("font_extents returned wrong value: %v != %v", expect, actual));
 	}
     },
-    
+
 };
 
 bool
@@ -854,7 +897,7 @@ run_image_test (image_test_t t, string srcdir)
 	    try {
 		twixt (surface_t ref = surface_create_from_png (srcdir + "/" +
 						      t.name + "-ref.png");
-		       Surface::destroy (ref)) 
+		       Surface::destroy (ref))
 		{
 		    int	mask = t.format == format_t.RGB ? 0xffffff : ~0;
 
@@ -876,7 +919,7 @@ run_image_test (image_test_t t, string srcdir)
 					out_p, ref_p, x, y);
 			}
 		}
-	    } catch File::open_error (string message, File::error_type error, 
+	    } catch File::open_error (string message, File::error_type error,
 				      string name) {
 		raise test_fail (message + ": " + name);
 	    } catch File::io_error (string message, File::error_type error,
@@ -885,8 +928,8 @@ run_image_test (image_test_t t, string srcdir)
 	    }
 	} catch test_fail (string reason) {
 	    Surface::write_to_png (out, t.name + "-out.png");
-	    printf (" failed: %s\n", reason);
-	    return false;
+	    printf (" %s: %s\n", t.warn ? "warning" : "failed", reason);
+	    return false || t.warn;
 	}
 	if (dump_out)
 	    Surface::write_to_png (out, t.name + "-out.png");
@@ -926,7 +969,7 @@ int
 run_tests (string srcdir)
 {
     int	failures = 0;
-    
+
     for (int i = 0; i < dim (image_tests); i++)
 	if (!run_image_test (image_tests[i], srcdir))
 	    ++failures;
