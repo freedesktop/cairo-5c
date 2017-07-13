@@ -44,6 +44,8 @@ clean-local:
 set-ref: test-suite.log
 	for ref in $(REFPNG); do \
 		out=`echo $$ref | sed 's/-ref.png/-out.png/'`; \
-		echo cp $$out $$ref; \
-		cp $$out $$ref; \
+		if [ -f $$out ]; then \
+			echo cp $$out $$ref; \
+			cp $$out $$ref; \
+		fi; \
 	done
