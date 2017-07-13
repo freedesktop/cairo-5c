@@ -33,6 +33,8 @@
  *      Keith Packard <keithp@keithp.com>
  */
 
+Environ::set("FREETYPE_PROPERTIES", "truetype:interpreter-version=35");
+
 if (!Command::valid_name ((string[]) { "Cairo" }))
     Foreign::load ("libcairo-5c.so.0");
 
