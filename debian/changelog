@@ -1,3 +1,11 @@
+cairo-5c (1.15) unstable; urgency=medium
+
+  * Add per-surface DPI values. Fetch correct value for X. Scale
+    fonts.
+  * Fix a bunch of lintian warnings.
+
+ -- Keith Packard <keithp@keithp.com>  Thu, 04 Oct 2018 15:10:41 -0700
+
 cairo-5c (1.14) unstable; urgency=medium
 
   * Force freetype rendering to version 35.
