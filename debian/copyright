@@ -1,6 +1,6 @@
-Format:  http://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Format:  https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
 Upstream-Name: cairo-5c
-Source: http://nickle.org
+Source: https://nickle.org
 
 Files: *
 Copyright: 2004, 2005, 2007, 2008, 2012 Keith Packard <keithp@keithp.com>
