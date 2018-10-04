@@ -53,6 +53,7 @@ typedef struct _x_global {
     int		ref_count;
     int		running;
     int		pipe[2];
+    double	dpi;
     pthread_t	x_thread;
     pthread_mutex_t repaint_mutex;
     XContext	context;
@@ -145,7 +146,7 @@ set_window_surface (x_global_t *xg, Window wid, cairo_5c_surface_t *c5s)
 static void
 configure_event (x_global_t *xg, XConfigureEvent *event)
 {
-    cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window); 
+    cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
     cairo_5c_gui_t	*gui;
 
     if (!c5s)
@@ -169,7 +170,7 @@ expose_event (x_global_t *xg, XExposeEvent *event)
 {
     cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
     cairo_5c_gui_t	*gui;
-    
+
     if (!c5s)
 	return;
     gui = c5s->u.window.gui;
@@ -191,7 +192,7 @@ expose_event (x_global_t *xg, XExposeEvent *event)
  */
 static void
 delete_drawing_area (x_global_t *xg, cairo_5c_surface_t *c5s)
-{			   
+{
     cairo_5c_gui_t	*gui = c5s->u.window.gui;
     if (gui->send_events)
     {
@@ -204,7 +205,7 @@ static void
 client_message_event (x_global_t *xg, XClientMessageEvent *event)
 {
     cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
-    
+
     if (!c5s)
 	return;
     if (event->message_type == xg->wm_protocols && event->format == 32)
@@ -222,7 +223,7 @@ motion_notify_event (x_global_t *xg, XMotionEvent *event)
 {
     cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
     cairo_5c_gui_t	*gui;
-    
+
     if (!c5s)
 	return;
     gui = c5s->u.window.gui;
@@ -243,7 +244,7 @@ button_event (x_global_t *xg, XButtonEvent *event)
 {
     cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
     cairo_5c_gui_t	*gui;
-    
+
     if (!c5s)
 	return;
     gui = c5s->u.window.gui;
@@ -264,7 +265,7 @@ key_event (x_global_t *xg, XKeyEvent *event)
 {
     cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
     cairo_5c_gui_t	*gui;
-    
+
     if (!c5s)
 	return;
     gui = c5s->u.window.gui;
@@ -290,7 +291,7 @@ focus_change_event (x_global_t *xg, XFocusChangeEvent *event)
 {
     cairo_5c_surface_t	*c5s = get_window_surface (xg, event->window);
     cairo_5c_gui_t	*gui;
-    
+
     if (!c5s)
 	return;
     gui = c5s->u.window.gui;
@@ -310,17 +311,17 @@ static void
 repaint (cairo_5c_surface_t *c5s, int x, int y, int w, int h)
 {
     cairo_5c_gui_t  *gui = c5s->u.window.gui;
-    if (gui->window && 
+    if (gui->window &&
 	(gui->new_width != c5s->width ||
 	 gui->new_height != c5s->height))
     {
 	allocate_pixmap (c5s);
     }
-    
+
     if (gui->window && gui->pixmap && gui->gc)
     {
 	Display	    *dpy = gui->global->dpy;
-    
+
 	if (w == 0)
 	    w = c5s->width - x;
 	if (h == 0)
@@ -336,7 +337,7 @@ static void
 _repaint_timeout (x_global_t *xg, int when)
 {
     x_repaint_t	*xr;
-    
+
     while ((xr = xg->repaint) && xr->when - when <= 0)
     {
 	cairo_5c_surface_t  *c5s = xr->c5s;
@@ -383,7 +384,7 @@ x_thread_main (void *closure)
     sigaddset (&mask, SIGCHLD);
     sigaddset (&mask, SIGINT);
     pthread_sigmask (SIG_BLOCK, &mask, NULL);
-    
+
     fds[0].fd = ConnectionNumber (xg->dpy);
     fds[0].events = POLLIN;
     fds[1].fd = xg->pipe[0];
@@ -497,18 +498,19 @@ x_global_create (void)
     static int	been_here = 0;
     Display	*dpy;
     x_global_t	*xg;
+    char	*dpi_string;
 
     if (!been_here)
     {
 	XInitThreads ();
 	been_here = 1;
     }
-    
+
     if (x_global)
 	return x_global;
 
     dpy = XOpenDisplay (NULL);
-    
+
     if (!dpy)
     {
 	int err = errno;
@@ -518,15 +520,23 @@ x_global_create (void)
 				FileGetError (err), NewStrString (display_name_arg));
 	return NULL;
     }
-	
+
     xg = malloc (sizeof (x_global_t));
-    
+
     xg->ref_count = 0;
     xg->dpy = dpy;
     xg->running = 1;
     xg->repaint = NULL;
+    xg->dpi = 0.0;
+    dpi_string = XGetDefault(dpy, "Xft", "dpi");
+    if (dpi_string) {
+	char *dpi_end;
+	xg->dpi = strtod(dpi_string, &dpi_end);
+	if (dpi_end == dpi_string)
+	    xg->dpi = 0.0;
+    }
     pipe (xg->pipe);
-    
+
     pthread_mutex_init(&xg->repaint_mutex, NULL);
     pthread_create (&xg->x_thread, 0, x_thread_main, xg);
     x_global = xg;
@@ -550,7 +560,7 @@ cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height,
     XWMHints		    wmHints;
     XClassHint		    classHints;
     XSetWindowAttributes    attr;
-    
+
     xg = x_global_create ();
 
     if (aborting)
@@ -561,14 +571,14 @@ cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height,
 
     dpy = xg->dpy;
     screen = DefaultScreen (dpy);
-    
+
     if (!width)
-	width = XDisplayWidth (dpy, screen) / 3;
+	width = DisplayWidth (dpy, screen) / 3;
     if (!height)
-	height = XDisplayWidth (dpy, screen) / 3;
+	height = DisplayWidth (dpy, screen) / 3;
 
     gui = malloc (sizeof (cairo_5c_gui_t));
-    
+
     xg->ref_count++;
     gui->global = xg;
     gui->pixmap = None;
@@ -577,12 +587,12 @@ cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height,
     gui->dirty = 0;
     gui->disable = 0;
     gui->depth = DefaultDepth (dpy, screen);
-    
+
     gui->new_width = width;
     gui->new_height = height;
-    
+
     gui->send_events = NULL;
-    
+
     attr.background_pixmap = None;
     attr.event_mask = (KeyPressMask|
 		       KeyReleaseMask|
@@ -594,7 +604,7 @@ cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height,
 		       ExposureMask|
 		       StructureNotifyMask|
 		       FocusChangeMask);
-    
+
     gui->window = XCreateWindow (dpy, gui->root,
 				 0, 0, gui->new_width, gui->new_height, 0,
 				 gui->depth,
@@ -606,30 +616,38 @@ cairo_5c_gui_create (cairo_5c_surface_t *c5s, char *name, int width, int height,
     gui->gc = XCreateGC (dpy, gui->window,
 			 GCForeground | GCGraphicsExposures,
 			 &gcv);
-    
+
     set_window_surface (xg, gui->window, c5s);
-    
+
     sizeHints.flags = 0;
     wmHints.flags = InputHint;
     wmHints.input = True;
     classHints.res_name = name;
     classHints.res_class = name;
-    
+
     xg->wm_delete_window = XInternAtom(dpy, "WM_DELETE_WINDOW", False);
     xg->wm_protocols = XInternAtom (dpy, "WM_PROTOCOLS", False);
 
     Xutf8SetWMProperties (dpy, gui->window, name, name,
 			  NULL, 0, &sizeHints, &wmHints, &classHints);
     XSetWMProtocols (dpy, gui->window, &xg->wm_delete_window, 1);
-			  
+
     if (shown)
 	XMapWindow (dpy, gui->window);
 
     c5s->u.window.gui = gui;
-    
+    if (xg->dpi != 0.0) {
+	c5s->dpi = xg->dpi;
+    } else {
+	int	height_pix = DisplayHeight(dpy, screen);
+	int	height_mm = DisplayHeightMM(dpy, screen);
+
+	c5s->dpi = (double) height_pix / ((double) height_mm / 25.4);
+    }
+
     /* create the pixmap */
     allocate_pixmap (c5s);
-    
+
     EXIT ();
     return True;
 }
@@ -742,8 +760,8 @@ void
 cairo_5c_gui_check_size (cairo_5c_surface_t *c5s)
 {
     cairo_5c_gui_t *gui = c5s->u.window.gui;
-    
-    if (gui->disable == 0 && 
+
+    if (gui->disable == 0 &&
 	(gui->new_width != c5s->width ||
 	 gui->new_height != c5s->height))
 	allocate_pixmap (c5s);
@@ -795,7 +813,7 @@ cairo_5c_gui_open_event (cairo_5c_surface_t *c5s)
 	err = errno;
 	RaiseStandardException (exception_open_error, 3,
 				FileGetErrorMessage (err),
-				FileGetError (err), 
+				FileGetError (err),
 				NewStrString ("event"));
 	RETURN (Void);
     }

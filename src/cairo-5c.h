@@ -107,6 +107,7 @@ typedef struct _cairo_5c_surface_t {
     cairo_surface_t *surface;
     double    	    width;
     double    	    height;
+    double	    dpi;
     Bool	    dirty;
     Value	    recv_events;
     Bool	    copied;

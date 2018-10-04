@@ -215,6 +215,7 @@ create_window (Value namev, Value wv, Value hv, Value sv)
     c5s->copied = False;
     c5s->recv_events = Void;
     c5s->u.window.gui = NULL;
+    c5s->dpi = 72.0;
     
     if (!cairo_5c_gui_create (c5s, name, width, height, shown))
     {
@@ -341,6 +342,7 @@ do_Cairo_Surface_create_similar (Value sv, Value cv, Value wv, Value hv)
     c5s->dirty = False;
     c5s->copied = False;
     c5s->recv_events = Void;
+    c5s->dpi = 72.0;
     
     c5s->surface = cairo_surface_create_similar (c5os->surface,
 						 content,
@@ -430,6 +432,7 @@ do_Cairo_Image_surface_create (Value fv, Value wv, Value hv)
     c5s->dirty = False;
     c5s->recv_events = Void;
     c5s->copied = False;
+    c5s->dpi = 72.0;
     
     c5s->surface = cairo_image_surface_create (format,
 					       width,
@@ -476,6 +479,8 @@ do_Cairo_Image_surface_create_from_png (Value filenamev)
     c5s->dirty = False;
     c5s->recv_events = Void;
     c5s->copied = False;
+    c5s->dpi = 72.0;
+
     ret = NewForeign (CairoSurfaceId, c5s, 
 		      cairo_surface_foreign_mark, cairo_surface_foreign_free);
 
@@ -658,6 +663,7 @@ do_Cairo_Pdf_surface_create (Value fnv, Value wv, Value hv)
     c5s->dirty = False;
     c5s->copied = False;
     c5s->recv_events = Void;
+    c5s->dpi = 72.0;
     
     c5s->u.pdf.file = Void;
     
@@ -692,6 +698,7 @@ do_Cairo_Svg_surface_create (Value fnv, Value wv, Value hv)
     c5s->dirty = False;
     c5s->copied = False;
     c5s->recv_events = Void;
+    c5s->dpi = 72.0;
     
     c5s->u.svg.file = Void;
     
@@ -726,7 +733,8 @@ do_Cairo_Ps_surface_create (Value fnv, Value wv, Value hv)
     c5s->dirty = False;
     c5s->copied = False;
     c5s->recv_events = Void;
-    
+    c5s->dpi = 72.0;
+
     c5s->u.ps.file = Void;
     
     c5s->surface = cairo_ps_surface_create (filename, width, height);

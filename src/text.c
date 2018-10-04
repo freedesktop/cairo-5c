@@ -195,13 +195,14 @@ do_Cairo_set_font (Value cv, Value fv)
 {
     ENTER ();
     cairo_5c_t		*c5c = cairo_5c_get (cv);
+    cairo_5c_surface_t	*c5s = cairo_5c_surface_get(c5c->surface);
     cairo_5c_font_t	*c5f = cairo_5c_font_find (fv);
 
     if (!c5f)
 	RETURN (Void);
 
     cairo_set_font_face (c5c->cr, c5f->font_face);
-    cairo_set_font_size (c5c->cr, c5f->size);
+    cairo_set_font_size (c5c->cr, c5f->size * c5s->dpi / 72.0);
     RETURN(Void);
 }
 
