@@ -22,7 +22,7 @@ NICKLEFILES=\
 	text45.5c \
 	tic-tac-toe.5c
 
-exampledir=$(pkgdatadir)/examples
+exampledir=$(docdir)/examples
 
 example_DATA=$(NICKLEFILES)
 
