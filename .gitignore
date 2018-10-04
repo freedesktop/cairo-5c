@@ -34,3 +34,6 @@ tags
 releases
 cairo-5c-*.*
 cairo-5c_*.*.upload
+m4
+test-driver
+compile
