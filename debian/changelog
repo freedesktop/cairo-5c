@@ -1,3 +1,9 @@
+cairo-5c (1.16) unstable; urgency=medium
+
+  * Fix tests/upstream syntax error so that CI can run
+
+ -- Keith Packard <keithp@keithp.com>  Mon, 22 Oct 2018 17:56:41 -0700
+
 cairo-5c (1.15) unstable; urgency=medium
 
   * Add per-surface DPI values. Fetch correct value for X. Scale
