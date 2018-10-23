@@ -1,5 +1,3 @@
 #!/bin/sh
 cd test
-for i in *.5c; do
-	nickle "$i" || exit 1
-done
+nickle test.5c
