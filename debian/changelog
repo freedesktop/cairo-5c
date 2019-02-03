@@ -1,3 +1,9 @@
+cairo-5c (1.17) unstable; urgency=medium
+
+  * Only run 'test.5c' test; nichrometest.5c requires X
+
+ -- Keith Packard <keithp@keithp.com>  Tue, 23 Oct 2018 14:50:24 -0700
+
 cairo-5c (1.16) unstable; urgency=medium
 
   * Fix tests/upstream syntax error so that CI can run
