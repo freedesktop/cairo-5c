@@ -1,2 +1,2 @@
 Tests: upstream
-Depends: ttf-bitstream-vera
+Depends: @, ttf-bitstream-vera
