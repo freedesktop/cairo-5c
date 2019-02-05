@@ -1,3 +1,9 @@
+cairo-5c (1.18) unstable; urgency=medium
+
+  * Fix debian/tests/control dependencies.
+
+ -- Keith Packard <keithp@keithp.com>  Mon, 04 Feb 2019 16:01:36 -0800
+
 cairo-5c (1.17) unstable; urgency=medium
 
   * Only run 'test.5c' test; nichrometest.5c requires X
