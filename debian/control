@@ -5,7 +5,7 @@ Maintainer: Keith Packard <keithp@keithp.com>
 Build-Depends: debhelper (>= 11), libcairo2-dev, librsvg2-dev,
  nickle (>= 2.73), libx11-dev (>= 2:1.4.99.901), libfreetype6-dev,
  ttf-bitstream-vera
-Standards-Version: 4.2.1
+Standards-Version: 4.3.0
 
 Package: cairo-5c
 Architecture: all
@@ -15,6 +15,16 @@ Description: nickle bindings for the cairo graphics library
  library, along with examples of how to use it and a simple toolkit,
  nichrome, which allows applications to build user interfaces entirely
  in nickle.
+
+Package: libcairo-5c-dev
+Architecture: any
+Section: libdevel
+Depends: ${misc:Depends}, libcairo-5c0 (= ${binary:Version})
+Description: library for cairo nickle bindings dev files
+ This package contains a shared library which links to the cairo
+ library using the nickle FFI mechanism. It exposes most of the cairo
+ API, although support for fonts is limited to the toy font API. This
+ package provides the development files for the libcairo-5c library.
 
 Package: libcairo-5c0
 Architecture: any

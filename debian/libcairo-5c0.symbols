@@ -1,4 +1,5 @@
 libcairo-5c.so.0 libcairo-5c0 #MINVER#
+* Build-Depends-Package: libcairo-5c-dev
  CairoImageNamespace@Base 1.14
  CairoNamespace@Base 1.14
  CairoPatternNamespace@Base 1.14
