@@ -6,6 +6,14 @@ Files: *
 Copyright: 2004, 2005, 2007, 2008, 2012 Keith Packard <keithp@keithp.com>
 License: LGPL-2.1+MPL-1.1
 
+Files: INSTALL:
+Copyright: 1994, 1995, 1996, 1999, 2000, 2001, 2002 Free Software Foundation, Inc.
+License: FSFAP
+ Copying and distribution of this file, with or without modification,
+ are permitted in any medium without royalty provided the copyright
+ notice and this notice are preserved.  This file is offered as-is,
+ without warranty of any kind.
+
 License: LGPL-2.1+MPL-1.1
  This is the Debian package of the nickle bindings for the cairo graphics
  library.
