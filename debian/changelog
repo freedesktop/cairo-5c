@@ -1,3 +1,10 @@
+cairo-5c (1.19) unstable; urgency=medium
+
+  * Adjust newer nichome file license GPL -> LGPL/MPL
+  * Note separate license for INSTALL
+
+ -- Keith Packard <keithp@keithp.com>  Thu, 06 Jun 2019 12:16:25 +0200
+
 cairo-5c (1.18) unstable; urgency=medium
 
   * Fix debian/tests/control dependencies.
